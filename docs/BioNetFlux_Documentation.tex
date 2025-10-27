@@ -16,6 +16,28 @@
 \usepackage{longtable}
 \usepackage{tikz}
 
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+
+% Define a custom TODO box
+\newtcolorbox{todobox}{
+	colback=yellow!10,
+	colframe=orange!70!black,
+	title=\textbf{TODO},
+	fonttitle=\bfseries,
+	coltitle=white,
+	boxrule=0.8pt,
+	arc=4pt,
+	left=6pt,
+	right=6pt,
+	top=6pt,
+	bottom=6pt
+}
+
+
+	
+
 % Page setup
 \geometry{margin=2.5cm}
 \pagestyle{fancy}

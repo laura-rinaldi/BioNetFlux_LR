@@ -171,7 +171,7 @@ class DomainGeometry:
     
     def set_global_metadata(self, **metadata):
         """Set global metadata for the entire geometry."""
-        self.global_metadata.update(metadata)
+        self._global_metadata.update(metadata)
     
     def get_global_metadata(self) -> Dict[str, Any]:
         """Get global metadata."""
