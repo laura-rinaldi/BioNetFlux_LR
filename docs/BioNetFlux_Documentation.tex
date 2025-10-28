@@ -35,6 +35,19 @@
 	bottom=6pt
 }
 
+\newtcolorbox{warningbox}{
+	colback=red!5!white,
+	colframe=red!75!black,
+	title=\textbf{WARNING!},
+	fonttitle=\bfseries,
+	coltitle=white,
+	boxrule=1pt,
+	arc=4pt,
+	left=6pt,
+	right=6pt,
+	top=6pt,
+	bottom=6pt
+}
 
 	
 
@@ -154,6 +167,12 @@
    \item \textbf{Extensibility}: Adding new problem classes by writing problem specific static condensation modules 
 \end{itemize}
 
+
+\begin{warningbox}
+	Throughout the code we use the word {\tt Domain} as a synonym of {\tt Arc}
+\end{warningbox}
+
+
 \section{Architecture Overview}
 
 The \bionetflux{} framework is organized into several interconnected modules:
@@ -175,8 +194,8 @@ BioNetFlux/
 \subsection{Core Components}
 
 \begin{enumerate}
-    \item \textbf{Problem Definition}: Physical parameters, equations, and boundary conditions
     \item \textbf{Geometry Management}: Domain layout and network topology
+    \item \textbf{Problem Definition}: Physical parameters, equations, and boundary conditions
     \item \textbf{Discretization}: Spatial mesh and time discretization 
     \item \textbf{Constraint System}: Interface conditions and boundary constraints
     \item \textbf{Time Evolution}: Implicit time stepping with Newton solver
@@ -187,9 +206,46 @@ BioNetFlux/
 
 \subsection{Core Module (\code{ooc1d.core})}
 
+\subsection{Geometry Module (\code{ooc1d.geometry})}
+
+\subsubsection{DomainGeometry Class (\code{domain\_geometry.py})}
+
+The geometry module provides intuitive tools for defining complex network topologies:
+
+\begin{lstlisting}[language=Python, caption={DomainGeometry Class}]
+	class DomainGeometry:
+	def __init__(self, name="unnamed_geometry"):
+	# Initialize empty geometry
+	
+	def add_domain(self, extrema_start, extrema_end, 
+	domain_start=None, domain_length=None, 
+	name=None, **metadata):
+	# Add a domain segment to the network
+	
+	def get_domain(self, domain_id):
+	# Retrieve domain information
+	
+	def get_bounding_box(self):
+	# Calculate network bounding box
+\end{lstlisting}
+
+\textbf{Domain Information Structure:}
+\begin{lstlisting}[language=Python, caption={Domain Information Dataclass}]
+	@dataclass
+	class DomainInfo:
+	domain_id: int
+	extrema_start: Tuple[float, float]  # Physical coordinates
+	extrema_end: Tuple[float, float]
+	domain_start: float                 # Parameter space
+	domain_length: float
+	name: str
+	metadata: Dict[str, Any]
+\end{lstlisting}
+
+
 \subsubsection{Problem Class (\code{problem.py})}
 
-The \code{Problem} class encapsulates the physics of a single domain:
+The \code{Problem} class encapsulates the physics of a single arc:
 
 \begin{lstlisting}[language=Python, caption={Problem Class Structure}]
 class Problem:
@@ -212,6 +268,8 @@ class Problem:
 
 \subsubsection{Discretization Classes (\code{discretization.py})}
 
+The \code{Discretization} and \code{GlobalDiscretization} classes handle the spatial and temporal discretization parameters.
+ 
 \begin{lstlisting}[language=Python, caption={Discretization Classes}]
 class Discretization:
     # Single domain spatial discretization
@@ -233,41 +291,6 @@ class ConstraintManager:
                             coord1, coord2, perm)
 \end{lstlisting}
 
-\subsection{Geometry Module (\code{ooc1d.geometry})}
-
-\subsubsection{DomainGeometry Class (\code{domain\_geometry.py})}
-
-The geometry module provides intuitive tools for defining complex network topologies:
-
-\begin{lstlisting}[language=Python, caption={DomainGeometry Class}]
-class DomainGeometry:
-    def __init__(self, name="unnamed_geometry"):
-        # Initialize empty geometry
-    
-    def add_domain(self, extrema_start, extrema_end, 
-                   domain_start=None, domain_length=None, 
-                   name=None, **metadata):
-        # Add a domain segment to the network
-        
-    def get_domain(self, domain_id):
-        # Retrieve domain information
-        
-    def get_bounding_box(self):
-        # Calculate network bounding box
-\end{lstlisting}
-
-\textbf{Domain Information Structure:}
-\begin{lstlisting}[language=Python, caption={Domain Information Dataclass}]
-@dataclass
-class DomainInfo:
-    domain_id: int
-    extrema_start: Tuple[float, float]  # Physical coordinates
-    extrema_end: Tuple[float, float]
-    domain_start: float                 # Parameter space
-    domain_length: float
-    name: str
-    metadata: Dict[str, Any]
-\end{lstlisting}
 
 \subsection{Solver Module (\code{ooc1d.solver})}
 
@@ -600,6 +623,18 @@ plotter.plot_birdview(
     \item Clean network overview
 \end{itemize}
 
+\clearpage
+\thispagestyle{empty} % Remove headers/footers
+\vspace*{\fill}
+
+\begin{center}
+	{\Huge \textbf{Chapter Title}}\\[1cm]
+	{\Large Subtitle or Description (if any)}\\[2cm]
+%	\includegraphics[width=0.3\textwidth]{path/to/your/image.png} % Optional image
+\end{center}
+
+\vspace*{\fill}
+\clearpage
 
 \input{domain_geometry_api}
 \input{problem_module_api_accurate}
@@ -620,6 +655,7 @@ plotter.plot_birdview(
 \input{lean_matplotlib_plotter_api}
 
 \input{problems_folder_detailed_api}
+
 
 
 \section{Example Applications}

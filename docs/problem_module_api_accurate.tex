@@ -6,7 +6,7 @@
 \section{Problem Module API Reference (Accurate Analysis)}
 \label{sec:problem_module_api_accurate}
 
-This section provides an exact reference for the Problem class (\texttt{ooc1d.core.problem.Problem}) based on detailed analysis of the actual implementation. The Problem class serves as the central container for mathematical problem specification in BioNetFlux.
+This section provides an exact reference for the Problem class (\texttt{ooc1d.core.problem.Problem}) based on detailed analysis of the actual implementation. The Problem class serves as the base container for single arc mathematical problem specification in BioNetFlux.
 
 \subsection{Module Imports and Dependencies}
 
@@ -22,16 +22,14 @@ from .discretization import Discretization, GlobalDiscretization
 \begin{lstlisting}[language=Python, caption=Class Declaration]
 class Problem:
     """
-    Problem definition class for 1D Keller-Segel type problems.
-    
-    Equivalent to MATLAB problem{ipb} structure.
+    Problem definition base class for 1D Keller-Segel type problems.
     """
 \end{lstlisting}
 
 \subsection{Constructor}
 \label{subsec:constructor}
 
-\paragraph{\_\_init\_\_()}
+\paragraph{\_\_init\_\_()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Problem Constructor]
 def __init__(self, 
              neq: int = 2,
@@ -45,8 +43,8 @@ def __init__(self,
 \textbf{Parameters:}
 \begin{itemize}
     \item \texttt{neq}: Number of equations (default: 2)
-    \item \texttt{domain\_start}: Domain start coordinate corresponding to MATLAB \texttt{A} (default: 0.0)
-    \item \texttt{domain\_length}: Domain length corresponding to MATLAB \texttt{L} (default: 1.0)
+    \item \texttt{domain\_start}: Arc start coordinate (default: 0.0)
+    \item \texttt{domain\_length}: Arc length (default: 1.0)
     \item \texttt{parameters}: NumPy array of physical parameters (default: \texttt{[1.0, 1.0, 0.0, 0.0]})
     \item \texttt{problem\_type}: Problem type identifier (default: "keller\_segel")
     \item \texttt{name}: Descriptive problem name (default: "unnamed\_problem")
@@ -132,17 +130,17 @@ problem3 = Problem(
 \texttt{unknown\_names} & \texttt{List[str]} & List of strings: \texttt{[f"Unknown n. \{i+1\}" for i in range(neq)]} \\
 \hline
 
-\texttt{extrema} & \texttt{List[Tuple]} & Domain endpoints: \texttt{[(domain\_start, 0.0), (domain\_end, 0.0)]} \\
+\texttt{extrema} & \texttt{List[Tuple]} & Arc endpoints coordinates: \texttt{[(domain\_start, 0.0), (domain\_end, 0.0)]} \\
 \hline
 
-\texttt{neumann\_data} & \texttt{np.ndarray} & Boundary data array initialized as \texttt{np.zeros(4)} \\
+\texttt{neumann\_data} & \texttt{np.ndarray} & Boundary data array initialized as {\color{red} \texttt{np.zeros(4)} }\\
 \hline
 
 \end{longtable}
 
 \subsubsection{Function Attributes (Initialized with Defaults)}
 
-\begin{longtable}{|p{3.5cm}|p{3cm}|p{7cm}|}
+\begin{longtable}{|p{2.5cm}|p{4cm}|p{7cm}|}
 \hline
 \textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
 \hline
@@ -303,7 +301,7 @@ problem.set_initial_condition(3, lambda s: np.zeros_like(s))   # phi
 
 \subsubsection{Boundary Condition Management}
 
-\paragraph{set\_boundary\_flux()}
+\paragraph{set\_boundary\_flux()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Boundary Flux Method]
 def set_boundary_flux(self, equation_idx: int, 
                      left_flux: Optional[Callable] = None,
@@ -334,7 +332,7 @@ for eq_idx in range(4):
 
 \subsubsection{Parameter Management}
 
-\paragraph{get\_parameter()}
+\paragraph{get\_parameter()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Get Parameter Method]
 def get_parameter(self, index: int) -> float
 \end{lstlisting}
@@ -352,7 +350,7 @@ mu = problem.get_parameter(0)  # First parameter
 nu = problem.get_parameter(1)  # Second parameter
 \end{lstlisting}
 
-\paragraph{set\_parameter()}
+\paragraph{set\_parameter()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Parameter Method]
 def set_parameter(self, index: int, value: float)
 \end{lstlisting}
@@ -373,7 +371,7 @@ problem.set_parameter(0, 2.5)  # Change first parameter to 2.5
 problem.set_parameter(1, 1.8)  # Change second parameter to 1.8
 \end{lstlisting}
 
-\paragraph{set\_parameters()}
+\paragraph{set\_parameters()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Parameters Method]
 def set_parameters(self, parameters: np.ndarray)
 \end{lstlisting}
@@ -396,7 +394,7 @@ problem.set_parameters(new_params)
 
 \subsubsection{Geometric Management}
 
-\paragraph{set\_extrema()}
+\paragraph{set\_extrema()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Extrema Method]
 def set_extrema(self, point1: tuple, point2: tuple)
 \end{lstlisting}
@@ -417,7 +415,7 @@ def set_extrema(self, point1: tuple, point2: tuple)
 problem.set_extrema((0.0, 0.0), (1.0, 0.5))  # Diagonal domain
 \end{lstlisting}
 
-\paragraph{get\_extrema()}
+\paragraph{get\_extrema()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Get Extrema Method]
 def get_extrema(self)
 \end{lstlisting}
@@ -435,7 +433,7 @@ end_point = endpoints[1]    # (x2, y2)
 
 \subsubsection{Generic Function Management}
 
-\paragraph{set\_function()}
+\paragraph{set\_function()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Function Method]
 def set_function(self, function_name: str, function: Callable)
 \end{lstlisting}
@@ -626,5 +624,17 @@ if problem.type == "organ_on_chip":
 \end{longtable}
 
 This documentation provides an exact reference for the Problem class based on the actual implementation, with usage examples matching the MATLAB reference files provided.
+
+\begin{todobox}
+	\begin{itemize}[leftmargin=1.5em]
+		\item Clarify the difference bewteen {\tt u\_names} and {\tt unknown\_names}. Possibly eliminate one of the two
+		\item Check {\tt neumann\_data}, it has hard coded dimension 4. Probably not used.
+		\item  Have problem point to a geometry, instead of having its own geometry handling attributes and methods
+		\item Let chemotaxis functions be defined via the {\tt set\_function} method rather than a dedicated method
+		\item Are {\tt \{left,right\}\_flux} used also for Dirichlet data? Consider changin name to {\tt \{left,right\}\_boundary\_data}
+		\item Add handling of parameters using names to identify the different parameters
+	\end{itemize}
+\end{todobox}
+
 
 % End of accurate problem module API documentation
