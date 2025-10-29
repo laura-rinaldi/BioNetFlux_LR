@@ -19,14 +19,19 @@ BioNetFlux is a Python computational framework for simulating biological transpo
 ## Quick Start
 
 ```python
+# Add src to Python path
 import sys
-sys.path.insert(0, 'path/to/BioNetFlux/code')
+sys.path.insert(0, 'src')
 
-from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+# Import BioNetFlux components
+from bionetflux.core.problem import Problem
+from bionetflux.geometry.domain_geometry import DomainGeometry
+from bionetflux.problems.KS_grid_geometry import create_global_framework
 
 # Load problem
-setup = quick_setup("ooc1d.problems.KS_grid_geometry")
+from setup_solver import quick_setup
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+setup = quick_setup("bionetflux.problems.KS_grid_geometry")
 
 # Create initial conditions  
 trace_solutions, multipliers = setup.create_initial_conditions()
@@ -52,9 +57,9 @@ Comprehensive documentation is available in [`docs/BioNetFlux_Documentation.md`]
 ## Examples
 
 - **Simple Example**: [`examples/simple_example.py`](examples/simple_example.py)
-- **Grid Networks**: `ooc1d.problems.KS_grid_geometry`
-- **T-Junctions**: `ooc1d.problems.T_junction`
-- **Custom Geometries**: `ooc1d.problems.KS_with_geometry`
+- **Grid Networks**: `bionetflux.problems.KS_grid_geometry`
+- **T-Junctions**: `bionetflux.problems.T_junction`
+- **Custom Geometries**: `bionetflux.problems.KS_with_geometry`
 
 ## Installation
 
@@ -79,8 +84,8 @@ python simple_example.py
 
 ```
 BioNetFlux/
-├── code/
-│   ├── ooc1d/
+├── src/
+│   ├── bionetflux/
 │   │   ├── core/           # Mathematical components
 │   │   ├── geometry/       # Network geometry tools
 │   │   ├── problems/       # Problem definitions
@@ -96,7 +101,7 @@ BioNetFlux/
 
 ### Geometry Module
 ```python
-from ooc1d.geometry import DomainGeometry
+from bionetflux.geometry import DomainGeometry
 
 geometry = DomainGeometry("network_name")
 geometry.add_domain(extrema_start=(0,0), extrema_end=(1,0), name="segment1")
