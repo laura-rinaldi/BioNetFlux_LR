@@ -27,3 +27,15 @@ __pycache__/
 *.sh
 .DS_Store
 
+# Output directories
+outputs/
+
+# Python cache for new structure
+src/**/__pycache__/
+tests/__pycache__/
+
+# IDE files
+.vscode/
+.idea/
+
+
