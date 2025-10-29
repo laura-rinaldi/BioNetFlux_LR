@@ -4,7 +4,7 @@
 
 **Multi-Domain Biological Network Flow Simulation Framework**
 
-BioNetFlux is a Python computational framework for simulating biological transport phenomena on complex network geometries. It specializes in solving coupled partial differential equations on multi-domain networks with applications in chemotaxis, organ-on-chip systems, and microfluidic networks.
+BioNetFlux is a Python computational framework for simulating biological transport phenomena on complex network geometries. It specializes in solving coupled partial differential equations on multi-arc networks with applications in chemotaxis, organ-on-chip systems, and microfluidic networks.
 
 ## Features
 
