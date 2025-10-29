@@ -4,6 +4,8 @@ from ..core.discretization import Discretization, GlobalDiscretization
 from ..core.constraints import ConstraintManager
 from ..geometry import DomainGeometry
 
+
+
 def create_global_framework():
     """
     Organ-on-Chip problem with complex grid geometry:
@@ -43,8 +45,7 @@ def create_global_framework():
     
     
     # Parameter vector [nu, mu, epsilon, sigma, a, b, c, d, chi]
-    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
-    
+     
     # Domain definition
     domain_start = 1.0  # A in MATLAB
     domain_length = 1.0  # L in MATLAB
@@ -96,56 +97,7 @@ def create_global_framework():
     # Test case with sin initial condition for u (from TestProblem.m)
     def initial_u_test(s, t=0.0):
         return np.sin(2 * np.pi * s)
-    
-    # Create problem
-    problem = Problem(
-        neq=neq,
-        domain_start=domain_start,
-        domain_length=domain_length,
-        parameters=parameters,
-        problem_type="organ_on_chip",
-        name="ooc_test"
-    )
-    
-    def u(s, t):
-        s = np.asarray(s)   
-        y = t * np.cos(2 * np.pi * s) + 1.0
-        # y = np.cos(2 * np.pi * s)
-        # y = t
-        # y = t * s + 1.0
-        return y
-    
-    def u_x(s, t):
-        s = np.asarray(s)
-        y = -2 * np.pi * t * np.sin(2 * np.pi * s)
-        # y = -2 * np.pi * np.sin(2 * np.pi * s)
-        # y = np.zeros_like(s)
-        # y = t * np.ones_like(s)
-        return y
-    
-    def u_t(s, t):
-        s = np.asarray(s)
-        y = np.cos(2 * np.pi * s)
-        # y = np.zeros_like(s)
-        # y = s
-        # y = np.ones_like(s)
-        return y
-    
-    def u_xx(s, t):
-        s = np.asarray(s)
-        y = -4 * np.pi**2 * t * np.cos(2 * np.pi * s)
-        # y = -4 * np.pi**2 * np.cos(2 * np.pi * s)
-        # y = np.zeros_like(s)
-        return y
-    
-    # Physical parameters (from ooc_test_problem)
-    # Parameters: [D, v_flow, k_reaction, k_cell_interaction, a_reaction]
-    # Note: static_condensation_ooc.py expects 5 parameters including reaction parameter at index 4
-    
-    # Different parameters for different domain types
-    parameters_vertical = parameters   # Flow channels: higher flow
-    parameters_horizontal = parameters# Culture chambers: lower flow, higher reaction
-    
+
     # =============================================================================
     # COMPLEX GRID GEOMETRY SETUP (same as KS_grid_geometry)
     # =============================================================================
@@ -203,11 +155,55 @@ def create_global_framework():
     
     print(f"✓ OoC grid geometry created with {geometry.num_domains()} domains:")
     print(geometry.summary())
+
+
+
+    def u(s, t):
+        s = np.asarray(s)   
+        y = t * np.cos(2 * np.pi * s) + 1.0
+        # y = np.cos(2 * np.pi * s)
+        # y = t
+        # y = t * s + 1.0
+        return y
+    
+    def u_x(s, t):
+        s = np.asarray(s)
+        y = -2 * np.pi * t * np.sin(2 * np.pi * s)
+        # y = -2 * np.pi * np.sin(2 * np.pi * s)
+        # y = np.zeros_like(s)
+        # y = t * np.ones_like(s)
+        return y
+    
+    def u_t(s, t):
+        s = np.asarray(s)
+        y = np.cos(2 * np.pi * s)
+        # y = np.zeros_like(s)
+        # y = s
+        # y = np.ones_like(s)
+        return y
+    
+    def u_xx(s, t):
+        s = np.asarray(s)
+        y = -4 * np.pi**2 * t * np.cos(2 * np.pi * s)
+        # y = -4 * np.pi**2 * np.cos(2 * np.pi * s)
+        # y = np.zeros_like(s)
+        return y
+    
+    # Physical parameters (from ooc_test_problem)
+    # Parameters: [D, v_flow, k_reaction, k_cell_interaction, a_reaction]
+    # Note: static_condensation_ooc.py expects 5 parameters including reaction parameter at index 4
+    
+    # Different parameters for different domain types
+    problem_parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
+
+    # parameters_vertical = parameters   # Flow channels: higher flow
+    # parameters_horizontal = parameters  # Culture chambers: lower flow, higher reaction
+
     
     # =============================================================================
-    # PROBLEM SETUP using geometry information with OoC physics
+    # PROBLEM SETUP using geometry information with given parameters
     # =============================================================================
-    
+   
     problems = []
     discretizations = []
     
@@ -218,9 +214,9 @@ def create_global_framework():
         
         # Select parameters based on domain type
         if domain_type == 'flow_channel':
-            parameters = parameters_vertical.copy()
+            parameters = problem_parameters.copy()
         else:  # culture_chamber
-            parameters = parameters_horizontal.copy()
+            parameters = problem_parameters.copy()
         
         # Create problem with domain-specific parameters from geometry
         problem = Problem(
@@ -288,8 +284,7 @@ def create_global_framework():
         
         # Set organ-on-chip specific functions
         # Cell metabolism: u + v -> omega (nutrient + cells -> waste)
-    
-        
+     
         problems.append(problem)
         
         # Create discretization using geometry metadata
@@ -358,16 +353,14 @@ def create_global_framework():
         
         # Left junction: horizontal start connects to left vertical
         for eq_idx in range(neq):
-            constraint_manager.add_kedem_katchalsky(eq_idx, 0, horizontal_id, 
-                                                   left_junction_param, horizontal.domain_start, 
-                                                   permeabilities[eq_idx])
+            constraint_manager.add_trace_continuity(eq_idx, 0, horizontal_id, 
+                                                   left_junction_param, horizontal.domain_start)
         
         # Right junction: horizontal end connects to right vertical
         horizontal_end = horizontal.domain_start + horizontal.domain_length
         for eq_idx in range(neq):
-            constraint_manager.add_kedem_katchalsky(eq_idx, 1, horizontal_id, 
-                                                   right_junction_param, horizontal_end, 
-                                                   permeabilities[eq_idx])
+            constraint_manager.add_trace_continuity(eq_idx, 1, horizontal_id, 
+                                                   right_junction_param, horizontal_end)
         
         print(f"✓ Connected culture chamber {i+1} (y={y_coord}) to flow channels")
         print(f"  Permeabilities: u={permeability_nutrients}, ω={permeability_waste}, v={permeability_cells}, φ={permeability_growth_factors}")
