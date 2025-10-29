@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'code'))
 
 from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
 def main():
     """Main example execution."""

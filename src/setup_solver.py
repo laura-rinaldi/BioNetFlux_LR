@@ -8,12 +8,12 @@ from typing import List, Tuple, Optional, Dict, Any
 import importlib
 
 # Core imports
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
-from ooc1d.core.static_condensation_factory import StaticCondensationFactory
-from ooc1d.core.constraints import ConstraintManager
-from ooc1d.core.lean_global_assembly import GlobalAssembler
-from ooc1d.core.lean_bulk_data_manager import BulkDataManager
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
+from bionetflux.core.constraints import ConstraintManager
+from bionetflux.core.lean_global_assembly import GlobalAssembler
+from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 
 class SolverSetup:
     """
@@ -21,7 +21,7 @@ class SolverSetup:
     Maintains minimal data storage and provides efficient access to components.
     """
     
-    def __init__(self, problem_module: str = "ooc1d.problems.test_problem2"):
+    def __init__(self, problem_module: str = "bionetflux.problems.test_problem2"):
         """
         Initialize solver setup with specified problem module.
         
@@ -341,7 +341,7 @@ class SolverSetup:
             return False
 
 
-def create_solver_setup(problem_module: str = "ooc1d.problems.test_problem2") -> SolverSetup:
+def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2") -> SolverSetup:
     """
     Factory function to create and initialize a solver setup.
     
@@ -358,7 +358,7 @@ def create_solver_setup(problem_module: str = "ooc1d.problems.test_problem2") ->
 
 
 # Convenience functions for common operations
-def quick_setup(problem_module: str = "ooc1d.problems.test_problem2", validate: bool = True) -> SolverSetup:
+def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", validate: bool = True) -> SolverSetup:
     """
     Quick setup with optional validation.
     

@@ -8,7 +8,7 @@ import sys
 import os
 
 # Add the python_port directory to path for absolute imports
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import numpy as np
 import matplotlib.pyplot as plt

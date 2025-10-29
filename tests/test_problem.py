@@ -21,9 +21,9 @@ import time
 from typing import Dict, Any
 
 # Add the current directory to path for imports
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ooc1d.core.problem import Problem
+from bionetflux.core.problem import Problem
 
 def run_basic_functionality_tests() -> bool:
     """Test basic problem operations."""

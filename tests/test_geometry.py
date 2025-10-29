@@ -21,9 +21,9 @@ import time
 from typing import Dict, Any
 
 # Add the code directory to path
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ooc1d.geometry import DomainGeometry, DomainInfo
+from bionetflux.geometry import DomainGeometry, DomainInfo
 
 def run_basic_functionality_tests() -> bool:
     """Test basic geometry operations."""

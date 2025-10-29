@@ -7,10 +7,10 @@ import numpy as np
 import sys
 import os
 
-from ooc1d.core.lean_bulk_data_manager import BulkDataManager
-from ooc1d.core.bulk_data import BulkData
-from ooc1d.core.domain_data import DomainData
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.lean_bulk_data_manager import BulkDataManager
+from bionetflux.core.bulk_data import BulkData
+from bionetflux.core.domain_data import DomainData
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 
 
 class MockProblem:

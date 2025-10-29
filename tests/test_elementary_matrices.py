@@ -6,7 +6,7 @@ Minimal implementation without unnecessary functions.
 
 import sys
 import os
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 def export_elementary_matrices():
 
@@ -501,7 +501,7 @@ except ImportError:
     print("✗ SymPy not found. Install with: pip install sympy")
     exit(1)
 
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 
 print("Constructing elementary matrices (matching MATLAB build_eMatrices.m)...")
 

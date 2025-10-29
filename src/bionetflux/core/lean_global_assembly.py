@@ -7,7 +7,7 @@ import numpy as np
 from typing import List, Tuple, Optional
 
 from .discretization import GlobalDiscretization
-from .flux_jump import domain_flux_jump
+from bionetflux.core.flux_jump import domain_flux_jump
 from .constraints import ConstraintManager
 from .lean_bulk_data_manager import BulkDataManager
 from .bulk_data import BulkData

@@ -8,18 +8,18 @@ import sys
 import os
 
 # Add the python_port directory to path for absolute imports
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 # sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'python_port'))
 
 import numpy as np
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 
 # Now we can import the factory
-from ooc1d.core.static_condensation_factory import StaticCondensationFactory
-from ooc1d.core.constraints import ConstraintManager
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
+from bionetflux.core.constraints import ConstraintManager
 
-from ooc1d.problems.test_problem import create_global_framework
+from bionetflux.problems.test_problem import create_global_framework
 
 
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+cd #!/usr/bin/env python3
 """
 Comprehensive test script for domain_flux_jump function.
 Tests the flux jump computation with various scenarios and validates integration.
@@ -9,10 +9,10 @@ import os
 import numpy as np
 
 # Add the python_port directory to sys.path to allow imports
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ooc1d.core.flux_jump import domain_flux_jump, test_domain_flux_jump
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.flux_jump import domain_flux_jump, test_domain_flux_jump
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 
 
 def test_with_elementary_matrices():

@@ -119,10 +119,10 @@ BioNetFlux/
 
 ### Before (Current)
 ```python
-from ooc1d.core.problem import Problem
-from ooc1d.geometry.domain_geometry import DomainGeometry
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
-from ooc1d.problems.KS_grid_geometry import create_global_framework
+from bionetflux.core.problem import Problem
+from bionetflux.geometry.domain_geometry import DomainGeometry
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.problems.KS_grid_geometry import create_global_framework
 import setup_solver
 ```
 

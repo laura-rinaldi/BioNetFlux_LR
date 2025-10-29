@@ -266,8 +266,8 @@ cat > MIGRATION_V1_SUMMARY.md << 'EOF'
 - ✅ Renamed 2 files for consistency
 
 ## Import Changes
-- `from ooc1d.core.problem` → `from bionetflux.core.problem`
-- `from ooc1d.geometry` → `from bionetflux.geometry`
+- `from bionetflux.core.problem` → `from bionetflux.core.problem`
+- `from bionetflux.geometry` → `from bionetflux.geometry`
 - etc.
 
 ## No Functional Changes

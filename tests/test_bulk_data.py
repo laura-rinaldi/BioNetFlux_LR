@@ -9,9 +9,9 @@ import os
 
 # Add the python_port directory to path
 # sys.path.append(os.path.join(os.path.dirname(__file__), ''))
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from ooc1d.core.bulk_data import BulkData
+from bionetflux.core.bulk_data import BulkData
 
 
 class MockProblem:

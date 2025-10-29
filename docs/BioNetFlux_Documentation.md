@@ -211,7 +211,7 @@ sys.path.insert(0, '/path/to/BioNetFlux/code')
 
 ```python
 from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
 # Load a problem
 setup = quick_setup("ooc1d.problems.my_problem", validate=True)
@@ -493,7 +493,7 @@ import sys
 sys.path.insert(0, '../code')
 
 from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
 def main():
     # Setup problem
@@ -543,7 +543,7 @@ import sys
 sys.path.insert(0, '../code')
 
 from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
 def main():
     # Load complex grid problem

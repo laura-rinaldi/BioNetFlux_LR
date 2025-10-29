@@ -183,7 +183,7 @@ BioNetFlux/
 
 ### 1. Problem Definition
 ```python
-from ooc1d.problems import KS_grid_geometry
+from bionetflux.problems import KS_grid_geometry
 problems, global_disc, constraints, name = KS_grid_geometry.create_global_framework()
 ```
 
@@ -200,7 +200,7 @@ trace_solutions, multipliers = setup.create_initial_conditions()
 
 ### 4. Visualization
 ```python
-from ooc1d.visualization import LeanMatplotlibPlotter
+from bionetflux.visualization import LeanMatplotlibPlotter
 plotter = LeanMatplotlibPlotter(problems, discretizations)
 plotter.plot_2d_curves(trace_solutions)
 plotter.plot_birdview(trace_solutions, equation_idx=0, time=0.0)

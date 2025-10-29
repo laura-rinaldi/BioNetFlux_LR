@@ -9,7 +9,7 @@ python_port_dir = os.path.dirname(os.path.dirname(current_dir))
 if python_port_dir not in sys.path:
     sys.path.insert(0, python_port_dir)
 
-from ooc1d.core.static_condensation_base import StaticCondensationBase
+from bionetflux.core.static_condensation_base import StaticCondensationBase
 
 
 class KellerSegelStaticCondensation(StaticCondensationBase):

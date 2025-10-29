@@ -8,8 +8,8 @@ objects as parameters to methods that need them.
 
 import numpy as np
 from typing import List, Optional, Callable
-from ooc1d.core.bulk_data import BulkData
-from ooc1d.core.domain_data import DomainData
+from bionetflux.core.bulk_data import BulkData
+from bionetflux.core.domain_data import DomainData
 
 
 class BulkDataManager:

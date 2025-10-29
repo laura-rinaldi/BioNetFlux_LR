@@ -6,7 +6,7 @@ Alternative to BulkSolution with flexible set_data method.
 import numpy as np
 from .problem import Problem 
 from .discretization import Discretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 from typing import List, Optional, Union, Callable
 
 

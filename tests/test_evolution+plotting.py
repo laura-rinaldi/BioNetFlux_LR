@@ -18,10 +18,10 @@ import matplotlib.pyplot as plt
 plt.close('all')
 
 # Add the python_port directory to path for absolute imports
-sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from setup_solver import quick_setup
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
 filename = "ooc1d.problems.KS_grid_geometry"  # New geometry-based problem
 

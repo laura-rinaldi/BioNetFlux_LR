@@ -294,8 +294,8 @@ docs/
 
 ### Current (Complex)
 ```python
-from ooc1d.problems.KS_grid_geometry import create_global_framework
-from ooc1d.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.problems.KS_grid_geometry import create_global_framework
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 ```
 
 ### Proposed (Clean)
