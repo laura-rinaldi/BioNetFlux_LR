@@ -4,6 +4,7 @@ from matplotlib.patches import Rectangle
 from mpl_toolkits.mplot3d import Axes3D
 from typing import List, Dict, Optional, Tuple
 import matplotlib.colors as mcolors
+import os
 
 
 class LeanMatplotlibPlotter:
@@ -19,7 +20,8 @@ class LeanMatplotlibPlotter:
                  problems: List, 
                  discretizations: List,
                  equation_names: Optional[List[str]] = None,
-                 figsize: Tuple[float, float] = (12, 8)):
+                 figsize: Tuple[float, float] = (12, 8),
+                 output_dir: Optional[str] = None):
         """
         Initialize the lean plotter.
         
@@ -28,12 +30,19 @@ class LeanMatplotlibPlotter:
             discretizations: List of Discretization instances  
             equation_names: Optional equation names for labeling
             figsize: Default figure size
+            output_dir: Default directory for saving plots (optional, backward compatible)
         """
         self.problems = problems
         self.discretizations = discretizations
         self.ndom = len(problems)
         self.neq = problems[0].neq if problems else 2
         self.figsize = figsize
+        
+        # Set default output directory
+        self.output_dir = output_dir
+        if self.output_dir is not None:
+            # Create directory if it doesn't exist
+            os.makedirs(self.output_dir, exist_ok=True)
         
         # Set equation names with Greek letters
         if equation_names is None:
@@ -150,6 +159,30 @@ class LeanMatplotlibPlotter:
         
         return global_solutions
     
+    def _get_save_path(self, filename: Optional[str]) -> Optional[str]:
+        """
+        Get the full save path, combining output_dir with filename if needed.
+        
+        Args:
+            filename: Filename or full path provided by user
+            
+        Returns:
+            Full path for saving, or None if filename is None
+        """
+        if filename is None:
+            return None
+        
+        # If filename is already an absolute path, use it as-is (backward compatibility)
+        if os.path.isabs(filename):
+            return filename
+        
+        # If output_dir is set, combine it with filename
+        if self.output_dir is not None:
+            return os.path.join(self.output_dir, filename)
+        
+        # Otherwise, use filename as-is (current working directory)
+        return filename
+    
     def plot_2d_curves(self, 
                       trace_solutions: List[np.ndarray],
                       title: str = "2D Solution Curves",
@@ -164,7 +197,7 @@ class LeanMatplotlibPlotter:
             title: Plot title
             show_bounding_box: Whether to show domain boundaries
             show_mesh_points: Whether to show dots at mesh points
-            save_filename: Optional filename for saving
+            save_filename: Optional filename for saving (can be just filename if output_dir is set)
             
         Returns:
             Matplotlib Figure object
@@ -246,9 +279,10 @@ class LeanMatplotlibPlotter:
         plt.tight_layout()
         
         # Save if requested
-        if save_filename:
-            plt.savefig(save_filename, dpi=300, bbox_inches='tight')
-            print(f"✓ 2D curves saved as: {save_filename}")
+        save_path = self._get_save_path(save_filename)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"✓ 2D curves saved as: {save_path}")
         
         return fig
     
@@ -267,7 +301,7 @@ class LeanMatplotlibPlotter:
             equation_idx: Which equation to visualize
             title: Plot title (auto-generated if None)
             segment_width: Width of domain segments
-            save_filename: Optional filename for saving
+            save_filename: Optional filename for saving (can be just filename if output_dir is set)
             view_angle: 3D view angles (elevation, azimuth)
             
         Returns:
@@ -359,9 +393,10 @@ class LeanMatplotlibPlotter:
         plt.tight_layout()
         
         # Save if requested
-        if save_filename:
-            plt.savefig(save_filename, dpi=300, bbox_inches='tight')
-            print(f"✓ Flat 3D plot saved as: {save_filename}")
+        save_path = self._get_save_path(save_filename)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"✓ Flat 3D plot saved as: {save_path}")
         
         return fig
 
@@ -382,7 +417,7 @@ class LeanMatplotlibPlotter:
             equation_idx: Which equation to visualize
             title: Plot title (auto-generated if None)
             segment_width: Width of domain segments
-            save_filename: Optional filename for saving
+            save_filename: Optional filename for saving (can be just filename if output_dir is set)
             show_colorbar: Whether to show colorbar
             show_bounding_box: Whether to show bounding box
             time: Current time for title
@@ -487,9 +522,10 @@ class LeanMatplotlibPlotter:
         plt.tight_layout()
         
         # Save if requested
-        if save_filename:
-            plt.savefig(save_filename, dpi=300, bbox_inches='tight')
-            print(f"✓ Bird's eye view plot saved as: {save_filename}")
+        save_path = self._get_save_path(save_filename)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"✓ Bird's eye view plot saved as: {save_path}")
         
         return fig
 
@@ -508,7 +544,7 @@ class LeanMatplotlibPlotter:
             final_traces: Final trace solutions
             initial_time: Initial time
             final_time: Final time
-            save_filename: Optional filename for saving
+            save_filename: Optional filename for saving (can be just filename if output_dir is set)
             
         Returns:
             Matplotlib Figure object
@@ -561,11 +597,23 @@ class LeanMatplotlibPlotter:
                     fontsize=14, fontweight='bold')
         plt.tight_layout()
         # Save if requested
-        if save_filename:
-            plt.savefig(save_filename, dpi=300, bbox_inches='tight')
-            print(f"✓ Comparison plot saved as: {save_filename}")
+        save_path = self._get_save_path(save_filename)
+        if save_path:
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"✓ Comparison plot saved as: {save_path}")
         plt.show()
         return fig
+    
+    def set_output_dir(self, output_dir: str):
+        """
+        Set or change the default output directory.
+        
+        Args:
+            output_dir: Directory path for saving plots
+        """
+        self.output_dir = output_dir
+        os.makedirs(self.output_dir, exist_ok=True)
+        print(f"✓ Output directory set to: {self.output_dir}")
     
     def show_all(self):
         """Show all created plots."""

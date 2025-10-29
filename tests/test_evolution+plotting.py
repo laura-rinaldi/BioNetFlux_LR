@@ -82,8 +82,11 @@ plotter = LeanMatplotlibPlotter(
     problems=setup.problems,
     discretizations=setup.global_discretization.spatial_discretizations,
     equation_names=None,  # Will auto-detect based on problem type
-    figsize=(12, 8)
+    figsize=(12, 8),
+    output_dir="outputs/plots"  # Set directory for saving figures
 )
+
+
 
 # Plot initial trace solutions
 
