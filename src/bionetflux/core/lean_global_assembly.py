@@ -7,7 +7,7 @@ import numpy as np
 from typing import List, Tuple, Optional
 
 from .discretization import GlobalDiscretization
-from bionetflux.core.flux_jump import domain_flux_jump
+from .flux_jump import domain_flux_jump
 from .constraints import ConstraintManager
 from .lean_bulk_data_manager import BulkDataManager
 from .bulk_data import BulkData
@@ -191,7 +191,7 @@ class GlobalAssembler:
             
             # Compute constraint residuals
             constraint_residuals = self.constraint_manager.compute_constraint_residuals(
-                trace_solutions, multipliers, time
+                trace_solutions, multipliers, time, domain_data_list=self.bulk_manager.domain_data_list
             )            
             
             # Add constraint residuals to global residual
