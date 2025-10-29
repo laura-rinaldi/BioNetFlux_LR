@@ -1,4 +1,4 @@
-cd #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Comprehensive test script for domain_flux_jump function.
 Tests the flux jump computation with various scenarios and validates integration.

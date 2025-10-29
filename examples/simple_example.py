@@ -47,7 +47,7 @@ def main():
     print("Step 1: Setting up the problem...")
     
     # Load a complex grid geometry problem
-    problem_name = "ooc1d.problems.KS_grid_geometry"
+    problem_name = "bionetflux.problems.KS_grid_geometry"
     setup = quick_setup(problem_name, validate=True)
     
     # Get problem information

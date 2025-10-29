@@ -35,7 +35,7 @@ def test_basic_setup():
     print("="*50)
     
     try:
-        setup = SolverSetup("ooc1d.problems.test_problem2")
+        setup = SolverSetup("bionetflux.problems.test_problem2")
         setup.initialize()
         print("✓ Lean solver setup created and initialized")
         
@@ -171,7 +171,7 @@ def test_quick_setup():
     print("="*50)
     
     try:
-        quick_setup_instance = quick_setup("ooc1d.problems.test_problem2", validate=True)
+        quick_setup_instance = quick_setup("bionetflux.problems.test_problem2", validate=True)
         quick_info = quick_setup_instance.get_problem_info()
         print(f"✓ Quick setup created and validated")
         print(f"  Problem: {quick_info['problem_name']}")
@@ -193,7 +193,7 @@ def test_modularity():
     
     try:
         # Test with the same module (should work)
-        setup_alt = SolverSetup("ooc1d.problems.test_problem2")
+        setup_alt = SolverSetup("bionetflux.problems.test_problem2")
         setup_alt.initialize()
         alt_info = setup_alt.get_problem_info()
         print(f"✓ Alternative setup created: {alt_info['problem_name']}")

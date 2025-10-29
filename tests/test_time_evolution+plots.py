@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from setup_solver import quick_setup
 
-filename = "ooc1d.problems.KS_traveling_wave_double_arc"  # Test problem for MATLAB comparison
+filename = "bionetflux.problems.KS_traveling_wave_double_arc"  # Test problem for MATLAB comparison
 
 print("="*60)
 print("BIONETFLUX REAL INITIALIZATION TEST")
@@ -477,7 +477,7 @@ print("MULTIDOMAIN PLOTTER DEMONSTRATION")
 print("="*60)
 
 # Import the MultiDomainPlotter
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'ooc1d', 'visualization'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'bionetflux', 'visualization'))
 from multi_domain_plotter import MultiDomainPlotter
 
 # Initialize MultiDomainPlotter

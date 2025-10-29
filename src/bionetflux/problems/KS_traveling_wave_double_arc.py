@@ -1,7 +1,7 @@
 import numpy as np
-from ..core.problem import Problem
-from ..core.discretization import Discretization, GlobalDiscretization
-from ..core.constraints import ConstraintManager
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.core.constraints import ConstraintManager
 
 def create_global_framework():
     """
