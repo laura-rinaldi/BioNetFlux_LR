@@ -27,8 +27,6 @@ __pycache__/
 *.sh
 .DS_Store
 
-# Output directories
-outputs/
 
 # Python cache for new structure
 src/**/__pycache__/
