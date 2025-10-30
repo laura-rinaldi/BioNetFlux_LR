@@ -1,6 +1,6 @@
 # BioNetFlux
 
-![BioNetFlux Logo](assets/bionetflux_logo.png)
+![BioNetFlux OoC solution](docs/illustrazione.jpg)
 
 **Multi-Domain Biological Network Flow Simulation Framework**
 
