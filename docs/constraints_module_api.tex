@@ -754,65 +754,65 @@ print(f"  Boundary conditions: {len(boundary_constraints)}")
 print(f"  Junction conditions: {len(junction_constraints)}")
 \end{lstlisting}
 
-%\subsubsection{Newton Solver Integration}
-%
-%\begin{lstlisting}[language=Python, caption=Newton Solver Integration Example]
-%# Newton solver loop with constraint residuals
-%def newton_solve_with_constraints(constraint_manager, initial_solution, initial_multipliers):
-%    """Example Newton solver with constraint integration."""
-%    
-%    tolerance = 1e-10
-%    max_iterations = 20
-%    
-%    current_solution = initial_solution.copy()
-%    current_multipliers = initial_multipliers.copy()
-%    current_time = 0.0
-%    
-%    for iteration in range(max_iterations):
-%        # Extract trace solutions (domain-wise)
-%        trace_solutions = extract_trace_solutions(current_solution)
-%        
-%        # Compute constraint residuals
-%        constraint_residuals = constraint_manager.compute_constraint_residuals(
-%            trace_solutions=trace_solutions,
-%            multiplier_values=current_multipliers,
-%            time=current_time
-%        )
-%        
-%        # Compute system residuals (PDE + constraints)
-%        pde_residuals = compute_pde_residuals(current_solution)  # User function
-%        total_residuals = np.concatenate([pde_residuals, constraint_residuals])
-%        
-%        # Check convergence
-%        residual_norm = np.linalg.norm(total_residuals)
-%        print(f"Iteration {iteration}: residual norm = {residual_norm:.6e}")
-%        
-%        if residual_norm < tolerance:
-%            print("✓ Newton solver converged")
-%            break
-%        
-%        # Compute Jacobian (PDE + constraint contributions)
-%        jacobian = compute_system_jacobian(current_solution, current_multipliers, 
-%                                         constraint_manager, current_time)
-%        
-%        # Newton update
-%        try:
-%            delta = np.linalg.solve(jacobian, -total_residuals)
-%            current_solution += delta[:len(current_solution)]
-%            current_multipliers += delta[len(current_solution):]
-%        except np.linalg.LinAlgError:
-%            print("✗ Newton solver failed: singular Jacobian")
-%            break
-%    
-%    return current_solution, current_multipliers
-%
-%# Usage in time evolution
-%solution, multipliers = newton_solve_with_constraints(
-%    constraint_manager=cm,
-%    initial_solution=np.zeros(total_dofs),
-%    initial_multipliers=np.zeros(cm.n_multipliers)
-%)
-%\end{lstlisting}
+\subsubsection{Newton Solver Integration}
+\brokencode
+\begin{lstlisting}[language=Python, caption=Newton Solver Integration Example]
+# Newton solver loop with constraint residuals
+def newton_solve_with_constraints(constraint_manager, initial_solution, initial_multipliers):
+    """Example Newton solver with constraint integration."""
+    
+    tolerance = 1e-10
+    max_iterations = 20
+    
+    current_solution = initial_solution.copy()
+    current_multipliers = initial_multipliers.copy()
+    current_time = 0.0
+    
+    for iteration in range(max_iterations):
+        # Extract trace solutions (domain-wise)
+        trace_solutions = extract_trace_solutions(current_solution)
+        
+        # Compute constraint residuals
+        constraint_residuals = constraint_manager.compute_constraint_residuals(
+            trace_solutions=trace_solutions,
+            multiplier_values=current_multipliers,
+            time=current_time
+        )
+        
+        # Compute system residuals (PDE + constraints)
+        pde_residuals = compute_pde_residuals(current_solution)  # User function
+        total_residuals = np.concatenate([pde_residuals, constraint_residuals])
+        
+        # Check convergence
+        residual_norm = np.linalg.norm(total_residuals)
+        print(f"Iteration {iteration}: residual norm = {residual_norm:.6e}")
+        
+        if residual_norm < tolerance:
+            print("✓ Newton solver converged")
+            break
+        
+        # Compute Jacobian (PDE + constraint contributions)
+        jacobian = compute_system_jacobian(current_solution, current_multipliers, 
+                                         constraint_manager, current_time)
+        
+        # Newton update
+        try:
+            delta = np.linalg.solve(jacobian, -total_residuals)
+            current_solution += delta[:len(current_solution)]
+            current_multipliers += delta[len(current_solution):]
+        except np.linalg.LinAlgError:
+            print("✗ Newton solver failed: singular Jacobian")
+            break
+    
+    return current_solution, current_multipliers
+
+# Usage in time evolution
+solution, multipliers = newton_solve_with_constraints(
+    constraint_manager=cm,
+    initial_solution=np.zeros(total_dofs),
+    initial_multipliers=np.zeros(cm.n_multipliers)
+)
+\end{lstlisting}
 
 \subsection{Method Summary Table}
 \label{subsec:constraints_method_summary}
