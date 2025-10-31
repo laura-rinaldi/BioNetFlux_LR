@@ -6,7 +6,7 @@
 \section{Constraints Module API Reference (Accurate Analysis)}
 \label{sec:constraints_module_api}
 
-This section provides an exact reference for the constraints module (\texttt{ooc1d.core.constraints}) based on detailed analysis of the actual implementation. The module handles boundary conditions and junction constraints using Lagrange multipliers for HDG methods.
+This section provides an exact reference for the constraints module (\texttt{bionetflux.core.constraints}) based on detailed analysis of the actual implementation. The module handles boundary conditions and junction constraints using Lagrange multipliers for HDG methods.
 
 \subsection{Module Overview}
 
@@ -45,9 +45,9 @@ class ConstraintType(Enum):
 
 \textbf{Constraint Categories:}
 \begin{itemize}
-    \item \textbf{Boundary Conditions}: Single domain constraints (DIRICHLET, NEUMANN, ROBIN)
-    \item \textbf{Junction Conditions}: Multi-domain constraints (TRACE\_CONTINUITY, KEDEM\_KATCHALSKY)
-\end{itemize}
+    \item \textbf{Boundary Conditions}:  (DIRICHLET, NEUMANN, ROBIN) Single domain constraints
+    \item \textbf{Junction Conditions}:  (TRACE\_CONTINUITY, KEDEM\_KATCHALSKY)
+Multi-domain constraints \end{itemize}
 
 \subsection{Constraint Class}
 \label{subsec:constraint_class}
@@ -71,9 +71,9 @@ def __init__(self,
 \begin{itemize}
     \item \texttt{constraint\_type}: Type of constraint (from ConstraintType enum)
     \item \texttt{equation\_index}: Equation number (0, 1, ...) this constraint applies to
-    \item \texttt{domains}: List of domain indices (length 1 for boundary, 2 for junction)
-    \item \texttt{positions}: Position coordinates in each domain
-    \item \texttt{parameters}: Parameters for constraint (e.g., Robin coefficients) (optional)
+    \item \texttt{domains}: List of indices of the domains the constraint applies to (length 1 for boundary, 2 for junction)
+    \item \texttt{positions}: Position (parametric) coordinates in each domain
+    \item \texttt{parameters}: Constraint coefficient (e.g., Robin coefficients) (optional)
     \item \texttt{data\_function}: Function \texttt{f(t)} providing constraint data over time (optional)
 \end{itemize}
 
@@ -118,7 +118,7 @@ continuity = Constraint(
 
 \subsubsection{Instance Attributes}
 
-\begin{longtable}{|p{3.5cm}|p{2.5cm}|p{7cm}|}
+\begin{longtable}{|p{3.2cm}|p{3cm}|p{7cm}|}
 \hline
 \textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
 \hline
@@ -199,7 +199,7 @@ def get_data(self, time: float) -> float
     \item \texttt{time}: Time value for evaluation
 \end{itemize}
 
-\textbf{Returns:} \texttt{float} - Constraint data at given time
+\textbf{Returns:} \texttt{float} - Value of constraint data at given time
 
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Get Data Usage]
@@ -238,7 +238,7 @@ print(f"Initial multipliers: {constraint_manager.n_multipliers}")  # 0
 
 \subsubsection{Core Attributes}
 
-\begin{longtable}{|p{3.5cm}|p{2.5cm}|p{7cm}|}
+\begin{longtable}{|p{3.2cm}|p{3cm}|p{7cm}|}
 \hline
 \textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
 \hline
@@ -447,6 +447,8 @@ idx = constraint_manager.add_kedem_katchalsky(
 
 \subsubsection{Discretization Integration}
 
+In each one of the domain involved, the constraint is imposed at the discretization node closest to the position. The corresponding node indices are stored in the {\tt \_node\_mappings} attribute of the {\tt ConstraintManager} object. More precisely, depending on whether the index {\tt icx} constraint is a boundary or a junction constraint,  {\tt contraints.\_node\_mappings[icx]} contains a length $1$ or $2$ list containing the index of the node(s) where the constraint is applied on the domain(s) {\tt idx} (for boundary constraint) or {\tt idx1, idx2} (for junction constraint).
+
 \paragraph{map\_to\_discretizations()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Map to Discretizations Method]
 def map_to_discretizations(self, discretizations: List) -> None
@@ -465,7 +467,7 @@ def map_to_discretizations(self, discretizations: List) -> None
 
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Map to Discretizations Usage]
-from ooc1d.core.discretization import Discretization
+from bionetflux.core.discretization import Discretization
 
 # Create discretizations
 discretizations = [
@@ -622,6 +624,16 @@ print(f"Constraint residual norm: {residual_norm:.6e}")
 \end{lstlisting}
 
 \paragraph{\_get\_equations\_per\_domain()}\leavevmode
+
+% Usage example
+\begin{deprecatedbox}
+{\bf This method is deprecated and will be removed in future versions.}
+
+This method assumes {\tt neq}=2 and should ONLY be used for Keller-Segel problems.
+For general problems, use the {\tt domain\_data\_list parameter} in{\tt  compute\_constraint\_residuals}
+and access {\tt len(domain\_data\_list[domain\_idx].nodes)} directly.
+\end{deprecatedbox}
+
 \begin{lstlisting}[language=Python, caption=Get Equations per Domain Helper Method]
 def _get_equations_per_domain(self, domain_idx: int) -> int
 \end{lstlisting}
@@ -638,8 +650,8 @@ def _get_equations_per_domain(self, domain_idx: int) -> int
 \subsubsection{Single Domain with Mixed Boundary Conditions}
 
 \begin{lstlisting}[language=Python, caption=Single Domain Example]
-from ooc1d.core.constraints import ConstraintManager, ConstraintType
-from ooc1d.core.discretization import Discretization
+from bionetflux.core.constraints import ConstraintManager, ConstraintType
+from bionetflux.core.discretization import Discretization
 import numpy as np
 
 # Create constraint manager
@@ -742,65 +754,65 @@ print(f"  Boundary conditions: {len(boundary_constraints)}")
 print(f"  Junction conditions: {len(junction_constraints)}")
 \end{lstlisting}
 
-\subsubsection{Newton Solver Integration}
-
-\begin{lstlisting}[language=Python, caption=Newton Solver Integration Example]
-# Newton solver loop with constraint residuals
-def newton_solve_with_constraints(constraint_manager, initial_solution, initial_multipliers):
-    """Example Newton solver with constraint integration."""
-    
-    tolerance = 1e-10
-    max_iterations = 20
-    
-    current_solution = initial_solution.copy()
-    current_multipliers = initial_multipliers.copy()
-    current_time = 0.0
-    
-    for iteration in range(max_iterations):
-        # Extract trace solutions (domain-wise)
-        trace_solutions = extract_trace_solutions(current_solution)
-        
-        # Compute constraint residuals
-        constraint_residuals = constraint_manager.compute_constraint_residuals(
-            trace_solutions=trace_solutions,
-            multiplier_values=current_multipliers,
-            time=current_time
-        )
-        
-        # Compute system residuals (PDE + constraints)
-        pde_residuals = compute_pde_residuals(current_solution)  # User function
-        total_residuals = np.concatenate([pde_residuals, constraint_residuals])
-        
-        # Check convergence
-        residual_norm = np.linalg.norm(total_residuals)
-        print(f"Iteration {iteration}: residual norm = {residual_norm:.6e}")
-        
-        if residual_norm < tolerance:
-            print("✓ Newton solver converged")
-            break
-        
-        # Compute Jacobian (PDE + constraint contributions)
-        jacobian = compute_system_jacobian(current_solution, current_multipliers, 
-                                         constraint_manager, current_time)
-        
-        # Newton update
-        try:
-            delta = np.linalg.solve(jacobian, -total_residuals)
-            current_solution += delta[:len(current_solution)]
-            current_multipliers += delta[len(current_solution):]
-        except np.linalg.LinAlgError:
-            print("✗ Newton solver failed: singular Jacobian")
-            break
-    
-    return current_solution, current_multipliers
-
-# Usage in time evolution
-solution, multipliers = newton_solve_with_constraints(
-    constraint_manager=cm,
-    initial_solution=np.zeros(total_dofs),
-    initial_multipliers=np.zeros(cm.n_multipliers)
-)
-\end{lstlisting}
+%\subsubsection{Newton Solver Integration}
+%
+%\begin{lstlisting}[language=Python, caption=Newton Solver Integration Example]
+%# Newton solver loop with constraint residuals
+%def newton_solve_with_constraints(constraint_manager, initial_solution, initial_multipliers):
+%    """Example Newton solver with constraint integration."""
+%    
+%    tolerance = 1e-10
+%    max_iterations = 20
+%    
+%    current_solution = initial_solution.copy()
+%    current_multipliers = initial_multipliers.copy()
+%    current_time = 0.0
+%    
+%    for iteration in range(max_iterations):
+%        # Extract trace solutions (domain-wise)
+%        trace_solutions = extract_trace_solutions(current_solution)
+%        
+%        # Compute constraint residuals
+%        constraint_residuals = constraint_manager.compute_constraint_residuals(
+%            trace_solutions=trace_solutions,
+%            multiplier_values=current_multipliers,
+%            time=current_time
+%        )
+%        
+%        # Compute system residuals (PDE + constraints)
+%        pde_residuals = compute_pde_residuals(current_solution)  # User function
+%        total_residuals = np.concatenate([pde_residuals, constraint_residuals])
+%        
+%        # Check convergence
+%        residual_norm = np.linalg.norm(total_residuals)
+%        print(f"Iteration {iteration}: residual norm = {residual_norm:.6e}")
+%        
+%        if residual_norm < tolerance:
+%            print("✓ Newton solver converged")
+%            break
+%        
+%        # Compute Jacobian (PDE + constraint contributions)
+%        jacobian = compute_system_jacobian(current_solution, current_multipliers, 
+%                                         constraint_manager, current_time)
+%        
+%        # Newton update
+%        try:
+%            delta = np.linalg.solve(jacobian, -total_residuals)
+%            current_solution += delta[:len(current_solution)]
+%            current_multipliers += delta[len(current_solution):]
+%        except np.linalg.LinAlgError:
+%            print("✗ Newton solver failed: singular Jacobian")
+%            break
+%    
+%    return current_solution, current_multipliers
+%
+%# Usage in time evolution
+%solution, multipliers = newton_solve_with_constraints(
+%    constraint_manager=cm,
+%    initial_solution=np.zeros(total_dofs),
+%    initial_multipliers=np.zeros(cm.n_multipliers)
+%)
+%\end{lstlisting}
 
 \subsection{Method Summary Table}
 \label{subsec:constraints_method_summary}
@@ -886,5 +898,14 @@ solution, multipliers = newton_solve_with_constraints(
 \end{longtable}
 
 This documentation provides an exact reference for the constraints module, emphasizing its integration with HDG methods, support for both boundary and junction conditions, and seamless integration with Newton solvers for nonlinear systems.
+
+\begin{todobox}
+		\begin{itemize}[leftmargin=1.5em]
+			\item Add some external validation of the correct inclusions of the constraint position in the range of the domain parameter
+			\item Add the possibility of prescribing the jump of the solution at a point
+			
+			\item Check the Newton integration example (see commented section in latex file) - Missing global assembly integration
+			\end{itemize}
+\end{todobox}
 
 % End of constraints module API documentation
