@@ -7,6 +7,11 @@ import numpy as np
 import sys
 import os
 
+# Add the python_port directory to path
+# sys.path.append(os.path.join(os.path.dirname(__file__), ''))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+
+
 from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 from bionetflux.core.bulk_data import BulkData
 from bionetflux.core.domain_data import DomainData
