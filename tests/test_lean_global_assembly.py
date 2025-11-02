@@ -1,11 +1,20 @@
 """
-Test script for LeanGlobalAssembler class.
+Pytest-compatible test script for LeanGlobalAssembler class.
 Tests the lean global assembly implementation that uses parameter-passing approach.
+
+Usage:
+    pytest test_lean_global_assembly.py
+    pytest test_lean_global_assembly.py -v  # verbose output
+    pytest test_lean_global_assembly.py -s  # show print statements
 """
 
 import numpy as np
 import sys
 import os
+import pytest
+
+# Add the python_port directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from bionetflux.core.lean_global_assembly import GlobalAssembler
 from bionetflux.core.lean_bulk_data_manager import BulkDataManager
@@ -178,465 +187,343 @@ class OldMockStaticCondensation:
         return local_solution, flux, flux_trace, jacobian
 
 
-def test_lean_assembler_creation():
+# Fixtures
+@pytest.fixture
+def mock_problems():
+    """Fixture providing mock problems for testing."""
+    return [
+        MockProblem(neq=1, has_forcing=True, has_initial=True),
+        MockProblem(neq=2, has_forcing=False, has_initial=True)
+    ]
+
+@pytest.fixture
+def mock_discretizations():
+    """Fixture providing mock discretizations for testing."""
+    return [
+        MockDiscretization(n_elements=4),
+        MockDiscretization(n_elements=6)
+    ]
+
+@pytest.fixture
+def mock_static_condensations(mock_problems):
+    """Fixture providing mock static condensations for testing."""
+    return [
+        MockStaticCondensation(neq=problem.neq) for problem in mock_problems
+    ]
+
+@pytest.fixture
+def mock_global_discretization(mock_discretizations):
+    """Fixture providing mock global discretization."""
+    return MockGlobalDiscretization(mock_discretizations)
+
+@pytest.fixture
+def assembler(mock_problems, mock_global_discretization, mock_static_condensations):
+    """Fixture providing initialized LeanGlobalAssembler."""
+    return GlobalAssembler.from_framework_objects(
+        mock_problems, mock_global_discretization, mock_static_condensations
+    )
+
+@pytest.fixture
+def bulk_data_list(assembler, mock_problems, mock_discretizations):
+    """Fixture providing initialized bulk data list."""
+    return assembler.initialize_bulk_data(mock_problems, mock_discretizations, time=0.0)
+
+# Test Classes
+class TestLeanAssemblerCreation:
     """Test creating LeanGlobalAssembler in different ways."""
-    print("=== Testing LeanGlobalAssembler Creation ===")
-    
-    # Create framework objects
-    problems = [MockProblem(neq=1, has_forcing=True, has_initial=True),
-                MockProblem(neq=2, has_forcing=False, has_initial=True)]
-    
-    discretizations = [MockDiscretization(n_elements=4),
-                      MockDiscretization(n_elements=6)]
-    
-    static_condensations = [MockStaticCondensation(neq=1),  # FIXED: Pass neq instead of domain index
-                           MockStaticCondensation(neq=2)]   # FIXED: Pass neq instead of domain index
-    
-    print(f"Created {len(problems)} problems, {len(discretizations)} discretizations, {len(static_condensations)} static condensations")  # DEBUG
-    
-    global_discretization = MockGlobalDiscretization(discretizations)
-    
-    try:
-        # Method 1: Create using factory method
-        assembler1 = GlobalAssembler.from_framework_objects(
-            problems, global_discretization, static_condensations
+
+    def test_factory_method_creation(self, mock_problems, mock_global_discretization, mock_static_condensations):
+        """Test factory method creation."""
+        assembler = GlobalAssembler.from_framework_objects(
+            mock_problems, mock_global_discretization, mock_static_condensations
         )
         
-        print(f"✓ Factory method creation: {assembler1}")
-        
-        # Method 2: Create using pre-extracted domain data
+        assert assembler is not None
+        assert isinstance(assembler, GlobalAssembler)
+
+    def test_direct_creation(self, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test direct creation using domain data."""
         domain_data = BulkDataManager.extract_domain_data_list(
-            problems, discretizations, static_condensations
+            mock_problems, mock_discretizations, mock_static_condensations
         )
         
+        assembler = GlobalAssembler(domain_data)
+        
+        assert assembler is not None
+        assert isinstance(assembler, GlobalAssembler)
+
+    def test_creation_methods_equivalence(self, mock_problems, mock_global_discretization, mock_discretizations, mock_static_condensations):
+        """Test that both creation methods produce equivalent assemblers."""
+        assembler1 = GlobalAssembler.from_framework_objects(
+            mock_problems, mock_global_discretization, mock_static_condensations
+        )
+        
+        domain_data = BulkDataManager.extract_domain_data_list(
+            mock_problems, mock_discretizations, mock_static_condensations
+        )
         assembler2 = GlobalAssembler(domain_data)
         
-        print(f"✓ Direct creation: {assembler2}")
-        
-        # Verify both methods create equivalent assemblers
-        if (assembler1.n_domains != assembler2.n_domains or
-            assembler1.total_dofs != assembler2.total_dofs):
-            print("✗ Factory and direct creation methods produce different results")
-            return None
-        
-        print("✓ Both creation methods produce equivalent assemblers")
-        
-        # Run internal tests
-        success1 = assembler1.test(problems, discretizations, static_condensations)
-        success2 = assembler2.test(problems, discretizations, static_condensations)
-        
-        if not (success1 and success2):
-            print("✗ Internal tests failed")
-            return None
-        
-        print("✓ Internal tests passed for both assemblers")
-        
-        return assembler1, problems, discretizations, static_condensations
-        
-    except Exception as e:
-        print(f"✗ Assembler creation failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        assert assembler1.n_domains == assembler2.n_domains
+        assert assembler1.total_dofs == assembler2.total_dofs
+
+    def test_internal_validation(self, assembler, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test internal validation."""
+        success = assembler.test(mock_problems, mock_discretizations, mock_static_condensations)
+        assert success, "Lean assembler internal test failed"
 
 
-def test_dof_structure(assembler, problems, discretizations):
+class TestDOFStructure:
     """Test DOF structure and indexing."""
-    print("\n=== Testing DOF Structure ===")
-    
-    if assembler is None:
-        print("✗ Cannot test - assembler is None")
-        return False
-    
-    try:
-        # Test total DOF calculation
+
+    def test_total_dof_calculation(self, assembler, mock_problems, mock_discretizations):
+        """Test total DOF calculation."""
         expected_trace_dofs = 0
-        for i, (problem, discretization) in enumerate(zip(problems, discretizations)):
+        for problem, discretization in zip(mock_problems, mock_discretizations):
             n_nodes = discretization.n_elements + 1
             domain_trace_dofs = problem.neq * n_nodes
             expected_trace_dofs += domain_trace_dofs
-            
-            if assembler.domain_trace_sizes[i] != domain_trace_dofs:
-                print(f"✗ Domain {i} trace size mismatch")
-                return False
         
-        if assembler.total_trace_dofs != expected_trace_dofs:
-            print(f"✗ Total trace DOFs mismatch: {assembler.total_trace_dofs} != {expected_trace_dofs}")
-            return False
-        
-        print(f"✓ DOF structure validated: {assembler.total_trace_dofs} trace DOFs")
-        
-        # Test offset calculation
+        assert assembler.total_trace_dofs == expected_trace_dofs
+
+    def test_domain_trace_sizes(self, assembler, mock_problems, mock_discretizations):
+        """Test domain trace sizes."""
+        for i, (problem, discretization) in enumerate(zip(mock_problems, mock_discretizations)):
+            n_nodes = discretization.n_elements + 1
+            expected_size = problem.neq * n_nodes
+            assert assembler.domain_trace_sizes[i] == expected_size
+
+    def test_domain_offsets(self, assembler):
+        """Test domain offset calculation."""
         expected_offset = 0
         for i in range(assembler.n_domains):
-            if assembler.domain_trace_offsets[i] != expected_offset:
-                print(f"✗ Domain {i} offset mismatch")
-                return False
+            assert assembler.domain_trace_offsets[i] == expected_offset
             expected_offset += assembler.domain_trace_sizes[i]
-        
-        print("✓ Domain offsets validated")
-        
-        # Test solution extraction
+
+    def test_solution_extraction(self, assembler):
+        """Test solution extraction."""
         test_solution = np.random.rand(assembler.total_dofs)
         domain_solutions = assembler.get_domain_solutions(test_solution)
         
         for i, domain_sol in enumerate(domain_solutions):
-            if len(domain_sol) != assembler.domain_trace_sizes[i]:
-                print(f"✗ Domain {i} solution extraction size mismatch")
-                return False
+            assert len(domain_sol) == assembler.domain_trace_sizes[i]
             
-            # Verify the extracted solution matches the original
+            # Verify extracted solution matches original
             start_idx = assembler.domain_trace_offsets[i]
             end_idx = start_idx + assembler.domain_trace_sizes[i]
             expected_sol = test_solution[start_idx:end_idx]
             
-            if not np.allclose(domain_sol, expected_sol):
-                print(f"✗ Domain {i} solution extraction value mismatch")
-                return False
-        
-        print("✓ Solution extraction validated")
-        return True
-        
-    except Exception as e:
-        print(f"✗ DOF structure test failed: {e}")
-        return False
+            assert np.allclose(domain_sol, expected_sol)
 
 
-def test_initial_guess_methods(assembler, problems, discretizations):
+class TestInitialGuessMethods:
     """Test different initial guess creation methods."""
-    print("\n=== Testing Initial Guess Methods ===")
-    
-    if assembler is None:
-        print("✗ Cannot test - assembler is None")
-        return False
-    
-    try:
+
+    def test_initial_guess_from_bulk_data(self, assembler, mock_problems, mock_discretizations):
+        """Test initial guess from BulkData objects."""
+        time = 0.5
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time)
+        initial_guess = assembler.create_initial_guess_from_bulk_data(bulk_data_list)
+        
+        assert initial_guess.shape == (assembler.total_dofs,)
+        assert not np.any(np.isnan(initial_guess))
+        assert not np.any(np.isinf(initial_guess))
+
+    def test_initial_guess_from_problems(self, assembler, mock_problems, mock_discretizations):
+        """Test initial guess directly from problems."""
+        time = 0.5
+        initial_guess = assembler.create_initial_guess_from_problems(mock_problems, mock_discretizations, time)
+        
+        assert initial_guess.shape == (assembler.total_dofs,)
+        assert not np.any(np.isnan(initial_guess))
+        assert not np.any(np.isinf(initial_guess))
+
+    def test_initial_guess_methods_shape_consistency(self, assembler, mock_problems, mock_discretizations):
+        """Test that both initial guess methods produce same shape."""
         time = 0.5
         
-        # Method 1: From BulkData objects
-        bulk_data_list = assembler.initialize_bulk_data(problems, discretizations, time)
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time)
+        guess_bd = assembler.create_initial_guess_from_bulk_data(bulk_data_list)
+        guess_prob = assembler.create_initial_guess_from_problems(mock_problems, mock_discretizations, time)
         
-        initial_guess_bd = assembler.create_initial_guess_from_bulk_data(bulk_data_list)
-        
-        print(f"✓ BulkData initial guess: shape {initial_guess_bd.shape}")
-        print(f"  Range: [{np.min(initial_guess_bd):.6f}, {np.max(initial_guess_bd):.6f}]")
-        
-        # Method 2: Directly from problems
-        initial_guess_prob = assembler.create_initial_guess_from_problems(problems, discretizations, time)
-        
-        print(f"✓ Problem initial guess: shape {initial_guess_prob.shape}")
-        print(f"  Range: [{np.min(initial_guess_prob):.6f}, {np.max(initial_guess_prob):.6f}]")
-        
-        # Both should have same shape
-        if initial_guess_bd.shape != initial_guess_prob.shape:
-            print("✗ Initial guess methods produce different shapes")
-            return False
-        
-        if initial_guess_bd.shape != (assembler.total_dofs,):
-            print(f"✗ Initial guess shape incorrect: {initial_guess_bd.shape} != ({assembler.total_dofs},)")
-            return False
-        
-        # Test with different times
-        for test_time in [0.0, 1.0, 2.0]:
-            guess_time = assembler.create_initial_guess_from_problems(problems, discretizations, test_time)
-            if np.any(np.isnan(guess_time)) or np.any(np.isinf(guess_time)):
-                print(f"✗ Initial guess at time {test_time} contains invalid values")
-                return False
-        
-        print("✓ Initial guess methods validated for different times")
-        
-        return bulk_data_list
-        
-    except Exception as e:
-        print(f"✗ Initial guess test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        assert guess_bd.shape == guess_prob.shape
+
+    @pytest.mark.parametrize("test_time", [0.0, 1.0, 2.0])
+    def test_initial_guess_different_times(self, assembler, mock_problems, mock_discretizations, test_time):
+        """Test initial guess at different times."""
+        guess = assembler.create_initial_guess_from_problems(mock_problems, mock_discretizations, test_time)
+        assert not np.any(np.isnan(guess))
+        assert not np.any(np.isinf(guess))
 
 
-def test_residual_jacobian_assembly(assembler, problems, discretizations, static_condensations):
+class TestResidualJacobianAssembly:
     """Test residual and Jacobian assembly."""
-    print("\n=== Testing Residual and Jacobian Assembly ===")
-    
-    if assembler is None:
-        print("✗ Cannot test - missing required objects")
-        return False
-    
-    try:
-        # Create test solution vector (global_guess)
+
+    def test_assembly_basic(self, assembler, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test basic residual and Jacobian assembly."""
         global_guess = np.random.rand(assembler.total_dofs) * 0.1
         
-        # Create bulk data and extract forcing terms as List[np.ndarray]
-        bulk_data_list = assembler.initialize_bulk_data(problems, discretizations, time=0.0)
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time=0.0)
         forcing_terms = [bulk_sol.get_data() for bulk_sol in bulk_data_list]
         
-        time = 0.5
-        
-        # Assemble residual and Jacobian
         residual, jacobian = assembler.assemble_residual_and_jacobian(
             global_solution=global_guess,
             forcing_terms=forcing_terms,
-            static_condensations=static_condensations,
-            time=time
+            static_condensations=mock_static_condensations,
+            time=0.5
         )
         
-        print(f"✓ Assembly completed")
-        print(f"  Residual: shape {residual.shape}, range [{np.min(residual):.6e}, {np.max(residual):.6e}]")
-        print(f"  Jacobian: shape {jacobian.shape}, range [{np.min(jacobian):.6e}, {np.max(jacobian):.6e}]")
+        assert residual.shape == (assembler.total_dofs,)
+        assert jacobian.shape == (assembler.total_dofs, assembler.total_dofs)
+
+    def test_assembly_no_invalid_values(self, assembler, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test that assembly produces no invalid values."""
+        global_guess = np.random.rand(assembler.total_dofs) * 0.1
         
-        # Validate shapes
-        if residual.shape != (assembler.total_dofs,):
-            print(f"✗ Residual shape incorrect: {residual.shape}")
-            return False
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time=0.0)
+        forcing_terms = [bulk_sol.get_data() for bulk_sol in bulk_data_list]
         
-        if jacobian.shape != (assembler.total_dofs, assembler.total_dofs):
-            print(f"✗ Jacobian shape incorrect: {jacobian.shape}")
-            return False
+        residual, jacobian = assembler.assemble_residual_and_jacobian(
+            global_solution=global_guess,
+            forcing_terms=forcing_terms,
+            static_condensations=mock_static_condensations,
+            time=0.5
+        )
         
-        # Check for invalid values
-        if np.any(np.isnan(residual)) or np.any(np.isinf(residual)):
-            print("✗ Residual contains NaN or infinite values")
-            return False
+        assert not np.any(np.isnan(residual))
+        assert not np.any(np.isinf(residual))
+        assert not np.any(np.isnan(jacobian))
+        assert not np.any(np.isinf(jacobian))
+
+    def test_jacobian_not_all_zeros(self, assembler, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test that Jacobian is not all zeros."""
+        global_guess = np.random.rand(assembler.total_dofs) * 0.1
         
-        if np.any(np.isnan(jacobian)) or np.any(np.isinf(jacobian)):
-            print("✗ Jacobian contains NaN or infinite values")
-            return False
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time=0.0)
+        forcing_terms = [bulk_sol.get_data() for bulk_sol in bulk_data_list]
         
-        # Test Jacobian structure (should not be all zeros)
-        if np.allclose(jacobian, 0):
-            print("✗ Jacobian is all zeros")
-            return False
+        _, jacobian = assembler.assemble_residual_and_jacobian(
+            global_solution=global_guess,
+            forcing_terms=forcing_terms,
+            static_condensations=mock_static_condensations,
+            time=0.5
+        )
         
-        # Test that changing solution changes residual (basic sensitivity test)
+        assert not np.allclose(jacobian, 0)
+
+    def test_assembly_sensitivity(self, assembler, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test that residual changes with solution perturbation."""
+        global_guess = np.random.rand(assembler.total_dofs) * 0.1
+        
+        bulk_data_list = assembler.initialize_bulk_data(mock_problems, mock_discretizations, time=0.0)
+        forcing_terms = [bulk_sol.get_data() for bulk_sol in bulk_data_list]
+        
+        residual1, _ = assembler.assemble_residual_and_jacobian(
+            global_solution=global_guess,
+            forcing_terms=forcing_terms,
+            static_condensations=mock_static_condensations,
+            time=0.5
+        )
+        
         perturbed_solution = global_guess + 1e-6 * np.random.rand(len(global_guess))
-        residual_pert, _ = assembler.assemble_residual_and_jacobian(
+        residual2, _ = assembler.assemble_residual_and_jacobian(
             global_solution=perturbed_solution,
             forcing_terms=forcing_terms,
-            static_condensations=static_condensations,
-            time=time
+            static_condensations=mock_static_condensations,
+            time=0.5
         )
         
-        if np.allclose(residual, residual_pert):
-            print("✗ Residual doesn't change with solution perturbation")
-            return False
-        
-        print("✓ Assembly sensitivity test passed")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Residual/Jacobian assembly test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
+        assert not np.allclose(residual1, residual2)
 
 
-def test_mass_conservation(assembler, bulk_data_list):
+class TestMassConservation:
     """Test mass conservation computation."""
-    print("\n=== Testing Mass Conservation ===")
-    
-    print(f"Bulk data list shapes: {[bulk_data.get_data().shape for bulk_data in bulk_data_list]}")  # DEBUG
 
-    
-    if assembler is None or bulk_data_list is None:
-        print("✗ Cannot test - missing required objects")
-        return False
-    
-    try:
-        # Compute initial mass
-        initial_mass = assembler.compute_mass_conservation(bulk_data_list)
-        print(f"✓ Initial mass: {initial_mass:.10e}")
+    def test_mass_conservation_basic(self, assembler, bulk_data_list):
+        """Test basic mass conservation computation."""
+        mass = assembler.compute_mass_conservation(bulk_data_list)
+        
+        assert isinstance(mass, (int, float, np.number))
+        assert not np.isnan(mass)
+        assert not np.isinf(mass)
 
-        """
-        # Test with modified bulk data
-        modified_bulk_data = []
-        for bulk_data in bulk_data_list:
-            print(f"Original bulk data shape: {bulk_data.get_data().shape}")  # DEBUG
-            new_bulk_data = BulkData(MockProblem(), MockDiscretization(), dual=False)
-            # Create modified data (scaled version)
-            original_data = bulk_data.get_data()
-            new_data = original_data * 1.5
-            new_bulk_data.set_data(new_data)
-            print(f"Modified bulk data shape: {new_bulk_data.get_data().shape}")  # DEBUG
-            modified_bulk_data.append(new_bulk_data)
-
+    def test_mass_conservation_consistency(self, assembler, bulk_data_list):
+        """Test mass conservation consistency."""
+        mass1 = assembler.compute_mass_conservation(bulk_data_list)
+        mass2 = assembler.compute_mass_conservation(bulk_data_list)
         
-        modified_mass = assembler.compute_mass_conservation(modified_bulk_data)
-        print(f"✓ Modified mass: {modified_mass:.10e}")
-        
-        # Mass should have changed
-        if np.isclose(initial_mass, modified_mass):
-            print("✗ Mass didn't change after data modification")
-            return False
-        """
-        # For simplicity, just recompute initial mass to check consistency
-        modified_mass = assembler.compute_mass_conservation(bulk_data_list)
-        print(f"✓ Recomputed mass: {modified_mass:.10e}")  
-        
-        # Check for invalid values
-        if np.isnan(initial_mass) or np.isinf(initial_mass):
-            print("✗ Initial mass is NaN or infinite")
-            return False
-        
-        if np.isnan(modified_mass) or np.isinf(modified_mass):
-            print("✗ Modified mass is NaN or infinite")
-            return False
-        
-        print("✓ Mass conservation test passed")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Mass conservation test failed: {e}")
-        return False
+        assert np.isclose(mass1, mass2)
 
 
-def test_parameter_validation(assembler, problems, discretizations, static_condensations):
+class TestParameterValidation:
     """Test parameter validation in assembly methods."""
-    print("\n=== Testing Parameter Validation ===")
-    
-    if assembler is None:
-        print("✗ Cannot test - assembler is None")
-        return False
-    
-    try:
-        # Test with wrong number of problems
-        try:
-            wrong_problems = problems[:-1] if len(problems) > 1 else []
-            assembler.initialize_bulk_data(wrong_problems, discretizations)
-            print("✗ Should have failed with wrong number of problems")
-            return False
-        except ValueError:
-            print("✓ Correctly caught wrong number of problems")
+
+    def test_wrong_number_of_problems(self, assembler, mock_problems, mock_discretizations):
+        """Test validation with wrong number of problems."""
+        wrong_problems = mock_problems[:-1] if len(mock_problems) > 1 else []
         
-        # Test with wrong number of discretizations
-        try:
-            wrong_discretizations = discretizations[:-1] if len(discretizations) > 1 else []
-            assembler.initialize_bulk_data(problems, wrong_discretizations)
-            print("✗ Should have failed with wrong number of discretizations")
-            return False
-        except ValueError:
-            print("✓ Correctly caught wrong number of discretizations")
+        with pytest.raises(ValueError):
+            assembler.initialize_bulk_data(wrong_problems, mock_discretizations)
+
+    def test_wrong_number_of_discretizations(self, assembler, mock_problems, mock_discretizations):
+        """Test validation with wrong number of discretizations."""
+        wrong_discretizations = mock_discretizations[:-1] if len(mock_discretizations) > 1 else []
         
-        # Test with incompatible objects
+        with pytest.raises(ValueError):
+            assembler.initialize_bulk_data(mock_problems, wrong_discretizations)
+
+    def test_incompatible_problem_neq(self, assembler, mock_problems, mock_discretizations):
+        """Test validation with incompatible problem neq."""
         class MockBadProblem:
             def __init__(self):
                 self.neq = 999  # Wrong neq
         
-        try:
-            bad_problems = [MockBadProblem()] + problems[1:] if len(problems) > 1 else [MockBadProblem()]
-            assembler.initialize_bulk_data(bad_problems, discretizations)
-            print("✗ Should have failed with incompatible problem")
-            return False
-        except ValueError:
-            print("✓ Correctly caught incompatible problem")
+        bad_problems = [MockBadProblem()] + mock_problems[1:] if len(mock_problems) > 1 else [MockBadProblem()]
         
-        print("✓ Parameter validation tests passed")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Parameter validation test failed: {e}")
-        return False
+        with pytest.raises(ValueError):
+            assembler.initialize_bulk_data(bad_problems, mock_discretizations)
 
 
-def test_utility_methods(assembler):
+class TestUtilityMethods:
     """Test utility methods."""
-    print("\n=== Testing Utility Methods ===")
-    
-    if assembler is None:
-        print("✗ Cannot test - assembler is None")
-        return False
-    
-    try:
-        # Test basic getters
+
+    def test_get_num_domains(self, assembler):
+        """Test get_num_domains method."""
         num_domains = assembler.get_num_domains()
-        print(f"✓ Number of domains: {num_domains}")
-        
-        if num_domains != assembler.n_domains:
-            print("✗ get_num_domains() inconsistent")
-            return False
-        
-        # Test domain info access
-        for i in range(num_domains):
+        assert num_domains == assembler.n_domains
+
+    def test_get_domain_info(self, assembler):
+        """Test get_domain_info method."""
+        for i in range(assembler.n_domains):
             domain_info = assembler.get_domain_info(i)
-            print(f"  Domain {i}: {domain_info.neq} equations, {domain_info.n_elements} elements")
-        
-        # Test string representations
+            assert hasattr(domain_info, 'neq')
+            assert hasattr(domain_info, 'n_elements')
+
+    def test_string_representations(self, assembler):
+        """Test string representations."""
         str_repr = str(assembler)
         repr_repr = repr(assembler)
-        print(f"✓ String representations work (lengths: {len(str_repr)}, {len(repr_repr)})")
         
-        return True
-        
-    except Exception as e:
-        print(f"✗ Utility methods test failed: {e}")
-        return False
+        assert isinstance(str_repr, str)
+        assert isinstance(repr_repr, str)
+        assert len(str_repr) > 0
+        assert len(repr_repr) > 0
 
 
-def run_all_lean_assembly_tests():
-    """Run all LeanGlobalAssembler tests."""
-    print("Running LeanGlobalAssembler Tests")
-    print("=" * 60)
+# Configure pytest markers
+def pytest_configure(config):
+    """Configure pytest markers."""
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+
+def main():
+    """Run tests using pytest."""
+    print("This file is now pytest-compatible!")
+    print("Usage:")
+    print("  pytest test_lean_global_assembly.py")
+    print("  pytest test_lean_global_assembly.py -v")
+    print("  pytest test_lean_global_assembly.py -s  # show prints")
     
-    try:
-        # Test 1: Assembler creation
-        result = test_lean_assembler_creation()
-        if result is None:
-            print("❌ Assembler creation failed - stopping tests")
-            return
-        
-        assembler, problems, discretizations, static_condensations = result
-        
-        # Test 2: DOF structure
-        if not test_dof_structure(assembler, problems, discretizations):
-            print("❌ DOF structure tests failed")
-            return
-        
-        # Test 3: Initial guess methods
-        bulk_data_list = test_initial_guess_methods(assembler, problems, discretizations)
-        if bulk_data_list is None:
-            print("❌ Initial guess tests failed")
-            return
-        
-        
-        # Test 4: Residual and Jacobian assembly
-        if not test_residual_jacobian_assembly(assembler, problems, discretizations, static_condensations):
-            print("❌ Residual/Jacobian assembly tests failed")
-            return
-        
-        # Test 5: Mass conservation
-        # print(f"Bulk data list shapes: {[bulk_data.get_data().shape for bulk_data in bulk_data_list]}")  # DEBUG
-
-        if not test_mass_conservation(assembler, bulk_data_list):
-            print("❌ Mass conservation tests failed")
-            return
-        
-        # Test 6: Parameter validation
-        if not test_parameter_validation(assembler, problems, discretizations, static_condensations):
-            print("❌ Parameter validation tests failed")
-            return
-        
-        # Test 7: Utility methods
-        if not test_utility_methods(assembler):
-            print("❌ Utility methods tests failed")
-            return
-        
-        print("=" * 60)
-        print("🎉 All LeanGlobalAssembler tests completed successfully!")
-        print("\nLean GlobalAssembler features validated:")
-        print("  ✓ Factory method and direct creation")
-        print("  ✓ DOF structure and indexing")
-        print("  ✓ Multiple initial guess methods")
-        print("  ✓ Residual and Jacobian assembly")
-        print("  ✓ Mass conservation computation")
-        print("  ✓ Parameter validation")
-        print("  ✓ Utility methods and representations")
-        print("  ✓ Memory-efficient parameter passing")
-        
-    except Exception as e:
-        print(f"❌ Lean assembly test suite failed with error: {e}")
-        import traceback
-        traceback.print_exc()
-
+    # Run with pytest for backwards compatibility
+    pytest.main([__file__, "-v"])
 
 if __name__ == "__main__":
-    run_all_lean_assembly_tests()
+    main()

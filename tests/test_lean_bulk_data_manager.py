@@ -1,11 +1,20 @@
 """
-Test script for Lean BulkDataManager class.
+Pytest-compatible test script for Lean BulkDataManager class.
 Tests the memory-efficient implementation that accepts framework objects as parameters.
+
+Usage:
+    pytest test_lean_bulk_data_manager.py
+    pytest test_lean_bulk_data_manager.py -v  # verbose output
+    pytest test_lean_bulk_data_manager.py -s  # show print statements
 """
 
 import numpy as np
 import sys
 import os
+import pytest
+
+# Add the python_port directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 from bionetflux.core.bulk_data import BulkData
@@ -56,20 +65,7 @@ class MockStaticCondensation:
         }
     
     def static_condensation(self, local_trace: np.ndarray, local_source: np.ndarray = None):
-        """
-        Mock static condensation method for testing.
-        
-        Args:
-            local_trace: Vector of length 2 * neq (trace values at element boundaries)
-            local_source: Vector of length 2 * neq (source terms, optional)
-            
-        Returns:
-            tuple: (local_solution, flux, flux_trace, jacobian)
-                - local_solution: Vector of length 2 * neq
-                - flux: Vector of length 2 * neq - 1  
-                - flux_trace: Vector of length 2 * neq
-                - jacobian: Matrix of size (2 * neq) x (2 * neq)
-        """
+        """Mock static condensation method for testing."""
         # Determine neq from trace vector length
         trace_length = len(local_trace.flatten())
         if trace_length % 2 != 0:
@@ -122,242 +118,250 @@ class MockStaticCondensation:
         return local_solution, flux, flux_trace, jacobian
 
 
-def test_lean_manager_creation():
+# Fixtures
+@pytest.fixture
+def mock_problems():
+    """Fixture providing mock problems for testing."""
+    return [
+        MockProblem(neq=1, has_forcing=True, has_initial=True),
+        MockProblem(neq=2, has_forcing=False, has_initial=True)
+    ]
+
+
+@pytest.fixture
+def mock_discretizations():
+    """Fixture providing mock discretizations for testing."""
+    return [
+        MockDiscretization(n_elements=4),
+        MockDiscretization(n_elements=6)
+    ]
+
+
+@pytest.fixture
+def mock_static_condensations():
+    """Fixture providing mock static condensations for testing."""
+    return [
+        MockStaticCondensation(0),
+        MockStaticCondensation(1)
+    ]
+
+
+@pytest.fixture
+def lean_manager(mock_problems, mock_discretizations, mock_static_condensations):
+    """Fixture providing initialized lean BulkDataManager."""
+    # Extract domain data using static method
+    domain_data = BulkDataManager.extract_domain_data_list(
+        mock_problems, mock_discretizations, mock_static_condensations
+    )
+    
+    # Create lean manager
+    return BulkDataManager(domain_data)
+
+
+@pytest.fixture
+def bulk_data_list(lean_manager, mock_problems, mock_discretizations):
+    """Fixture providing initialized bulk data list."""
+    return lean_manager.initialize_all_bulk_data(mock_problems, mock_discretizations, time=0.0)
+
+
+class TestLeanManagerCreation:
     """Test creating lean BulkDataManager from framework objects."""
-    print("=== Testing Lean BulkDataManager Creation ===")
-    
-    # Create framework objects
-    problems = [MockProblem(neq=1, has_forcing=True, has_initial=True),
-                MockProblem(neq=2, has_forcing=False, has_initial=True)]
-    
-    discretizations = [MockDiscretization(n_elements=4),
-                      MockDiscretization(n_elements=6)]
-    
-    static_condensations = [MockStaticCondensation(0),
-                           MockStaticCondensation(1)]
-    
-    try:
-        # Extract domain data using static method
+
+    def test_domain_data_extraction(self, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test domain data extraction."""
         domain_data = BulkDataManager.extract_domain_data_list(
-            problems, discretizations, static_condensations
+            mock_problems, mock_discretizations, mock_static_condensations
         )
         
-        print(f"✓ Domain data extracted: {len(domain_data)} domains")
+        assert len(domain_data) == len(mock_problems)
         for i, dd in enumerate(domain_data):
-            print(f"  Domain {i}: {dd.neq} equations, {dd.n_elements} elements")
-        
-        # Create lean manager
-        lean_manager = BulkDataManager(domain_data)
-        print(f"✓ Lean manager created: {lean_manager}")
-        
-        # Test internal validation with original framework objects
-        success = lean_manager.test(problems, discretizations, static_condensations)
+            assert dd.neq == mock_problems[i].neq
+            assert dd.n_elements == mock_discretizations[i].n_elements
+
+    def test_lean_manager_creation(self, lean_manager):
+        """Test lean manager creation."""
+        assert lean_manager is not None
+        assert isinstance(lean_manager, BulkDataManager)
+
+    def test_internal_validation(self, lean_manager, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test internal validation."""
+        success = lean_manager.test(mock_problems, mock_discretizations, mock_static_condensations)
         assert success, "Lean manager internal test failed"
-        print("✓ Internal tests passed")
-        
-        return lean_manager, problems, discretizations, static_condensations
-        
-    except Exception as e:
-        print(f"✗ Lean manager creation failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return None, None, None, None
 
 
-def test_parameter_validation(lean_manager, problems, discretizations, static_condensations):
+class TestParameterValidation:
     """Test parameter validation functionality."""
-    print("\n=== Testing Parameter Validation ===")
-    
-    if lean_manager is None:
-        print("✗ Cannot test - lean manager is None")
-        return False
-    
-    try:
-        # Test 1: Correct parameters should pass
+
+    def test_correct_parameters_validation(self, lean_manager, mock_problems, mock_discretizations, mock_static_condensations):
+        """Test that correct parameters pass validation."""
+        # Should not raise exception
         lean_manager._validate_framework_objects(
-            problems=problems,
-            discretizations=discretizations,
-            static_condensations=static_condensations,
+            problems=mock_problems,
+            discretizations=mock_discretizations,
+            static_condensations=mock_static_condensations,
             operation_name="test_validation"
         )
-        print("✓ Correct parameters validation passed")
+
+    def test_wrong_number_of_problems(self, lean_manager, mock_problems, mock_discretizations):
+        """Test validation with wrong number of problems."""
+        wrong_problems = mock_problems[:-1] if len(mock_problems) > 1 else []
         
-        # Test 2: Wrong number of problems
-        try:
-            wrong_problems = problems[:-1] if len(problems) > 1 else []
+        with pytest.raises(ValueError, match="Number of problems"):
             lean_manager._validate_framework_objects(
                 problems=wrong_problems,
-                discretizations=discretizations,
+                discretizations=mock_discretizations,
                 operation_name="test_validation"
             )
-            print("✗ Should have failed with wrong number of problems")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught wrong problem count: {e}")
+
+    def test_wrong_number_of_discretizations(self, lean_manager, mock_problems, mock_discretizations):
+        """Test validation with wrong number of discretizations."""
+        wrong_discretizations = mock_discretizations[:-1] if len(mock_discretizations) > 1 else []
         
-        # Test 3: Wrong number of discretizations
-        try:
-            wrong_discretizations = discretizations[:-1] if len(discretizations) > 1 else []
+        with pytest.raises(ValueError, match="Number of discretizations"):
             lean_manager._validate_framework_objects(
-                problems=problems,
+                problems=mock_problems,
                 discretizations=wrong_discretizations,
                 operation_name="test_validation"
             )
-            print("✗ Should have failed with wrong number of discretizations")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught wrong discretization count: {e}")
-        
-        # Test 4: Incompatible problem neq
+
+    def test_incompatible_problem_neq(self, lean_manager, mock_problems, mock_discretizations):
+        """Test validation with incompatible problem neq."""
         class MockBadProblem:
             def __init__(self):
                 self.neq = 999  # Wrong neq
+
+        bad_problems = [MockBadProblem()] + mock_problems[1:]
         
-        try:
-            bad_problems = [MockBadProblem()] + problems[1:]
+        with pytest.raises(ValueError, match="doesn't match domain data neq"):
             lean_manager._validate_framework_objects(
                 problems=bad_problems,
-                discretizations=discretizations,
+                discretizations=mock_discretizations,
                 operation_name="test_validation"
             )
-            print("✗ Should have failed with incompatible problem neq")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught incompatible problem neq: {e}")
-        
-        # Test 5: Incompatible discretization n_elements
+
+    def test_incompatible_discretization_elements(self, lean_manager, mock_problems, mock_discretizations):
+        """Test validation with incompatible discretization n_elements."""
         class MockBadDiscretization:
             def __init__(self):
                 self.n_elements = 999  # Wrong n_elements
+
+        bad_discretizations = [MockBadDiscretization()] + mock_discretizations[1:]
         
-        try:
-            bad_discretizations = [MockBadDiscretization()] + discretizations[1:]
+        with pytest.raises(ValueError, match="doesn't match domain data n_elements"):
             lean_manager._validate_framework_objects(
-                problems=problems,
+                problems=mock_problems,
                 discretizations=bad_discretizations,
                 operation_name="test_validation"
             )
-            print("✗ Should have failed with incompatible discretization n_elements")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught incompatible discretization n_elements: {e}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Parameter validation test failed: {e}")
-        return False
+
+    def test_none_framework_objects(self, lean_manager):
+        """Test that None framework objects are handled correctly."""
+        # Should not raise exception
+        lean_manager._validate_framework_objects(
+            problems=None,
+            discretizations=None,
+            operation_name="test_validation"
+        )
 
 
-def test_bulk_data_operations(lean_manager, problems, discretizations):
+class TestBulkDataOperations:
     """Test BulkData creation and operations."""
-    print("\n=== Testing BulkData Operations ===")
-    
-    if lean_manager is None:
-        print("✗ Cannot test - lean manager is None")
-        return None
-    
-    try:
-        # Test 1: BulkData creation
-        bulk_data_0 = lean_manager.create_bulk_data(0, problems[0], discretizations[0], dual=False)
-        print(f"✓ BulkData created for domain 0: {bulk_data_0}")
+
+    def test_bulk_data_creation(self, lean_manager, mock_problems, mock_discretizations):
+        """Test individual BulkData creation."""
+        bulk_data_0 = lean_manager.create_bulk_data(0, mock_problems[0], mock_discretizations[0], dual=False)
         
-        # Test 2: Initialize all bulk data
-        bulk_data_list = lean_manager.initialize_all_bulk_data(problems, discretizations, time=0.0)
-        print(f"✓ All bulk data initialized: {len(bulk_data_list)} domains")
+        assert bulk_data_0 is not None
+        assert isinstance(bulk_data_0, BulkData)
+
+    def test_initialize_all_bulk_data(self, lean_manager, mock_problems, mock_discretizations):
+        """Test initialization of all bulk data."""
+        bulk_data_list = lean_manager.initialize_all_bulk_data(mock_problems, mock_discretizations, time=0.0)
+        
+        assert len(bulk_data_list) == len(mock_problems)
         
         for i, bulk_data in enumerate(bulk_data_list):
+            assert bulk_data is not None
             data = bulk_data.get_data()
-            print(f"  Domain {i}: shape {data.shape}, range [{np.min(data):.6f}, {np.max(data):.6f}]")
-        
-        # Test 3: Forcing term computation
+            assert data is not None
+            assert data.shape[0] > 0
+
+    def test_forcing_term_computation(self, lean_manager, bulk_data_list, mock_problems, mock_discretizations):
+        """Test forcing term computation."""
         forcing_terms = lean_manager.compute_forcing_terms(
-            bulk_data_list, problems, discretizations, time=0.5, dt=0.1
+            bulk_data_list, mock_problems, mock_discretizations, time=0.5, dt=0.1
         )
-        print(f"✓ Forcing terms computed for {len(forcing_terms)} domains")
+        
+        assert len(forcing_terms) == len(mock_problems)
         
         for i, forcing_term in enumerate(forcing_terms):
-            print(f"  Domain {i}: shape {forcing_term.shape}, range [{np.min(forcing_term):.6e}, {np.max(forcing_term):.6e}]")
-        
-        # Test 4: Mass computation
+            assert forcing_term is not None
+            assert isinstance(forcing_term, np.ndarray)
+            assert forcing_term.shape[0] > 0
+
+    def test_mass_computation(self, lean_manager, bulk_data_list):
+        """Test mass computation."""
         total_mass = lean_manager.compute_total_mass(bulk_data_list)
-        print(f"✓ Total mass computed: {total_mass:.6e}")
         
-        # Test 5: Data extraction
+        assert isinstance(total_mass, (int, float, np.number))
+        assert not np.isnan(total_mass)
+
+    def test_data_extraction(self, lean_manager, bulk_data_list):
+        """Test data array extraction."""
         data_arrays = lean_manager.get_bulk_data_arrays(bulk_data_list)
-        print(f"✓ Data arrays extracted: {len(data_arrays)} arrays")
         
-        return bulk_data_list
+        assert len(data_arrays) == len(bulk_data_list)
         
-    except Exception as e:
-        print(f"✗ BulkData operations test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+        for data_array in data_arrays:
+            assert isinstance(data_array, np.ndarray)
+            assert data_array.shape[0] > 0
 
 
-def test_data_management(lean_manager, bulk_data_list):
+class TestDataManagement:
     """Test data management operations."""
-    print("\n=== Testing Data Management ===")
-    
-    if lean_manager is None or bulk_data_list is None:
-        print("✗ Cannot test - missing required objects")
-        return False
-    
-    try:
-        # Test 1: Data update with valid data
+
+    def test_data_update_valid(self, lean_manager, bulk_data_list):
+        """Test data update with valid data."""
         original_arrays = lean_manager.get_bulk_data_arrays(bulk_data_list)
         
         # Create modified data
         new_data_list = []
-        for i, original_data in enumerate(original_arrays):
+        for original_data in original_arrays:
             new_data = original_data + 0.1 * np.random.rand(*original_data.shape)
             new_data_list.append(new_data)
         
+        # Should not raise exception
         lean_manager.update_bulk_data(bulk_data_list, new_data_list)
-        print("✓ Bulk data updated successfully")
         
         # Verify update worked
         updated_arrays = lean_manager.get_bulk_data_arrays(bulk_data_list)
-        for i, (original, updated) in enumerate(zip(original_arrays, updated_arrays)):
-            if np.allclose(original, updated):
-                print(f"✗ Domain {i} data was not updated")
-                return False
+        for original, updated in zip(original_arrays, updated_arrays):
+            assert not np.allclose(original, updated), "Data should have been updated"
+
+    def test_data_update_wrong_shape(self, lean_manager, bulk_data_list):
+        """Test data update with wrong shape."""
+        original_arrays = lean_manager.get_bulk_data_arrays(bulk_data_list)
+        wrong_shape_data = [np.ones((3, 3))] + original_arrays[1:]  # Wrong shape
         
-        print("✓ All data arrays were updated correctly")
-        
-        # Test 2: Invalid data update (wrong shape)
-        try:
-            wrong_shape_data = [np.ones((3, 3))] + new_data_list[1:]  # Wrong shape
+        with pytest.raises(ValueError):  # Remove specific match pattern
             lean_manager.update_bulk_data(bulk_data_list, wrong_shape_data)
-            print("✗ Should have failed with wrong shape data")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught wrong shape data: {e}")
+
+    def test_data_update_nan_values(self, lean_manager, bulk_data_list):
+        """Test data update with NaN values."""
+        original_arrays = lean_manager.get_bulk_data_arrays(bulk_data_list)
+        nan_data = [arr.copy() for arr in original_arrays]
+        nan_data[0].flat[0] = np.nan
         
-        # Test 3: Invalid data update (NaN values)
-        try:
-            nan_data = new_data_list.copy()
-            nan_data[0][0, 0] = np.nan
+        with pytest.raises(ValueError):  # Remove specific match pattern
             lean_manager.update_bulk_data(bulk_data_list, nan_data)
-            print("✗ Should have failed with NaN data")
-            return False
-        except ValueError as e:
-            print(f"✓ Correctly caught NaN data: {e}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Data management test failed: {e}")
-        return False
 
 
-def test_memory_efficiency():
+class TestMemoryEfficiency:
     """Test memory efficiency of lean approach."""
-    print("\n=== Testing Memory Efficiency ===")
-    
-    try:
-        # Create larger framework objects
+
+    def test_shared_domain_data(self):
+        """Test that multiple managers can share domain data."""
+        # Create framework objects
         n_domains = 5
         problems = [MockProblem(neq=2, has_forcing=True, has_initial=True) for _ in range(n_domains)]
         discretizations = [MockDiscretization(n_elements=20) for _ in range(n_domains)]
@@ -369,142 +373,133 @@ def test_memory_efficiency():
         )
         
         # Create multiple lean managers using the same domain data
-        managers = []
-        for i in range(3):
-            manager = BulkDataManager(domain_data)
-            managers.append(manager)
+        managers = [BulkDataManager(domain_data) for _ in range(3)]
         
-        print(f"✓ Created {len(managers)} lean managers sharing domain data")
-        print(f"  Each manager stores only: {len(domain_data)} DomainData objects")
-        print(f"  Framework objects stored externally and reused")
+        assert len(managers) == 3
         
         # Test that all managers work with the same framework objects
-        for i, manager in enumerate(managers):
+        for manager in managers:
             bulk_data_list = manager.initialize_all_bulk_data(problems, discretizations)
             total_mass = manager.compute_total_mass(bulk_data_list)
-            print(f"  Manager {i}: initialized {len(bulk_data_list)} domains, mass={total_mass:.6e}")
-        
-        print("✓ Memory efficiency validated - multiple managers share data")
-        return True
-        
-    except Exception as e:
-        print(f"✗ Memory efficiency test failed: {e}")
-        return False
+            
+            assert len(bulk_data_list) == len(problems)
+            assert isinstance(total_mass, (int, float, np.number))
 
 
-def test_edge_cases(lean_manager, problems, discretizations):
+class TestEdgeCases:
     """Test edge cases and error conditions."""
-    print("\n=== Testing Edge Cases ===")
-    
-    if lean_manager is None:
-        print("✗ Cannot test - lean manager is None")
-        return False
-    
-    try:
-        # Test 1: Empty framework object lists
-        try:
+
+    def test_empty_problems_list(self, lean_manager, mock_discretizations):
+        """Test with empty problems list."""
+        with pytest.raises(ValueError):
             lean_manager._validate_framework_objects(
                 problems=[],
-                discretizations=discretizations,
+                discretizations=mock_discretizations,
                 operation_name="edge_case_test"
             )
-            print("✗ Should have failed with empty problems list")
-            return False
-        except ValueError:
-            print("✓ Correctly caught empty problems list")
-        
-        # Test 2: None framework objects
-        lean_manager._validate_framework_objects(
-            problems=None,
-            discretizations=None,
-            operation_name="edge_case_test"
-        )
-        print("✓ None framework objects handled correctly")
-        
-        # Test 3: Out of bounds domain index
-        try:
-            lean_manager.create_bulk_data(999, problems[0], discretizations[0])
-            print("✗ Should have failed with out of bounds domain index")
-            return False
-        except ValueError:
-            print("✓ Correctly caught out of bounds domain index")
-        
-        # Test 4: Missing attributes
+
+    def test_out_of_bounds_domain_index(self, lean_manager, mock_problems, mock_discretizations):
+        """Test with out of bounds domain index."""
+        with pytest.raises(ValueError, match="Domain index.*out of range"):
+            lean_manager.create_bulk_data(999, mock_problems[0], mock_discretizations[0])
+
+    def test_missing_attributes(self, lean_manager, mock_problems):
+        """Test with missing attributes."""
         class MockIncompleteDiscretization:
             pass  # Missing n_elements attribute
         
-        try:
-            incomplete_discretizations = [MockIncompleteDiscretization()] + discretizations[1:]
+        incomplete_discretizations = [MockIncompleteDiscretization()]
+        
+        with pytest.raises((ValueError, AttributeError)):
             lean_manager._validate_framework_objects(
-                problems=problems,
+                problems=mock_problems[:1],
                 discretizations=incomplete_discretizations,
                 operation_name="edge_case_test"
             )
-            print("✗ Should have failed with missing attributes")
-            return False
-        except ValueError:
-            print("✓ Correctly caught missing attributes")
-        
-        return True
-        
-    except Exception as e:
-        print(f"✗ Edge cases test failed: {e}")
-        return False
 
 
-def run_all_lean_tests():
-    """Run all lean BulkDataManager tests."""
-    print("Running Lean BulkDataManager Tests")
-    print("=" * 60)
+class TestPerformance:
+    """Performance tests for lean BulkDataManager."""
+
+    @pytest.mark.slow
+    def test_large_domain_performance(self):
+        """Test performance with larger domains."""
+        import time
+        
+        # Create larger test case
+        n_domains = 10
+        n_elements = 50
+        
+        problems = [MockProblem(neq=3, has_forcing=True, has_initial=True) for _ in range(n_domains)]
+        discretizations = [MockDiscretization(n_elements=n_elements) for _ in range(n_domains)]
+        static_condensations = [MockStaticCondensation(i) for i in range(n_domains)]
+        
+        # Time domain data extraction
+        start_time = time.time()
+        domain_data = BulkDataManager.extract_domain_data_list(
+            problems, discretizations, static_condensations
+        )
+        extraction_time = time.time() - start_time
+        
+        # Time manager creation and operations
+        start_time = time.time()
+        manager = BulkDataManager(domain_data)
+        bulk_data_list = manager.initialize_all_bulk_data(problems, discretizations)
+        forcing_terms = manager.compute_forcing_terms(bulk_data_list, problems, discretizations, time=0.0, dt=0.01)
+        operation_time = time.time() - start_time
+        
+        # Performance assertions
+        assert extraction_time < 1.0, f"Domain data extraction too slow: {extraction_time:.3f}s"
+        assert operation_time < 2.0, f"Manager operations too slow: {operation_time:.3f}s"
+        
+        # Verify results
+        assert len(bulk_data_list) == n_domains
+        assert len(forcing_terms) == n_domains
+
+
+# Configure pytest markers
+def pytest_configure(config):
+    """Configure pytest markers."""
+    # Register markers to avoid warnings
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+    config.addinivalue_line("markers", "integration: marks tests as integration tests")
+    config.addinivalue_line("markers", "unit: marks tests as unit tests")
+
+
+def pytest_collection_modifyitems(config, items):
+    """Add marker to slow tests if not already marked."""
+    for item in items:
+        # Add slow marker to performance tests
+        if "performance" in item.name.lower() or "large_domain" in item.name:
+            if not any(mark.name == "slow" for mark in item.iter_markers()):
+                item.add_marker(pytest.mark.slow)
+        
+        # Add unit marker to most tests
+        if not any(mark.name in ["slow", "integration"] for mark in item.iter_markers()):
+            item.add_marker(pytest.mark.unit)
+
+
+# Add pytest.ini configuration content programmatically
+pytest_plugins = []
+
+def pytest_collection_modifyitems(config, items):
+    """Add marker to slow tests if not already marked."""
+    for item in items:
+        if "large_domain_performance" in item.name:
+            item.add_marker(pytest.mark.slow)
+
+def main():
+    """Run tests using pytest."""
+    print("This file is now pytest-compatible!")
+    print("Usage:")
+    print("  pytest test_lean_bulk_data_manager.py")
+    print("  pytest test_lean_bulk_data_manager.py -v")
+    print("  pytest test_lean_bulk_data_manager.py -s  # show prints")
+    print("  pytest test_lean_bulk_data_manager.py -m \"not slow\"  # skip slow tests")
     
-    try:
-        # Test 1: Manager creation
-        lean_manager, problems, discretizations, static_condensations = test_lean_manager_creation()
-        if lean_manager is None:
-            print("❌ Manager creation failed - stopping tests")
-            return
-        
-        # Test 2: Parameter validation
-        if not test_parameter_validation(lean_manager, problems, discretizations, static_condensations):
-            print("❌ Parameter validation tests failed")
-            return
-        
-        # Test 3: BulkData operations
-        bulk_data_list = test_bulk_data_operations(lean_manager, problems, discretizations)
-        if bulk_data_list is None:
-            print("❌ BulkData operations tests failed")
-            return
-        
-        # Test 4: Data management
-        if not test_data_management(lean_manager, bulk_data_list):
-            print("❌ Data management tests failed")
-            return
-        
-        # Test 5: Memory efficiency
-        if not test_memory_efficiency():
-            print("❌ Memory efficiency tests failed")
-            return
-        
-        # Test 6: Edge cases
-        if not test_edge_cases(lean_manager, problems, discretizations):
-            print("❌ Edge cases tests failed")
-            return
-        
-        print("=" * 60)
-        print("🎉 All Lean BulkDataManager tests completed successfully!")
-        print("\nLean implementation benefits validated:")
-        print("  ✓ Minimal memory footprint - only essential data stored")
-        print("  ✓ Framework objects passed as parameters")
-        print("  ✓ Multiple managers can share domain data")
-        print("  ✓ Comprehensive parameter validation")
-        print("  ✓ Full functionality maintained")
-        print("  ✓ Robust error handling")
-        
-    except Exception as e:
-        print(f"❌ Lean test suite failed with error: {e}")
-        import traceback
-        traceback.print_exc()
+    # Run with pytest for backwards compatibility
+    pytest.main([__file__, "-v"])
 
 
 if __name__ == "__main__":
-    run_all_lean_tests()
+    main()

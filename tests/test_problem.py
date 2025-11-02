@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Comprehensive test script for the Problem class.
+Pytest-compatible test script for the Problem class.
 
 This script tests all functionality of the problem module including:
 - Problem creation and initialization
@@ -11,13 +11,16 @@ This script tests all functionality of the problem module including:
 - Integration with different problem types
 
 Usage:
-    python test_problem.py
+    pytest test_problem.py
+    pytest test_problem.py -v  # verbose output
+    pytest test_problem.py -s  # show print statements
 """
 
 import sys
 import os
 import numpy as np
 import time
+import pytest
 from typing import Dict, Any
 
 # Add the current directory to path for imports
@@ -25,16 +28,12 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from bionetflux.core.problem import Problem
 
-def run_basic_functionality_tests() -> bool:
+
+class TestBasicFunctionality:
     """Test basic problem operations."""
-    print("Testing Basic Functionality")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Default problem creation
-    print("Test 1: Default problem creation")
-    try:
+
+    def test_default_problem_creation(self):
+        """Test default problem creation."""
         default_problem = Problem()
         assert default_problem.neq == 2
         assert default_problem.domain_start == 0.0
@@ -42,14 +41,9 @@ def run_basic_functionality_tests() -> bool:
         assert default_problem.domain_end == 1.0
         assert default_problem.name == "unnamed_problem"
         assert default_problem.type == "keller_segel"
-        print("  ✓ Default problem creation")
-    except Exception as e:
-        print(f"  ✗ Default problem creation failed: {e}")
-        all_passed = False
-    
-    # Test 2: Custom problem creation
-    print("Test 2: Custom problem creation")
-    try:
+
+    def test_custom_problem_creation(self):
+        """Test custom problem creation."""
         custom_problem = Problem(
             neq=3,
             domain_start=1.0,
@@ -65,23 +59,13 @@ def run_basic_functionality_tests() -> bool:
         assert custom_problem.domain_end == 3.0
         assert custom_problem.name == "custom_problem"
         assert custom_problem.type == "organ_on_chip"
-        print("  ✓ Custom problem creation")
-    except Exception as e:
-        print(f"  ✗ Custom problem creation failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_parameter_management_tests() -> bool:
+
+class TestParameterManagement:
     """Test parameter management functions."""
-    print("\nTesting Parameter Management")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Parameter setting and getting
-    print("Test 1: Parameter setting and getting")
-    try:
+
+    def test_parameter_setting_and_getting(self):
+        """Test parameter setting and getting."""
         problem = Problem(parameters=np.array([1.0, 2.0, 3.0]))
         
         # Test getting parameters
@@ -97,39 +81,22 @@ def run_parameter_management_tests() -> bool:
         assert problem.get_parameter(0) == 1.5
         assert problem.get_parameter(1) == 2.5
         assert problem.get_parameter(2) == 3.5
-        
-        print("  ✓ Parameter setting and getting")
-    except Exception as e:
-        print(f"  ✗ Parameter setting and getting failed: {e}")
-        all_passed = False
-    
-    # Test 2: Parameter array setting
-    print("Test 2: Parameter array setting")
-    try:
+
+    def test_parameter_array_setting(self):
+        """Test parameter array setting."""
         problem = Problem(parameters=np.array([1.0, 2.0]))
         problem.set_parameters(np.array([3.0, 4.0, 5.0]))
         
         assert problem.get_parameter(0) == 3.0
         assert problem.get_parameter(1) == 4.0
         assert problem.get_parameter(2) == 5.0
-        
-        print("  ✓ Parameter array setting")
-    except Exception as e:
-        print(f"  ✗ Parameter array setting failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_function_setting_tests() -> bool:
+
+class TestFunctionSetting:
     """Test function setting and management."""
-    print("\nTesting Function Setting")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Initial condition setting
-    print("Test 1: Initial condition setting")
-    try:
+
+    def test_initial_condition_setting(self):
+        """Test initial condition setting."""
         problem = Problem(neq=3)
         
         # Set initial conditions
@@ -146,15 +113,9 @@ def run_function_setting_tests() -> bool:
         assert np.allclose(result0, np.sin(test_s))
         assert np.allclose(result1, np.cos(test_s))
         assert np.allclose(result2, np.exp(-test_s))
-        
-        print("  ✓ Initial condition setting")
-    except Exception as e:
-        print(f"  ✗ Initial condition setting failed: {e}")
-        all_passed = False
-    
-    # Test 2: Force function setting
-    print("Test 2: Force function setting")
-    try:
+
+    def test_force_function_setting(self):
+        """Test force function setting."""
         problem = Problem(neq=2)
         
         # Set force functions
@@ -169,15 +130,9 @@ def run_function_setting_tests() -> bool:
         
         assert np.allclose(result0, test_s + test_t)
         assert np.allclose(result1, test_s * test_t)
-        
-        print("  ✓ Force function setting")
-    except Exception as e:
-        print(f"  ✗ Force function setting failed: {e}")
-        all_passed = False
-    
-    # Test 3: Solution function setting
-    print("Test 3: Solution function setting")
-    try:
+
+    def test_solution_function_setting(self):
+        """Test solution function setting."""
         problem = Problem(neq=2)
         
         # Set solution functions
@@ -192,24 +147,13 @@ def run_function_setting_tests() -> bool:
         
         assert np.allclose(result0, np.sin(test_s) * np.exp(-test_t))
         assert np.allclose(result1, np.cos(test_s) * np.exp(-test_t))
-        
-        print("  ✓ Solution function setting")
-    except Exception as e:
-        print(f"  ✗ Solution function setting failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_validation_tests() -> bool:
+
+class TestProblemValidation:
     """Test problem validation functionality."""
-    print("\nTesting Problem Validation")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Valid problem validation
-    print("Test 1: Valid problem validation")
-    try:
+
+    def test_valid_problem_validation(self):
+        """Test valid problem validation."""
         valid_problem = Problem(
             neq=2,
             domain_start=0.0,
@@ -221,14 +165,9 @@ def run_validation_tests() -> bool:
         
         is_valid = valid_problem.validate_problem(verbose=False)
         assert is_valid == True
-        print("  ✓ Valid problem validation")
-    except Exception as e:
-        print(f"  ✗ Valid problem validation failed: {e}")
-        all_passed = False
-    
-    # Test 2: Invalid problem (e.g., negative domain length)
-    print("Test 2: Invalid problem")
-    try:
+
+    def test_invalid_problem_negative_domain(self):
+        """Test invalid problem with negative domain length."""
         invalid_problem = Problem(
             neq=2,
             domain_start=0.0,
@@ -240,23 +179,13 @@ def run_validation_tests() -> bool:
         
         is_valid = invalid_problem.validate_problem(verbose=False)
         assert is_valid == False
-        print("  ✓ Invalid problem correctly identified")
-    except Exception as e:
-        print(f"  ✗ Invalid problem test failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_problem_type_tests() -> bool:
+
+class TestProblemTypes:
     """Test different problem types."""
-    print("\nTesting Problem Types")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Keller-Segel problem
-    print("Test 1: Keller-Segel problem")
-    try:
+
+    def test_keller_segel_problem(self):
+        """Test Keller-Segel problem."""
         ks_problem = Problem(
             neq=2,
             parameters=np.array([1.0, 2.0, 0.1, 0.0]),
@@ -277,14 +206,9 @@ def run_problem_type_tests() -> bool:
         functions_ok = ks_problem.test_functions(verbose=False)
         
         assert is_valid and functions_ok
-        print("  ✓ Keller-Segel problem")
-    except Exception as e:
-        print(f"  ✗ Keller-Segel problem failed: {e}")
-        all_passed = False
-    
-    # Test 2: Organ-on-Chip problem
-    print("Test 2: Organ-on-Chip problem")
-    try:
+
+    def test_organ_on_chip_problem(self):
+        """Test Organ-on-Chip problem."""
         ooc_problem = Problem(
             neq=4,
             parameters=np.array([1e-9, 0.001, 1e-4, 1e-5, 1e-3]),
@@ -306,115 +230,64 @@ def run_problem_type_tests() -> bool:
         functions_ok = ooc_problem.test_functions(verbose=False)
         
         assert is_valid and functions_ok
-        print("  ✓ Organ-on-Chip problem")
-    except Exception as e:
-        print(f"  ✗ Organ-on-Chip problem failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_error_handling_tests() -> bool:
+
+class TestErrorHandling:
     """Test error handling and edge cases."""
-    print("\nTesting Error Handling")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test 1: Invalid parameter access
-    print("Test 1: Invalid parameter access")
-    try:
+
+    def test_invalid_parameter_access(self):
+        """Test invalid parameter access."""
         problem = Problem(parameters=np.array([1.0, 2.0]))
         
         # Should raise IndexError
-        try:
-            invalid_param = problem.get_parameter(5)
-            print("  ✗ Should have raised IndexError")
-            all_passed = False
-        except IndexError:
-            print("  ✓ IndexError properly raised")
-        except Exception as e:
-            print(f"  ✗ Wrong exception type: {e}")
-            all_passed = False
-            
-    except Exception as e:
-        print(f"  ✗ Error handling test setup failed: {e}")
-        all_passed = False
-    
-    # Test 2: Invalid function setting
-    print("Test 2: Invalid function setting")
-    try:
+        with pytest.raises(IndexError):
+            problem.get_parameter(5)
+
+    def test_invalid_function_setting(self):
+        """Test invalid function setting."""
         problem = Problem()
         
         # Invalid function (not callable)
-        try:
+        with pytest.raises(TypeError):
             problem.set_function("invalid_func", 12345)
-            print("  ✗ Should have raised TypeError")
-            all_passed = False
-        except TypeError:
-            print("  ✓ TypeError properly raised")
-        except Exception as e:
-            print(f"  ✗ Wrong exception type: {e}")
-            all_passed = False
-            
-    except Exception as e:
-        print(f"  ✗ Error handling test setup failed: {e}")
-        all_passed = False
-    
-    return all_passed
 
-def run_test_problems() -> bool:
+
+class TestPredefinedProblems:
     """Test the predefined test problems."""
-    print("\nTesting Predefined Test Problems")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    try:
+
+    def test_create_test_problems(self):
+        """Test creation of all predefined test problems."""
         test_problems = Problem.create_test_problems()
         
         expected_problems = ["ks_basic", "ooc_basic", "custom_geometry", "analytical", "invalid"]
         
         for name in expected_problems:
-            if name not in test_problems:
-                print(f"  ✗ Missing test problem: {name}")
-                all_passed = False
-                continue
-            
-            problem = test_problems[name]
-            
-            # Run self-test on each problem
-            if name != "invalid":  # Invalid problem is expected to fail validation
-                test_result = problem.run_self_test(verbose=False)
-                if test_result:
-                    print(f"  ✓ {name} problem self-test passed")
-                else:
-                    print(f"  ✗ {name} problem self-test failed")
-                    all_passed = False
-            else:
-                # Invalid case should fail validation
-                is_valid = problem.validate_problem(verbose=False)
-                if not is_valid:
-                    print(f"  ✓ {name} problem correctly identified as invalid")
-                else:
-                    print(f"  ✗ {name} problem should be invalid")
-                    all_passed = False
-        
-    except Exception as e:
-        print(f"  ✗ Test problems creation failed: {e}")
-        all_passed = False
-    
-    return all_passed
+            assert name in test_problems, f"Missing test problem: {name}"
 
-def run_performance_tests() -> bool:
+    @pytest.mark.parametrize("problem_name", ["ks_basic", "ooc_basic", "custom_geometry", "analytical"])
+    def test_valid_predefined_problems(self, problem_name):
+        """Test that valid predefined problems pass self-tests."""
+        test_problems = Problem.create_test_problems()
+        problem = test_problems[problem_name]
+        
+        test_result = problem.run_self_test(verbose=False)
+        assert test_result, f"{problem_name} problem self-test failed"
+
+    def test_invalid_predefined_problem(self):
+        """Test that invalid predefined problem fails validation."""
+        test_problems = Problem.create_test_problems()
+        invalid_problem = test_problems["invalid"]
+        
+        is_valid = invalid_problem.validate_problem(verbose=False)
+        assert not is_valid, "Invalid problem should fail validation"
+
+
+class TestPerformance:
     """Test performance with function evaluations."""
-    print("\nTesting Performance")
-    print("-" * 40)
-    
-    all_passed = True
-    
-    # Test function evaluation performance
-    print("Test 1: Function evaluation performance")
-    try:
+
+    @pytest.mark.slow
+    def test_function_evaluation_performance(self):
+        """Test function evaluation performance."""
         problem = Problem(neq=2)
         
         # Set computationally simple functions
@@ -437,110 +310,79 @@ def run_performance_tests() -> bool:
         
         eval_time = time.time() - start_time
         
-        print(f"  ✓ Function evaluations completed in {eval_time:.3f} seconds")
+        # Performance assertion
+        assert eval_time < 5.0, f"Function evaluations too slow: {eval_time:.3f}s"
+
+
+# Fixtures for reusable test objects
+@pytest.fixture
+def basic_problem():
+    """Fixture providing a basic problem instance."""
+    return Problem(
+        neq=2,
+        domain_start=0.0,
+        domain_length=1.0,
+        parameters=np.array([1.0, 2.0, 0.1, 0.0]),
+        problem_type="keller_segel",
+        name="test_problem"
+    )
+
+
+@pytest.fixture
+def configured_problem(basic_problem):
+    """Fixture providing a fully configured problem."""
+    basic_problem.set_initial_condition(0, lambda s: np.exp(-s**2))
+    basic_problem.set_initial_condition(1, lambda s: np.sin(np.pi * s))
+    basic_problem.set_force(0, lambda s, t: np.zeros_like(s))
+    basic_problem.set_force(1, lambda s, t: np.zeros_like(s))
+    basic_problem.set_chemotaxis(
+        lambda x: np.ones_like(x),
+        lambda x: np.zeros_like(x)
+    )
+    return basic_problem
+
+
+class TestFixtures:
+    """Test using fixtures."""
+
+    def test_basic_problem_fixture(self, basic_problem):
+        """Test the basic problem fixture."""
+        assert basic_problem.neq == 2
+        assert basic_problem.type == "keller_segel"
+        assert basic_problem.name == "test_problem"
+
+    def test_configured_problem_fixture(self, configured_problem):
+        """Test the configured problem fixture."""
+        assert configured_problem.u0[0] is not None
+        assert configured_problem.u0[1] is not None
+        assert configured_problem.force[0] is not None
+        assert configured_problem.force[1] is not None
         
-        if eval_time > 5.0:  # Should be much faster
-            print(f"  ⚠ Warning: Function evaluations seem slow ({eval_time:.3f}s)")
-    
-    except Exception as e:
-        print(f"  ✗ Performance test failed: {e}")
-        all_passed = False
-    
-    return all_passed
+        # Test function execution
+        test_s = np.array([0.0, 0.5, 1.0])
+        result = configured_problem.u0[0](test_s)
+        assert isinstance(result, np.ndarray)
+
+
+# Configure pytest markers
+def pytest_configure(config):
+    """Configure pytest markers."""
+    config.addinivalue_line("markers", "slow: marks tests as slow (deselect with '-m \"not slow\"')")
+
 
 def main():
-    """Run all problem tests."""
-    print("="*60)
-    print("PROBLEM MODULE COMPREHENSIVE TEST")
-    print("="*60)
+    """Run tests using pytest."""
+    print("This file is now pytest-compatible!")
+    print("Usage:")
+    print("  pytest test_problem.py")
+    print("  pytest test_problem.py -v")
+    print("  pytest test_problem.py -s  # show prints")
+    print("  pytest test_problem.py -m \"not slow\"  # skip slow tests")
+    print("  pytest test_problem.py::TestBasicFunctionality::test_default_problem_creation")
     
-    test_functions = [
-        run_basic_functionality_tests,
-        run_parameter_management_tests,
-        run_function_setting_tests,
-        run_validation_tests,
-        run_problem_type_tests,
-        run_error_handling_tests,
-        run_test_problems,
-        run_performance_tests
-    ]
-    
-    results = []
-    total_start_time = time.time()
-    
-    for test_func in test_functions:
-        try:
-            result = test_func()
-            results.append(result)
-        except Exception as e:
-            print(f"Test function {test_func.__name__} crashed: {e}")
-            results.append(False)
-    
-    total_time = time.time() - total_start_time
-    
-    # Summary
-    print("\n" + "="*60)
-    print("TEST SUMMARY")
-    print("="*60)
-    
-    passed = sum(results)
-    total = len(results)
-    
-    print(f"Tests passed: {passed}/{total}")
-    print(f"Success rate: {passed/total*100:.1f}%")
-    print(f"Total time: {total_time:.3f} seconds")
-    
-    if passed == total:
-        print("✓ ALL TESTS PASSED!")
-        return_code = 0
-    else:
-        print("✗ SOME TESTS FAILED!")
-        return_code = 1
-    
-    # Demonstrate usage example
-    print("\n" + "="*60)
-    print("USAGE EXAMPLE")
-    print("="*60)
-    
-    try:
-        # Create and test a Keller-Segel problem
-        example_problem = Problem(
-            neq=2,
-            domain_start=0.0,
-            domain_length=1.0,
-            parameters=np.array([1.0, 2.0, 0.1, 0.0]),
-            problem_type="keller_segel",
-            name="example_ks"
-        )
-        
-        # Set up chemotaxis
-        example_problem.set_chemotaxis(
-            lambda x: 1.0 / (1.0 + x),
-            lambda x: -1.0 / (1.0 + x)**2
-        )
-        
-        # Set initial conditions
-        example_problem.set_initial_condition(0, lambda s: np.exp(-s**2))
-        example_problem.set_initial_condition(1, lambda s: np.sin(np.pi * s))
-        
-        # Set extrema for visualization
-        example_problem.set_extrema((0.0, 0.0), (1.0, 0.0))
-        
-        print("Created example Keller-Segel problem:")
-        print(f"  Name: {example_problem.name}")
-        print(f"  Type: {example_problem.type}")
-        print(f"  Equations: {example_problem.neq}")
-        print(f"  Domain: [{example_problem.domain_start}, {example_problem.domain_end}]")
-        print(f"  Parameters: {example_problem.parameters}")
-        
-        print("\nRunning self-test:")
-        example_problem.run_self_test(verbose=True)
-        
-    except Exception as e:
-        print(f"Usage example failed: {e}")
-    
-    return return_code
+    # Run with pytest for backwards compatibility
+    pytest.main([__file__, "-v"])
+
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    main()
