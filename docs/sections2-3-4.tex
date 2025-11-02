@@ -1,0 +1,411 @@
+\section{Architecture Overview}
+
+The \bionetflux{} framework is organized into several interconnected modules following a clean, modular architecture:
+
+\begin{lstlisting}[language=bash, caption={BioNetFlux Directory Structure}]
+BioNetFlux/
+├── src/
+│   └── bionetflux/
+│       ├── core/                    # Core mathematical components
+│       │   ├── problem.py           # Problem definitions and parameters
+│       │   ├── discretization.py    # Spatial and temporal discretization
+│       │   ├── constraints.py       # Boundary and interface conditions
+│       │   ├── bulk_data.py         # Element-level data management
+│       │   ├── lean_bulk_data_manager.py  # Memory-efficient data handling
+│       │   ├── lean_global_assembly.py   # Global system assembly
+│       │   ├── static_condensation_*.py  # Problem-specific condensation
+│       │   └── flux_jump.py         # Interface flux calculations
+│       ├── geometry/                # Geometry management
+│       │   └── domain_geometry.py   # Network topology and layout
+│       ├── problems/                # Problem definitions
+│       │   ├── test_problem.py      # Reference test problems
+│       │   ├── test_problem2.py     # Alternative test configurations
+│       │   └── ooc_test_problem.py  # OrganOnChip examples
+│       ├── utils/                   # Utility modules
+│       │   └── elementary_matrices.py  # Finite element matrices
+│       └── visualization/           # Plotting and visualization
+│           └── lean_matplotlib_plotter.py  # Multi-mode plotting
+├── tests/                          # Pytest test suite
+│   ├── test_geometry.py            # Geometry module tests
+│   ├── test_problem.py             # Problem class tests
+│   ├── test_lean_bulk_data_manager.py  # Data manager tests
+│   ├── test_lean_global_assembly.py    # Assembly tests
+│   ├── test_static_condensation_setup.py  # SC setup tests
+│   └── test_lean_setup.py          # Complete setup tests
+├── setup_solver.py                 # Main solver setup interface
+├── matlab_reference/               # MATLAB reference implementations
+│   ├── TestProblem.m               # MATLAB test problem (4-eq OoC)
+│   ├── EmptyProblem.m              # MATLAB empty template
+│   ├── StaticC.m                   # Static condensation reference
+│   └── scBlocks.m                  # Matrix building blocks
+└── docs/                          # Documentation
+\end{lstlisting}
+
+\subsection{Core Architecture Principles}
+
+\begin{enumerate}
+    \item \textbf{Lean Design}: Minimal data storage with on-demand component creation
+    \item \textbf{Parameter Passing}: Framework objects passed as parameters rather than stored
+    \item \textbf{Component Caching}: Expensive objects created once and cached for efficiency
+    \item \textbf{MATLAB Reference Alignment}: Python implementations follow MATLAB reference structure
+    \item \textbf{Modular Problem Types}: Static condensation implementations for different physics
+    \item \textbf{Comprehensive Testing}: Pytest-compatible test suite with fixtures and parametrization
+\end{enumerate}
+
+\subsection{Core Components}
+
+\begin{enumerate}
+    \item \textbf{Problem Definition}: Physical parameters following MATLAB OoC structure (4-equation systems)
+    \item \textbf{Geometry Management}: Network topology using DomainGeometry class
+    \item \textbf{Static Condensation}: Element-level solution elimination following StaticC.m algorithm
+    \item \textbf{Global Assembly}: Lean system assembly with parameter-based validation
+    \item \textbf{Discretization System}: Spatial mesh and temporal discretization management
+    \item \textbf{Constraint Management}: Interface conditions and boundary constraints
+    \item \textbf{Visualization System}: Multi-mode plotting with 2D curves, 3D flat views, and bird's eye views
+\end{enumerate}
+
+\section{Modules}
+
+\subsection{Core Module (\code{bionetflux.core})}
+
+The core module contains the fundamental mathematical and computational components:
+
+\subsubsection{Problem Class (\code{problem.py})}
+
+The \code{Problem} class encapsulates the physics of a single domain/arc, following the MATLAB OoC parameter structure:
+
+\begin{lstlisting}[language=Python, caption={Problem Class Structure}]
+class Problem:
+    def __init__(self, neq=2, domain_start=0.0, domain_length=1.0, 
+                 parameters=None, problem_type="keller_segel", 
+                 name="unnamed_problem"):
+        # Physical domain definition and equation parameters
+        # Follows MATLAB OoC structure: [nu, mu, epsilon, sigma, a, b, c, d, chi]
+        
+    # Parameter management (aligned with MATLAB TestProblem.m)
+    def get_parameter(self, index)
+    def set_parameter(self, index, value)  
+    def set_parameters(self, parameters)
+    
+    # Function management (compatible with MATLAB u0, force functions)
+    def set_initial_condition(self, eq_idx, ic_func)  # Maps to problem.u0{i}
+    def set_force(self, eq_idx, force_func)           # Maps to force{i}
+    def set_solution(self, eq_idx, sol_func)
+    def set_chemotaxis(self, chi_func, dchi_func)     # Maps to lambda, dlambda
+    
+    # Validation and testing
+    def validate_problem(self, verbose=False)
+    def test_functions(self, verbose=False)
+    def run_self_test(self, verbose=False)
+\end{lstlisting}
+
+\textbf{MATLAB Parameter Mapping:}
+\begin{itemize}
+    \item \code{parameters[0:3]}: Viscosity parameters (\code{nu, mu, epsilon, sigma})
+    \item \code{parameters[4:7]}: Reaction parameters (\code{a, b, c, d})
+    \item \code{parameters[8]}: Coupling parameter (\code{chi})
+    \item \code{lambda}: Nonlinear function (set via \code{set\_chemotaxis})
+\end{itemize}
+
+\subsubsection{Static Condensation System}
+
+Problem-specific static condensation implementations following the MATLAB StaticC.m algorithm:
+
+\begin{lstlisting}[language=Python, caption={Static Condensation Architecture}]
+# Factory pattern for different problem types
+StaticCondensationFactory.create(problem, global_disc, 
+                                elementary_matrices, domain_idx)
+
+# Available implementations (following StaticC.m structure):
+# - static_condensation_keller_segel.py  # 2-equation Keller-Segel
+# - static_condensation_organ_on_chip.py # 4-equation OoC (matches MATLAB)
+# - static_condensation_base.py          # Base class interface
+
+# Each implementation follows MATLAB StaticC.m pattern:
+class StaticCondensationBase:
+    def build_matrices()  # Pre-compute matrices (follows scBlocks.m)
+    def static_condensation(local_trace, local_source)  # StaticC.m algorithm
+        # Returns: (U, hJ, dhJ) matching MATLAB output structure
+\end{lstlisting}
+
+\textbf{MATLAB Alignment:}
+\begin{itemize}
+    \item \code{build\_matrices()}: Implements scBlocks.m matrix construction
+    \item \code{static\_condensation()}: Follows StaticC.m algorithm exactly
+    \item Matrix naming: Uses MATLAB convention (L1, B1, C2, etc.)
+    \item Input/Output: \code{(hU, rhs)} → \code{(U, hJ, dhJ)}
+\end{itemize}
+
+\subsubsection{Lean Global Assembly (\code{lean\_global\_assembly.py})}
+
+Memory-efficient global system assembly with parameter-passing design:
+
+\begin{lstlisting}[language=Python, caption={Lean Global Assembly}]
+class GlobalAssembler:
+    # Factory method creation
+    @classmethod
+    def from_framework_objects(problems, global_discretization, 
+                              static_condensations, constraint_manager=None)
+    
+    # Core assembly methods
+    def assemble_residual_and_jacobian(global_solution, forcing_terms,
+                                      static_condensations, time)
+    def initialize_bulk_data(problems, discretizations, time)
+    def compute_forcing_terms(bulk_data_list, problems, 
+                             discretizations, time, dt)
+    
+    # Solution management
+    def create_initial_guess_from_problems(problems, discretizations, time)
+    def create_initial_guess_from_bulk_data(bulk_data_list)
+    def get_domain_solutions(global_solution)
+\end{lstlisting}
+
+\subsubsection{Lean Bulk Data Manager (\code{lean\_bulk\_data\_manager.py})}
+
+Efficient element-level data management with minimal storage:
+
+\begin{lstlisting}[language=Python, caption={Lean Bulk Data Manager}]
+class BulkDataManager:
+    def __init__(self, domain_data_list)  # Minimal storage approach
+    
+    # Static factory method for domain data extraction
+    @staticmethod
+    def extract_domain_data_list(problems, discretizations, 
+                                static_condensations)
+    
+    # Core operations with parameter passing
+    def create_bulk_data(domain_idx, problem, discretization, dual=False)
+    def initialize_all_bulk_data(problems, discretizations, time)
+    def compute_forcing_terms(bulk_data_list, problems, 
+                             discretizations, time, dt)
+    def compute_total_mass(bulk_data_list)
+    
+    # Parameter validation
+    def _validate_framework_objects(problems, discretizations, 
+                                   static_condensations, operation_name)
+\end{lstlisting}
+
+\subsection{Geometry Module (\code{bionetflux.geometry})}
+
+\subsubsection{DomainGeometry Class (\code{domain\_geometry.py})}
+
+Intuitive network topology definition with comprehensive validation:
+
+\begin{lstlisting}[language=Python, caption={DomainGeometry Class}]
+class DomainGeometry:
+    def __init__(self, name="unnamed_geometry")
+    
+    # Domain management
+    def add_domain(self, extrema_start, extrema_end, 
+                   domain_start=None, domain_length=None,
+                   name=None, **metadata)
+    def remove_domain(self, domain_id)
+    def get_domain(self, domain_id)
+    def find_domain_by_name(self, name)
+    
+    # Network analysis
+    def get_connectivity_info(self)
+    def find_intersections(self, tolerance=1e-6)
+    def get_bounding_box(self)
+    def suggest_parameter_spacing(self, gap=0.1)
+    
+    # Validation and testing
+    def validate_geometry(self, verbose=False)
+    def run_self_test(self, verbose=False)
+    
+    # Predefined test geometries
+    @staticmethod
+    def create_test_geometries()
+\end{lstlisting}
+
+\textbf{Domain Information Structure:}
+\begin{lstlisting}[language=Python, caption={Domain Information Dataclass}]
+@dataclass
+class DomainInfo:
+    domain_id: int
+    extrema_start: Tuple[float, float]  # Physical coordinates
+    extrema_end: Tuple[float, float]
+    domain_start: float                 # Parameter space
+    domain_length: float
+    name: str
+    metadata: Dict[str, Any]
+\end{lstlisting}
+
+\subsection{Problems Module (\code{bionetflux.problems})}
+
+Problem-specific implementations following standardized \code{create\_global\_framework} pattern and MATLAB reference structure:
+
+\subsubsection{Problem Module Structure}
+
+Each problem module implements the standard pattern with MATLAB compatibility:
+
+\begin{lstlisting}[language=Python, caption={Standard Problem Module Pattern}]
+def create_global_framework():
+    """
+    Standard problem creation pattern (follows MATLAB TestProblem.m structure).
+    
+    Returns:
+        Tuple: (problems, global_discretization, constraint_manager, problem_name)
+    """
+    # 1. Parameter Configuration (matches MATLAB parameter order)
+    # MATLAB: nu, mu, epsilon, sigma, a, b, c, d, chi, lambda
+    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
+    
+    # 2. Function Definitions (compatible with MATLAB problem.u0{i}, force{i})
+    def initial_conditions_u(s, t=0.0):  # Maps to problem.u0{1}
+    def initial_conditions_omega(s, t=0.0):  # Maps to problem.u0{2}  
+    def initial_conditions_v(s, t=0.0):  # Maps to problem.u0{3}
+    def initial_conditions_phi(s, t=0.0):  # Maps to problem.u0{4}
+    
+    def lambda_func(x):  # Maps to MATLAB lambda function
+    def dlambda_func(x):  # Maps to MATLAB dlambda function
+    
+    # 3. Domain and Discretization Setup
+    # 4. Problem Instance Creation with MATLAB-compatible parameters
+    # 5. Constraint Setup
+    # 6. Global Discretization and Time Configuration
+    
+    return problems, global_discretization, constraint_manager, problem_name
+\end{lstlisting}
+
+\subsubsection{Available Problem Modules}
+
+\begin{itemize}
+    \item \textbf{test\_problem.py}: Multi-domain reference problem with comprehensive constraint testing
+    \item \textbf{test\_problem2.py}: Alternative test configuration for validation
+    \item \textbf{ooc\_test\_problem.py}: OrganOnChip analytical test case following MATLAB TestProblem.m structure
+\end{itemize}
+
+\subsection{Setup Interface (\code{setup\_solver.py})}
+
+\subsubsection{SolverSetup Class}
+
+Lean orchestration of solver components with lazy loading and caching:
+
+\begin{lstlisting}[language=Python, caption={SolverSetup Interface}]
+class SolverSetup:
+    def __init__(self, problem_module="bionetflux.problems.test_problem2")
+    
+    # Lazy-loaded properties (cached on first access)
+    @property
+    def elementary_matrices(self)    # ElementaryMatrices instance
+    @property 
+    def static_condensations(self)   # List of SC implementations
+    @property
+    def global_assembler(self)       # GlobalAssembler instance
+    @property
+    def bulk_data_manager(self)      # BulkDataManager instance
+    
+    # Solution vector management
+    def create_initial_conditions(self)
+    def create_global_solution_vector(self, trace_solutions, multipliers)
+    def extract_domain_solutions(self, global_solution)
+    
+    # System information and validation
+    def get_problem_info(self)
+    def validate_setup(self, verbose=False)
+
+# Factory functions
+def create_solver_setup(problem_module)
+def quick_setup(problem_module, validate=True)
+\end{lstlisting}
+
+\subsection{Visualization Module (\code{bionetflux.visualization})}
+
+\subsubsection{LeanMatplotlibPlotter (\code{lean\_matplotlib\_plotter.py})}
+
+Three complementary visualization modes optimized for network analysis:
+
+\begin{lstlisting}[language=Python, caption={Visualization System}]
+class LeanMatplotlibPlotter:
+    def __init__(self, problems, discretizations, 
+                 equation_names=None, figsize=(12, 8))
+    
+    # Primary visualization modes
+    def plot_2d_curves(self, trace_solutions, title=None,
+                       show_mesh_points=True, save_filename=None)
+    def plot_flat_3d(self, trace_solutions, equation_idx=0,
+                     view_angle=(30, 45), save_filename=None)
+    def plot_birdview(self, trace_solutions, equation_idx=0,
+                      time=0.0, save_filename=None)
+    
+    # Comparison and analysis
+    def plot_comparison(self, initial_traces, final_traces,
+                       initial_time=0.0, final_time=1.0,
+                       save_filename=None)
+    
+    # Utility methods
+    def show_all(self)
+    def close_all(self)
+\end{lstlisting}
+
+\textbf{Visualization Features:}
+\begin{enumerate}
+    \item \textbf{2D Curve Plots}: Domain-by-domain solution profiles with mesh points
+    \item \textbf{Flat 3D View}: Network topology with solution-colored scatter points above
+    \item \textbf{Bird's Eye View}: Top-down network overview with color-coded solution values
+    \item \textbf{Comparison Plots}: Side-by-side initial vs. final state analysis
+\end{enumerate}
+
+\section{Getting Started}
+
+\subsection{Installation}
+
+\begin{enumerate}
+    \item Clone the repository:
+    \begin{lstlisting}[language=bash]
+git clone <repository-url>
+cd BioNetFlux
+    \end{lstlisting}
+    
+    \item Set up Python path:
+    \begin{lstlisting}[language=Python]
+import sys
+sys.path.insert(0, '/path/to/BioNetFlux/src')
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{Basic Usage}
+
+\begin{lstlisting}[language=Python, caption={Basic Usage Example}]
+from setup_solver import quick_setup
+from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+
+# Load a problem (follows MATLAB TestProblem.m structure)
+setup = quick_setup("bionetflux.problems.ooc_test_problem", validate=True)
+
+# Create initial conditions
+trace_solutions, multipliers = setup.create_initial_conditions()
+
+# Initialize visualization
+plotter = LeanMatplotlibPlotter(
+    problems=setup.problems,
+    discretizations=setup.global_discretization.spatial_discretizations
+)
+
+# Plot initial conditions (all 4 equations for OoC problems)
+plotter.plot_2d_curves(trace_solutions, title="Initial Conditions")
+plotter.plot_birdview(trace_solutions, equation_idx=0, time=0.0)
+\end{lstlisting}
+
+\subsection{MATLAB Reference Integration}
+
+The Python implementation closely follows the MATLAB reference structure:
+
+\begin{lstlisting}[language=Python, caption={MATLAB-Python Parameter Mapping}]
+# MATLAB TestProblem.m parameters:
+# nu = 1., mu = 2., epsilon = 1., sigma = 1.
+# a = 0., b = 1., c = 0., d = 1., chi = 1.
+
+# Python equivalent:
+parameters = np.array([1.0, 2.0, 1.0, 1.0,  # nu, mu, epsilon, sigma
+                      0.0, 1.0, 0.0, 1.0,   # a, b, c, d  
+                      1.0])                  # chi
+
+# MATLAB initial conditions: problem.u0{1} = @(x,t) sin(2*pi*x);
+# Python equivalent:
+problem.set_initial_condition(0, lambda s: np.sin(2*np.pi*s))
+
+# MATLAB Neumann data: problem.fluxu0{1} = @(t) 0.;
+# Python equivalent: handled by constraint_manager.add_neumann()
+\end{lstlisting}
