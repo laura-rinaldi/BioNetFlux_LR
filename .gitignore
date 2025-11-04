@@ -33,7 +33,7 @@ src/**/__pycache__/
 tests/__pycache__/
 
 # IDE files
-.vscode/
 .idea/
+# Note: .vscode/ is tracked to share testing configuration
 
 
