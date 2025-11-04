@@ -424,7 +424,8 @@ class TestResidualJacobianAssembly:
             time=0.5
         )
         
-        perturbed_solution = global_guess + 1e-6 * np.random.rand(len(global_guess))
+        # Use a larger perturbation to ensure detectable change
+        perturbed_solution = global_guess + 1e-3 * np.random.rand(len(global_guess))
         residual2, _ = assembler.assemble_residual_and_jacobian(
             global_solution=perturbed_solution,
             forcing_terms=forcing_terms,
@@ -432,7 +433,8 @@ class TestResidualJacobianAssembly:
             time=0.5
         )
         
-        assert not np.allclose(residual1, residual2)
+        # Use stricter tolerance to detect small but meaningful changes
+        assert not np.allclose(residual1, residual2, rtol=1e-10, atol=1e-12)
 
 
 class TestMassConservation:

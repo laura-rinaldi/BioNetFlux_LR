@@ -71,13 +71,83 @@ cd BioNetFlux
 
 2. Install dependencies:
 ```bash
-pip install numpy matplotlib
+pip install -r requirements-dev.txt
 ```
 
 3. Run examples:
 ```bash
 cd examples
 python simple_example.py
+```
+
+## Development Setup
+
+### Prerequisites
+- Python 3.8+
+- pytest for testing
+- Virtual environment (recommended)
+
+### Setting Up Development Environment
+
+1. **Create and activate virtual environment**:
+```bash
+# Using venv
+python -m venv bionetflux-env
+source bionetflux-env/bin/activate  # On Windows: bionetflux-env\Scripts\activate
+
+# Or using conda
+conda create -n bionetflux python=3.11
+conda activate bionetflux
+```
+
+2. **Install development dependencies**:
+```bash
+pip install -r requirements-dev.txt
+```
+
+3. **Configure VS Code (optional but recommended)**:
+   - Copy `.vscode/settings.json.template` to `.vscode/settings.json`
+   - Adjust Python interpreter path if needed
+   - Install recommended VS Code extensions:
+     - Python (ms-python.python)
+     - Pylance (ms-python.vscode-pylance)
+     - Python Test Explorer (littlefoxteam.vscode-python-test-adapter)
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run tests with coverage
+pytest --cov=src/bionetflux
+
+# Run specific test file
+pytest tests/test_sample.py
+
+# Run tests in verbose mode
+pytest -v
+```
+
+### VS Code Testing Integration
+The project is configured for VS Code's integrated testing:
+- Tests appear in Explorer under "Test Explorer"
+- Auto-discovery on file save
+- Individual test running and debugging
+- Automatic test execution on startup
+
+### Python Path Configuration
+The project uses `src/` layout. Add to your Python path:
+```python
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+```
+
+### Environment Variables
+For consistent development across machines, consider setting:
+```bash
+export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 ```
 
 ## Project Structure

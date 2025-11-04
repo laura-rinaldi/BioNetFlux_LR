@@ -36,4 +36,17 @@ tests/__pycache__/
 .idea/
 # Note: .vscode/ is tracked to share testing configuration
 
+# Environment files (user-specific)
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# User-specific VS Code settings (if needed)
+.vscode/settings.local.json
+
+# Original conda requirements (too specific)
+requirements.txt.conda-backup
+
 
