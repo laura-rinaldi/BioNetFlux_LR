@@ -109,9 +109,6 @@ class GlobalDiscretization:
             'n_domains': self.n_domains,
             'total_elements': self.total_elements,
             'total_nodes': self.total_nodes,
-            'global_start': self.global_start,
-            'global_end': self.global_end,
-            'global_length': self.global_length,
             'time_info': self.get_time_info(),
             'spatial_discretizations': [disc.get_mesh_info() for disc in self.spatial_discretizations]
         }
