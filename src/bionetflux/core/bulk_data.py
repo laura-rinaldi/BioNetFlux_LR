@@ -300,10 +300,15 @@ class BulkData:
     def get_trace_values(self) -> np.ndarray:
         """
         Extract trace values at nodes (inverse of trace-based construction).
+        WARNING: This is a placeholder implementation
         
         Returns:
             Array of size neq*(n_elements+1) with trace values at nodes
         """
+        # Add warning when this method is called
+        print("WARNING: get_trace_values() is a placeholder implementation and should not be used in production code!")
+        print("         This method is being called - please verify if this is intentional.")
+        
         # This is a placeholder - actual implementation would depend on 
         # the trace matrix and reconstruction method
         trace_values = np.zeros((self.neq, self.n_elements + 1))
@@ -320,6 +325,7 @@ class BulkData:
         
         return trace_values.flatten()
     
+
     def get_element_data(self, element_idx: int) -> np.ndarray:
         """
         Get bulk coefficients for a specific element.

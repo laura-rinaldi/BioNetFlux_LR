@@ -6,7 +6,7 @@
 \section{Bulk Data Module API Reference (Accurate Analysis)}
 \label{sec:bulk_data_module_api}
 
-This section provides an exact reference for the BulkData class (\texttt{ooc1d.core.bulk\_data.BulkData}) based on detailed analysis of the actual implementation. The BulkData class manages bulk coefficients for HDG methods with flexible initialization options.
+This section provides reference for the BulkData class  (\texttt{bionetflux.core.bulk\_data}). The BulkData class manages the coefficients of bulk objects for HDG methods. A bulk object contains coefficients for discrete objects ``living'' in the elements. This class handles both element solutions, which are marked as {\tt not dual} (primal), by providing the coefficients with respect to the chosen basis for the element (the choice of the basis is set in the {\tt elementary\_matrices} module), and right hand side object, marked as {\tt dual}. For dual objects the coefficients contained in the BulkData field {\tt data} are the integrals of the considerefd function with the elements of the chosen basis. 
 
 \subsection{Module Imports and Dependencies}
 
@@ -14,7 +14,7 @@ This section provides an exact reference for the BulkData class (\texttt{ooc1d.c
 import numpy as np
 from .problem import Problem 
 from .discretization import Discretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 from typing import List, Optional, Union, Callable
 \end{lstlisting}
 
@@ -43,15 +43,15 @@ def __init__(self, problem: Problem, discretization: Discretization, dual: bool 
 \begin{itemize}
     \item \texttt{problem}: Problem instance containing relevant information
     \item \texttt{discretization}: Discretization instance containing mesh information
-    \item \texttt{dual}: Boolean flag for dual formulation (default: False)
+    \item \texttt{dual}: Boolean flag for distinguishing between primal (solutions, {\tt dual} = False) and dual (right hand side, {\tt dual} = True) bulk objects (default: False)
 \end{itemize}
 
 \textbf{Side Effects:} Initializes all instance attributes and matrices
 
 \textbf{Usage Examples:}
 \begin{lstlisting}[language=Python, caption=Constructor Usage Examples]
-from ooc1d.core.problem import Problem
-from ooc1d.core.discretization import Discretization
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization
 
 # Create problem and discretization
 problem = Problem(neq=2, domain_start=0.0, domain_length=1.0)
@@ -124,8 +124,10 @@ self.quad_matrix = h * elementary_matrices.get_matrix('QUAD')
 self.quad_nodes = elementary_matrices.get_matrix('qnodes')
 \end{lstlisting}
 
-\subsection{Primary Data Setting Method}
+\subsection{Data Setting Method}
 \label{subsec:set_data_method}
+{\tt set\_data} populates the {\tt data} field of a BulkData object, in such a way that the {\tt j}-th column of {\tt data} contains the coefficients of {\tt neq} functions on the {\tt j}-th element.
+
 
 \paragraph{set\_data()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Set Data Method]
@@ -178,6 +180,60 @@ bulk_data.set_data(trace_values)
 
 \subsection{Internal Data Setting Methods}
 \label{subsec:internal_data_methods}
+
+Depending of whether a BulkData object is tagged as {\tt dual} or not, and on the format of the input, different methods are called to evaluate the {\tt data} field entries 
+
+\subsubsection{Primal Formulation Methods}
+
+\paragraph{\_set\_data\_primal()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Primal Data Setting Method]
+	def _set_data_primal(self, input_data, time)
+\end{lstlisting}
+
+\textbf{Purpose:} Handle data setting for primal formulation (direct reconstruction)
+
+\textbf{Error Handling:} Raises \texttt{ValueError} for invalid input formats
+
+\paragraph{\_construct\_from\_functions()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Function Construction Method]
+	def _construct_from_functions(self, functions: List[Callable], time: float)
+\end{lstlisting}
+
+\textbf{Purpose:} Construct bulk coefficients from functions evaluated at nodes
+
+\textbf{Algorithm:} For each element and equation:
+\begin{enumerate}
+	\item Evaluate function at element endpoints
+	\item Solve \texttt{trace\_matrix @ bulk\_coeffs = [u\_left, u\_right]}
+	\item Store coefficients in data array
+\end{enumerate}
+
+\textbf{Exception Handling:}
+\begin{lstlisting}[language=Python, caption=Function Construction Error Handling]
+	try:
+	local_bulk = np.linalg.solve(trace_matrix, local_trace)
+	element_coeffs.extend(local_bulk)
+	except np.linalg.LinAlgError:
+	print(f"Warning: Singular trace matrix at element {k}, using zeros")
+	element_coeffs.extend([0.0, 0.0])
+\end{lstlisting}
+
+\paragraph{\_construct\_from\_trace\_vector()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Trace Construction Method]
+	def _construct_from_trace_vector(self, trace_vector: np.ndarray, trace_matrix: np.ndarray)
+\end{lstlisting}
+
+\textbf{Purpose:} Construct bulk coefficients from trace values at nodes
+
+\textbf{Input Validation:}
+\begin{lstlisting}[language=Python, caption=Trace Vector Validation]
+	# Flatten and verify size
+	trace_flat = trace_vector.flatten()
+	expected_size = self.neq * (self.n_elements + 1)
+	if trace_flat.size != expected_size:
+	raise ValueError(f"Trace vector has size {trace_flat.size}, "
+	f"expected {expected_size}")
+\end{lstlisting}
 
 \subsubsection{Dual Formulation Methods}
 
@@ -245,57 +301,7 @@ def _integrate_from_trace_vector(self, trace_vector: np.ndarray,
     \item \texttt{mass\_matrix}: Mass matrix for integration
 \end{itemize}
 
-\subsubsection{Primal Formulation Methods}
 
-\paragraph{\_set\_data\_primal()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Primal Data Setting Method]
-def _set_data_primal(self, input_data, time)
-\end{lstlisting}
-
-\textbf{Purpose:} Handle data setting for primal formulation (direct reconstruction)
-
-\textbf{Error Handling:} Raises \texttt{ValueError} for invalid input formats
-
-\paragraph{\_construct\_from\_functions()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Function Construction Method]
-def _construct_from_functions(self, functions: List[Callable], time: float)
-\end{lstlisting}
-
-\textbf{Purpose:} Construct bulk coefficients from functions evaluated at nodes
-
-\textbf{Algorithm:} For each element and equation:
-\begin{enumerate}
-    \item Evaluate function at element endpoints
-    \item Solve \texttt{trace\_matrix @ bulk\_coeffs = [u\_left, u\_right]}
-    \item Store coefficients in data array
-\end{enumerate}
-
-\textbf{Exception Handling:}
-\begin{lstlisting}[language=Python, caption=Function Construction Error Handling]
-try:
-    local_bulk = np.linalg.solve(trace_matrix, local_trace)
-    element_coeffs.extend(local_bulk)
-except np.linalg.LinAlgError:
-    print(f"Warning: Singular trace matrix at element {k}, using zeros")
-    element_coeffs.extend([0.0, 0.0])
-\end{lstlisting}
-
-\paragraph{\_construct\_from\_trace\_vector()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Trace Construction Method]
-def _construct_from_trace_vector(self, trace_vector: np.ndarray, trace_matrix: np.ndarray)
-\end{lstlisting}
-
-\textbf{Purpose:} Construct bulk coefficients from trace values at nodes
-
-\textbf{Input Validation:}
-\begin{lstlisting}[language=Python, caption=Trace Vector Validation]
-# Flatten and verify size
-trace_flat = trace_vector.flatten()
-expected_size = self.neq * (self.n_elements + 1)
-if trace_flat.size != expected_size:
-    raise ValueError(f"Trace vector has size {trace_flat.size}, "
-                   f"expected {expected_size}")
-\end{lstlisting}
 
 \subsection{Utility and Validation Methods}
 \label{subsec:utility_methods}
@@ -333,23 +339,23 @@ print(f"Data shape: {data_copy.shape}")
 print(f"Data range: [{np.min(data_copy):.6e}, {np.max(data_copy):.6e}]")
 \end{lstlisting}
 
-\paragraph{get\_trace\_values()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Get Trace Values Method]
-def get_trace_values(self) -> np.ndarray
-\end{lstlisting}
-
-\textbf{Returns:} \texttt{np.ndarray} - Flattened array of size \texttt{neq*(n\_elements+1)} with trace values
-
-\textbf{Purpose:} Extract trace values at nodes (inverse of trace-based construction)
-
-\textbf{Note:} Current implementation provides approximation using bulk coefficients
-
-\textbf{Usage:}
-\begin{lstlisting}[language=Python, caption=Get Trace Values Usage]
-trace_vals = bulk_data.get_trace_values()
-print(f"Trace values size: {trace_vals.size}")
-print(f"Expected size: {bulk_data.neq * (bulk_data.n_elements + 1)}")
-\end{lstlisting}
+%\paragraph{get\_trace\_values()}\leavevmode
+%\begin{lstlisting}[language=Python, caption=Get Trace Values Method]
+%def get_trace_values(self) -> np.ndarray
+%\end{lstlisting}
+%
+%\textbf{Returns:} \texttt{np.ndarray} - Flattened array of size \texttt{neq*(n\_elements+1)} with trace values
+%
+%\textbf{Purpose:} Extract trace values at nodes (inverse of trace-based construction)
+%
+%\textbf{Note:} Current implementation provides approximation using bulk coefficients
+%
+%\textbf{Usage:}
+%\begin{lstlisting}[language=Python, caption=Get Trace Values Usage]
+%trace_vals = bulk_data.get_trace_values()
+%print(f"Trace values size: {trace_vals.size}")
+%print(f"Expected size: {bulk_data.neq * (bulk_data.n_elements + 1)}")
+%\end{lstlisting}
 
 \paragraph{get\_element\_data()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Get Element Data Method]
@@ -407,7 +413,7 @@ return total_mass
 
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Mass Computation Usage]
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 
 # Get mass matrix
 elementary_matrices = ElementaryMatrices()
@@ -496,9 +502,9 @@ All tests passed!
 \subsubsection{Primal Formulation Example}
 
 \begin{lstlisting}[language=Python, caption=Complete Primal Usage Example]
-from ooc1d.core.problem import Problem
-from ooc1d.core.discretization import Discretization
-from ooc1d.core.bulk_data import BulkData
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization
+from bionetflux.core.bulk_data import BulkData
 import numpy as np
 
 # Setup problem and discretization
@@ -534,7 +540,7 @@ element_5_data = bulk_data.get_element_data(5)
 trace_values = bulk_data.get_trace_values()
 
 # Compute mass
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 elementary_matrices = ElementaryMatrices()
 mass_matrix = elementary_matrices.get_matrix('M')
 total_mass = bulk_data.compute_mass(mass_matrix)
