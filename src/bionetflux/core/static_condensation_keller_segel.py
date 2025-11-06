@@ -221,7 +221,8 @@ class KellerSegelStaticCondensation(StaticCondensationBase):
         local_solution = B0 @ local_trace + G0
         
         # Step 2: Compute average phi for chemotaxis
-        phi_avg = float(Av @ local_solution)
+        # .item() converts single-element array to scalar
+        phi_avg = float((Av @ local_solution).item())
         
         # Get chi value at average phi
         chi_val = (self.problem.chi(phi_avg) if 
