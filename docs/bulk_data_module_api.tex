@@ -81,7 +81,7 @@ bulk_data_dual = BulkData(problem, discretization, dual=True)
 \texttt{neq} & \texttt{int} & Number of equations from problem \\
 \hline
 
-\texttt{dual} & \texttt{bool} & Flag for dual formulation mode \\
+\texttt{dual} & \texttt{bool} & Flag for dual  mode \\
 \hline
 
 \texttt{nodes} & \texttt{np.ndarray} & Node coordinates from discretization \\
@@ -537,7 +537,7 @@ bulk_data.set_data(trace_vals)
 # Access data
 data_array = bulk_data.get_data()
 element_5_data = bulk_data.get_element_data(5)
-trace_values = bulk_data.get_trace_values()
+
 
 # Compute mass
 from bionetflux.utils.elementary_matrices import ElementaryMatrices
@@ -590,9 +590,6 @@ print(f"Total integrated source: {source_mass:.6e}")
 \texttt{get\_data} & \texttt{np.ndarray} & Get copy of bulk coefficient array \\
 \hline
 
-\texttt{get\_trace\_values} & \texttt{np.ndarray} & Extract trace values at nodes \\
-\hline
-
 \texttt{get\_element\_data} & \texttt{np.ndarray} & Get coefficients for specific element \\
 \hline
 
@@ -620,5 +617,15 @@ print(f"Total integrated source: {source_mass:.6e}")
 \end{longtable}
 
 This documentation provides an exact reference for the BulkData class based on the actual implementation, with comprehensive examples showing all supported input formats and usage patterns for both primal and dual formulations.
+
+\begin{todobox}
+\begin{itemize}
+	\item Evaluate better name for the {\tt BulkData} class ({\tt LocalBulkData}?)
+	\item Evaluate merging module with the {\tt lean\_bulk\_data\_manager} module
+	\item Check \& fix for use with orthonormal basis functions
+	\item Correct the {\tt compute\_mass} method to handle each unknown independently
+\end{itemize}
+\end{todobox}
+
 
 % End of bulk data module API documentation

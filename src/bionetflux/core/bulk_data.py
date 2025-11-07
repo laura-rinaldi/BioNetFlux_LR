@@ -3,6 +3,8 @@ Bulk data management for HDG method.
 Alternative to BulkSolution with flexible set_data method.
 """
 
+# TODO: HIGH PRIORITY - Correct compute_mass in BulkData: compute individual equation mass rather than total mass
+
 import numpy as np
 from .problem import Problem 
 from .discretization import Discretization
