@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from setup_solver import quick_setup
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 
-filename = "bionetflux.problems.OoC_grid_new"  # New geometry-based problem
+filename = "bionetflux.problems.reduced_ooc_problem"  # New geometry-based problem
 
 print("="*60)
 print("BIONETFLUX REAL INITIALIZATION TEST")
