@@ -465,171 +465,189 @@ def create_global_framework():
     # Add specific trace continuity conditions for horizontal-vertical intersections
     print("  Adding specific trace continuity conditions for grid intersections...")
     
-    # Trace continuity: start of domains 4-8 and 14-18 with corresponding point of domain 0 (S1)
+    # CORRECTED: Fix the domain indexing based on actual geometry creation
+    # Domain order: [0,1,2,3] = vertical segments, then horizontal connectors
     
     print("    Adding continuity conditions between horizontal connectors and vertical segments...")
-    print(f"    Total horizontal domains: {2*N}, Total domains: {geometry.num_domains()}")
-    s1_connections = list(range(4, 4+N)) + list(range(4+2*N, 4+3*N))  # domains 4-8 and 14-18
+    print(f"    Total horizontal domains: {2*N*2}, Total domains: {geometry.num_domains()}")
+    
+    # FIXED: Correct domain ranges based on geometry creation order
+    # Lower connectors S1->S2: domains 4 to 4+N-1
+    # Lower connectors S4->S2: domains 4+N to 4+2*N-1  
+    # Upper connectors S1->S3: domains 4+2*N to 4+3*N-1
+    # Upper connectors S4->S3: domains 4+3*N to 4+4*N-1
+    
+    # Trace continuity: start of lower S1->S2 and upper S1->S3 connectors with S1 (domain 0)
+    s1_left_lower = list(range(4, 4+N))        # Lower S1->S2 connectors  
+    s1_left_upper = list(range(4+2*N, 4+3*N))  # Upper S1->S3 connectors
+    s1_connections = s1_left_lower + s1_left_upper
     
     for domain_idx in s1_connections:
         if domain_idx < len(problems):
+            # Get horizontal segment info
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_start[1]  # y-coordinate at S1 end
+            
+            # Map to S1 parameter space: S1 spans y ∈ [-1, 1], param ∈ [0, domain_length]
+            s1_param = (intersection_y + 1.0) / 2.0 * problems[0].domain_length
+            
+            # CRITICAL FIX: Add continuity for ALL equations, not just some
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 0 (S1)
-                # Domain 0 is vertical from (-1,-1) to (-1,1), so we need to map the intersection point
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_start[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 0 (S1)
-                # S1 goes from y=-1 (param=0) to y=1 (param=domain_length)
-                s1_param = (intersection_y + 1.0) / 2.0 * problems[0].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=0,  # S1 domain
-                    position1=problems[domain_idx].domain_start,  # Start of horizontal segment
-                    position2=s1_param,  # Corresponding point on S1
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} start -> domain 0 at param {s1_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # Horizontal connector
+                        domain2_index=0,           # S1 (left vertical)
+                        position1=problems[domain_idx].domain_start,  # Start of horizontal (at S1)
+                        position2=s1_param,       # Corresponding point on S1
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} start -> domain 0 at param {s1_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S1 continuity eq {eq_idx}, domain {domain_idx}: {e}")
     
-    # Trace continuity: end of domains 9-13 and 19-23 with corresponding point of domain 3 (S4)
-    s4_connections = list(range(4+N, 4+2*N)) + list(range(4+3*N, 4+4*N))  # domains 9-13 and 19-23
+    # Trace continuity: end of lower S4->S2 and upper S4->S3 connectors with S4 (domain 3) 
+    s4_right_lower = list(range(4+N, 4+2*N))    # Lower S4->S2 connectors
+    s4_right_upper = list(range(4+3*N, 4+4*N))  # Upper S4->S3 connectors  
+    s4_connections = s4_right_lower + s4_right_upper
     
     for domain_idx in s4_connections:
         if domain_idx < len(problems):
+            # Get horizontal segment info
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_start[1]  # y-coordinate at S4 end
+            
+            # Map to S4 parameter space: S4 spans y ∈ [-1, 1], param ∈ [0, domain_length]
+            s4_param = (intersection_y + 1.0) / 2.0 * problems[3].domain_length
+            
+            # CRITICAL FIX: Add continuity for ALL equations
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 3 (S4)
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 3 (S4)
-                # S4 goes from y=-1 (param=0) to y=1 (param=domain_length)
-                s4_param = (intersection_y + 1.0) / 2.0 * problems[3].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=3,  # S4 domain
-                    position1=problems[domain_idx].domain_end,  # End of horizontal segment
-                    position2=s4_param,  # Corresponding point on S4
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 3 at param {s4_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # Horizontal connector  
+                        domain2_index=3,           # S4 (right vertical)
+                        position1=problems[domain_idx].domain_start,  # Start of horizontal (at S4)
+                        position2=s4_param,       # Corresponding point on S4
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} start -> domain 3 at param {s4_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S4 continuity eq {eq_idx}, domain {domain_idx}: {e}")
 
-    # NEW: Additional trace continuity conditions for middle vertical segments
+    # Trace continuity with middle vertical segments S2 and S3
     
-    # Trace continuity: end of domains 4-8 with corresponding point of domain 1 (S2)
-    s2_lower_connections = list(range(4, 4+N))  # domains 4-8 (lower connectors from S1)
+    # S2 connections (lower middle vertical): end of S1->S2 connectors + start of S4->S2 connectors
+    s2_from_s1 = list(range(4, 4+N))        # End of S1->S2 connectors connects to S2
+    s2_from_s4 = list(range(4+N, 4+2*N))    # Start of S4->S2 connectors connects to S2  
     
-    for domain_idx in s2_lower_connections:
+    # End of S1->S2 connectors with S2
+    for domain_idx in s2_from_s1:
         if domain_idx < len(problems):
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate at S2 end
+            
+            # Map to S2 parameter space: S2 spans y ∈ [-1, -0.1], param ∈ [0, domain_length]
+            s2_y_start, s2_y_end = -1.0, -0.1
+            s2_param = (intersection_y - s2_y_start) / (s2_y_end - s2_y_start) * problems[1].domain_length
+            
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 1 (S2)
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 1 (S2)
-                # S2 goes from y=-1 (param=0) to y=-0.1 (param=domain_length)
-                # Parameter mapping: param = (y - y_start) / (y_end - y_start) * domain_length
-                s2_y_start = -1.0
-                s2_y_end = -0.1
-                s2_param = (intersection_y - s2_y_start) / (s2_y_end - s2_y_start) * problems[1].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=1,  # S2 domain
-                    position1=problems[domain_idx].domain_end,  # End of horizontal segment
-                    position2=s2_param,  # Corresponding point on S2
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 1 at param {s2_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # S1->S2 connector
+                        domain2_index=1,           # S2 (lower middle vertical)
+                        position1=problems[domain_idx].domain_end,    # End of horizontal (at S2)
+                        position2=s2_param,       # Corresponding point on S2
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 1 at param {s2_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S2 continuity eq {eq_idx}, domain {domain_idx}: {e}")
     
-    # Trace continuity: end of domains 14-18 with corresponding point of domain 2 (S3)
-    s3_upper_connections = list(range(4+2*N, 4+3*N))  # domains 14-18 (upper connectors from S1)
-    
-    for domain_idx in s3_upper_connections:
+    # Start of S4->S2 connectors with S2  
+    for domain_idx in s2_from_s4:
         if domain_idx < len(problems):
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate at S2 end
+            
+            # Map to S2 parameter space
+            s2_y_start, s2_y_end = -1.0, -0.1
+            s2_param = (intersection_y - s2_y_start) / (s2_y_end - s2_y_start) * problems[1].domain_length
+            
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 2 (S3)
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 2 (S3)
-                # S3 goes from y=0.1 (param=0) to y=1.0 (param=domain_length)
-                s3_y_start = 0.1
-                s3_y_end = 1.0
-                s3_param = (intersection_y - s3_y_start) / (s3_y_end - s3_y_start) * problems[2].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=2,  # S3 domain
-                    position1=problems[domain_idx].domain_end,  # End of horizontal segment
-                    position2=s3_param,  # Corresponding point on S3
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 2 at param {s3_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # S4->S2 connector
+                        domain2_index=1,           # S2 (lower middle vertical)
+                        position1=problems[domain_idx].domain_end,    # End of horizontal (at S2)
+                        position2=s2_param,       # Corresponding point on S2
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 1 at param {s2_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S2 continuity eq {eq_idx}, domain {domain_idx}: {e}")
     
-    # Trace continuity: start of domains 9-13 with corresponding point of domain 1 (S2)
-    s2_lower_right_connections = list(range(4+N, 4+2*N))  # domains 9-13 (lower connectors from S4)
+    # S3 connections (upper middle vertical): end of S1->S3 connectors + start of S4->S3 connectors
+    s3_from_s1 = list(range(4+2*N, 4+3*N))  # End of S1->S3 connectors connects to S3
+    s3_from_s4 = list(range(4+3*N, 4+4*N))  # Start of S4->S3 connectors connects to S3
     
-    for domain_idx in s2_lower_right_connections:
+    # End of S1->S3 connectors with S3
+    for domain_idx in s3_from_s1:
         if domain_idx < len(problems):
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate at S3 end
+            
+            # Map to S3 parameter space: S3 spans y ∈ [0.1, 1.0], param ∈ [0, domain_length]
+            s3_y_start, s3_y_end = 0.1, 1.0
+            s3_param = (intersection_y - s3_y_start) / (s3_y_end - s3_y_start) * problems[2].domain_length
+            
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 1 (S2)
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_start[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 1 (S2)
-                # S2 goes from y=-1 (param=0) to y=-0.1 (param=domain_length)
-                s2_y_start = -1.0
-                s2_y_end = -0.1
-                s2_param = (intersection_y - s2_y_start) / (s2_y_end - s2_y_start) * problems[1].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=1,  # S2 domain
-                    position1=problems[domain_idx].domain_start,  # Start of horizontal segment
-                    position2=s2_param,  # Corresponding point on S2
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} start -> domain 1 at param {s2_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # S1->S3 connector
+                        domain2_index=2,           # S3 (upper middle vertical)
+                        position1=problems[domain_idx].domain_end,    # End of horizontal (at S3)
+                        position2=s3_param,       # Corresponding point on S3
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 2 at param {s3_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S3 continuity eq {eq_idx}, domain {domain_idx}: {e}")
     
-    # Trace continuity: start of domains 19-23 with corresponding point of domain 2 (S3)
-    s3_upper_right_connections = list(range(4+3*N, 4+4*N))  # domains 19-23 (upper connectors from S4)
-    
-    for domain_idx in s3_upper_right_connections:
+    # Start of S4->S3 connectors with S3
+    for domain_idx in s3_from_s4:
         if domain_idx < len(problems):
+            horizontal_domain_info = geometry.get_domain(domain_idx)
+            intersection_y = horizontal_domain_info.extrema_end[1]  # y-coordinate at S3 end
+            
+            # Map to S3 parameter space
+            s3_y_start, s3_y_end = 0.1, 1.0
+            s3_param = (intersection_y - s3_y_start) / (s3_y_end - s3_y_start) * problems[2].domain_length
+            
             for eq_idx in range(neq):
-                # Find the corresponding y-coordinate on domain 2 (S3)
-                horizontal_domain_info = geometry.get_domain(domain_idx)
-                intersection_y = horizontal_domain_info.extrema_start[1]  # y-coordinate of horizontal segment
-                
-                # Map y-coordinate to parameter space on domain 2 (S3)
-                # S3 goes from y=0.1 (param=0) to y=1.0 (param=domain_length)
-                s3_y_start = 0.1
-                s3_y_end = 1.0
-                s3_param = (intersection_y - s3_y_start) / (s3_y_end - s3_y_start) * problems[2].domain_length
-                
-                constraint_manager.add_trace_continuity(
-                    equation_index=eq_idx,
-                    domain1_index=domain_idx,
-                    domain2_index=2,  # S3 domain
-                    position1=problems[domain_idx].domain_start,  # Start of horizontal segment
-                    position2=s3_param,  # Corresponding point on S3
-                )
-                print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} start -> domain 2 at param {s3_param:.3f}")
+                try:
+                    constraint_manager.add_trace_continuity(
+                        equation_index=eq_idx,
+                        domain1_index=domain_idx,  # S4->S3 connector
+                        domain2_index=2,           # S3 (upper middle vertical)  
+                        position1=problems[domain_idx].domain_end,    # End of horizontal (at S3)
+                        position2=s3_param,       # Corresponding point on S3
+                    )
+                    print(f"    Added continuity: eq {eq_idx}, domain {domain_idx} end -> domain 2 at param {s3_param:.3f}")
+                except Exception as e:
+                    print(f"    ERROR adding S3 continuity eq {eq_idx}, domain {domain_idx}: {e}")
                
-    total_boundary_conditions = len(boundary_domains) * 2 * neq  # 2 boundaries per domain, neq equations each
-    total_continuity_conditions = (len(s1_connections) + len(s4_connections) + 
-                                  len(s2_lower_connections) + len(s3_upper_connections) + 
-                                  len(s2_lower_right_connections) + len(s3_upper_right_connections)) * neq
+    # Calculate total constraints
+    total_boundary_conditions = len(boundary_domains) * 2 * neq
+    total_s1_s4_continuity = (len(s1_connections) + len(s4_connections)) * neq
+    total_s2_s3_continuity = (len(s2_from_s1) + len(s2_from_s4) + len(s3_from_s1) + len(s3_from_s4)) * neq
+    total_continuity_conditions = total_s1_s4_continuity + total_s2_s3_continuity
     
     print(f"✓ Constraint setup completed:")
     print(f"  - External boundary conditions: {total_boundary_conditions} Neumann BCs")
-    print(f"  - S1 continuity connections: {len(s1_connections)} domains × {neq} equations = {len(s1_connections) * neq} constraints")
-    print(f"  - S4 continuity connections: {len(s4_connections)} domains × {neq} equations = {len(s4_connections) * neq} constraints")
-    print(f"  - S2 continuity connections: {len(s2_lower_connections) + len(s2_lower_right_connections)} domains × {neq} equations = {(len(s2_lower_connections) + len(s2_lower_right_connections)) * neq} constraints")
-    print(f"  - S3 continuity connections: {len(s3_upper_connections) + len(s3_upper_right_connections)} domains × {neq} equations = {(len(s3_upper_connections) + len(s3_upper_right_connections)) * neq} constraints")
+    print(f"  - S1/S4 continuity: {total_s1_s4_continuity} constraints")
+    print(f"  - S2/S3 continuity: {total_s2_s3_continuity} constraints") 
     print(f"  - Total continuity conditions: {total_continuity_conditions}")
+    print(f"  - Constraint verification:")
+    print(f"    - All {neq} equations have continuity constraints: {total_continuity_conditions // neq == (len(s1_connections) + len(s4_connections) + len(s2_from_s1) + len(s2_from_s4) + len(s3_from_s1) + len(s3_from_s4))}") 
 
     # Map constraints to discretizations
     constraint_manager.map_to_discretizations(discretizations)

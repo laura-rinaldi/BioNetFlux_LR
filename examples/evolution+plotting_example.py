@@ -342,14 +342,14 @@ print("\nCreating plots of final solution...")
 n_equations = setup.problems[0].neq
 
 # 2D curve visualization for final solutions
-print("Creating 2D curve visualization for final solutions...")
-final_curves_2d_fig = plotter.plot_2d_curves(
-    trace_solutions=final_traces,
-    title=f"Final Solutions - 2D Curves at t={current_time:.4f}",
-    show_bounding_box=True,
-    show_mesh_points=True,
-    save_filename=f"bionetflux_final_2d_curves_t{current_time-dt:.4f}.png"
-)
+# print("Creating 2D curve visualization for final solutions...")
+# final_curves_2d_fig = plotter.plot_2d_curves(
+#     trace_solutions=final_traces,
+#     title=f"Final Solutions - 2D Curves at t={current_time:.4f}",
+#     show_bounding_box=True,
+#     show_mesh_points=True,
+#     save_filename=f"bionetflux_final_2d_curves_t{current_time-dt:.4f}.png"
+# )
 
 # Flat 3D visualization for final solutions
 for eq_idx in range(n_equations):
@@ -373,14 +373,14 @@ for eq_idx in range(n_equations):
     )
 
 # Solution evolution comparison
-print("Creating solution evolution comparison...")
-comparison_fig = plotter.plot_comparison(
-    initial_traces=trace_solutions,
-    final_traces=final_traces,
-    initial_time=0.0,
-    final_time=current_time-dt,
-    save_filename=f"bionetflux_solution_comparison_t{current_time-dt:.4f}.png"
-)
+# print("Creating solution evolution comparison...")
+# comparison_fig = plotter.plot_comparison(
+#     initial_traces=trace_solutions,
+#     final_traces=final_traces,
+#     initial_time=0.0,
+#    final_time=current_time-dt,
+#     save_filename=f"bionetflux_solution_comparison_t{current_time-dt:.4f}.png"
+# )
 
 # Show all plots
 plotter.show_all()
