@@ -304,7 +304,7 @@ def create_global_framework():
     )
     
     # Horizontal connectors - Lower section (-0.9 < y < -0.2)
-    N = 6  # Number of horizontal segments
+    N = 4  # Number of horizontal segments
     y_lower_values = np.linspace(-0.9, -0.2, N)
     
     print(f"  Adding {N} lower horizontal connectors at y = {y_lower_values}")
@@ -395,10 +395,10 @@ def create_global_framework():
         )
         
         # Set initial conditions (matches MATLAB problem.u0{i})
-        problem.set_initial_condition(0, lambda s: 0.0 * constant_function(s))
-        problem.set_initial_condition(1, lambda s: 0.0 * constant_function(s))
-        problem.set_initial_condition(2, lambda s: 0.0 * constant_function(s))
-        problem.set_initial_condition(3, lambda s: 0.0 * constant_function(s))
+        problem.set_initial_condition(0, lambda s, t=0: 0.0 * constant_function(s))
+        problem.set_initial_condition(1, lambda s, t=0: 0.0 * constant_function(s))
+        problem.set_initial_condition(2, lambda s, t=0: 0.0 * constant_function(s))
+        problem.set_initial_condition(3, lambda s, t=0: 0.0 * constant_function(s))
         
         # Set source terms (matches MATLAB force{i})
         problem.set_force(0, lambda s, t: 0.0 * constant_function(s))
@@ -418,14 +418,14 @@ def create_global_framework():
         discretization = Discretization(
             domain_start=domain_info.domain_start,
             domain_length=domain_info.domain_length,
-            n_elements=10  # Adjust as needed for your problem
+            n_elements=20  # Adjust as needed for your problem
         )
 
         discretization.set_tau([0.5, 0.5, 0.5, 0.5])  # Example: set tau parameter if needed
         discretizations.append(discretization)
     
-    problems[0].set_initial_condition(2, constant_function)  # u0 for first domain as sin(2πs)
-    problems[3].set_initial_condition(0, constant_function)  # u0 for fourth domain as sin(2πs)
+    problems[0].set_initial_condition(2, lambda s, t=0: constant_function(s))  # u0 for first domain as sin(2πs)
+    problems[3].set_initial_condition(0, lambda s, t=0: constant_function(s))  # u0 for fourth domain as sin(2πs)
     
     print(f"✓ Created {len(problems)} problem instances")
     

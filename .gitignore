@@ -28,6 +28,7 @@ __pycache__/
 .DS_Store
 
 
+
 # Python cache for new structure
 src/**/__pycache__/
 tests/__pycache__/
@@ -42,6 +43,11 @@ tests/__pycache__/
 venv/
 env/
 ENV/
+
+
+
+build/
+.cache/
 
 # User-specific VS Code settings (if needed)
 .vscode/settings.local.json
