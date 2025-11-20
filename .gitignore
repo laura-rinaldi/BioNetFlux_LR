@@ -55,5 +55,5 @@ build/
 # Original conda requirements (too specific)
 requirements.txt.conda-backup
 
-!docs/BioNetFlux_logo.png
+!docs/BioNetFlux_Logo.png
 !docs/Barra_D34Health.png
