@@ -270,9 +270,7 @@ while current_time+dt <= T and time_step <= max_time_steps:
    
     # Newton iteration loop
     newton_converged = False
-    
-    
-    
+     
     
     for newton_iter in range(max_newton_iterations):
         

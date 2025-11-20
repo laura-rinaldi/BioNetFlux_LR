@@ -8,7 +8,7 @@ def create_global_framework():
     Single domain test problem equivalent to MATLAB TestGabriella1.m
     """
     # Mesh parameters
-    n_elements = 160 # Number of spatial elements
+    n_elements = 80 # Number of spatial elements
     
     # Global parameters
     neq = 2

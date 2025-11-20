@@ -118,7 +118,7 @@ class ErrorEvaluator:
             
             domain_result = self._compute_domain_l2_error(
                 problem, discretization, numerical_sol, time, 
-                analytical_functions[domain_idx] if analytical_functions else None
+                analytical_functions[domain_idx] if analytical_functions and domain_idx < len(analytical_functions) else None
             )
             
             results['domain_errors'].append(domain_result)
