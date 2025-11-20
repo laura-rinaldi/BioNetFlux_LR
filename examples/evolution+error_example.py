@@ -22,10 +22,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from setup_solver import quick_setup
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
-from bionetflux.analysis.error_evaluation import L2ErrorEvaluator, create_analytical_solutions_example
+from bionetflux.analysis.error_evaluation import ErrorEvaluator, create_analytical_solutions_example
 
-filename = "bionetflux.problems.reduced_ooc_problem"  # New geometry-based problem
-# filename = "bionetflux.problems.KS_traveling_wave"  # Original test_problem2 for MATL
+# filename = "bionetflux.problems.reduced_ooc_problem"  # New geometry-based problem
+filename = "bionetflux.problems.KS_traveling_wave"  # Original test_problem2 for MATL
     
 print("="*60)
 print("BIONETFLUX REAL INITIALIZATION TEST")
@@ -90,7 +90,7 @@ plotter = LeanMatplotlibPlotter(
 
 # Initialize the L2 error evaluator
 print("\nInitializing L2 Error Evaluator...")
-error_evaluator = L2ErrorEvaluator(
+error_evaluator = ErrorEvaluator(
     problems=setup.problems,
     discretizations=setup.global_discretization.spatial_discretizations
 )
@@ -124,7 +124,7 @@ time_history_error = [0.0]
 
 # Plot initial trace solutions
 
-print("Plotting initial trace solutions...")
+# print("Plotting initial trace solutions...")
 
 # 2D curve visualization (all equations together)
 # print("Creating 2D curve visualization...")
@@ -355,11 +355,18 @@ while current_time+dt <= T and time_step <= max_time_steps:
         # No need to pass analytical_functions - will use auto-extracted ones
     )
     
+    # Compute bulk error at current time step
+    current_bulk_error_results = error_evaluator.compute_bulk_error(
+        bulk_solutions=bulk_guess,
+        time=current_time
+    )
+    
     # Store error history
     error_history.append(current_error_results)
     time_history_error.append(current_time)
     
-    print(f"  L2 Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
+    print(f"  Trace L2 Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
+    print(f"  Bulk L2 Error: {current_bulk_error_results['global_error']:.6e} (relative: {current_bulk_error_results.get('relative_global_error', 'N/A'):.6e})")
 
     print(f"✓ Newton solver completed")
     print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
@@ -394,26 +401,7 @@ n_equations = setup.problems[0].neq
 #     save_filename=f"bionetflux_final_2d_curves_t{current_time-dt:.4f}.png"
 # )
 
-# Flat 3D visualization for final solutions
-for eq_idx in range(n_equations):
-    final_flat_3d_fig = plotter.plot_flat_3d(
-        trace_solutions=final_traces,
-        equation_idx=eq_idx,
-        title=f"Final {plotter.equation_names[eq_idx]} Solution - Flat 3D at t={current_time:.4f}",
-        segment_width=0.1,
-        save_filename=f"bionetflux_final_{plotter.equation_names[eq_idx]}_flat3d_t{current_time:.4f}.png",
-        view_angle=(30, 45)
-    )
-    
-    # Bird's eye view visualization for final solutions
-    final_birdview_fig = plotter.plot_birdview(
-        trace_solutions=final_traces,
-        equation_idx=eq_idx,
-        segment_width=0.15,
-        save_filename=f"bionetflux_final_{plotter.equation_names[eq_idx]}_birdview_t{current_time:.4f}.png",
-        show_colorbar=True,
-        # time=current_time-dt
-    )
+
 
 # Solution evolution comparison
 # print("Creating solution evolution comparison...")
@@ -466,9 +454,19 @@ print(f"✓ Matplotlib plots saved and displayed")
 # =============================================================================
 print("\nStep 6.8: Error analysis and reporting...")
 
-# Generate final error report
+# Generate final error report for trace solutions
 final_error_report = error_evaluator.generate_error_report(error_history[-1])
+print("TRACE ERROR REPORT:")
 print(final_error_report)
+
+# Generate final bulk error report
+final_bulk_error_results = error_evaluator.compute_bulk_error(
+    bulk_solutions=bulk_guess,
+    time=current_time-dt
+)
+final_bulk_error_report = error_evaluator.generate_error_report(final_bulk_error_results)
+print("\nBULK ERROR REPORT:")
+print(final_bulk_error_report)
 
 # Plot error evolution over time
 plt.figure(figsize=(10, 6))
