@@ -53,7 +53,7 @@ def retrieve_analytical_solution(problems: List) -> Dict:
 class ErrorEvaluator:
     """
     Evaluates L2 errors between numerical and analytical solutions.
-    Supports both pointwise and integrated error measures.
+    Supports both pointwise and integrated error measures with HDG-specific trace error formulation.
     """
     
     def __init__(self, problems: List, discretizations: List):
@@ -78,18 +78,26 @@ class ErrorEvaluator:
     def compute_trace_error(self, 
                         numerical_solutions: List[np.ndarray], 
                         time: float,
-                        analytical_functions: Optional[List[List[Callable]]] = None) -> Dict:
+                        analytical_functions: Optional[List[List[Callable]]] = None,
+                        alpha: float = 0.5,
+                        use_hdg_formulation: bool = True) -> Dict:
         """
-        Compute L2 errors between numerical and analytical solutions.
+        Compute L2 errors between numerical and analytical solutions using HDG trace error formulation.
+        
+        According to HDG theory, the trace error is defined as:
+        error = h^alpha * ||pointwise_errors||_2
+        where h is the mesh size and alpha is a user-provided exponent.
         
         Args:
             numerical_solutions: List of numerical trace solutions for each domain
             time: Current time for analytical solution evaluation
             analytical_functions: Optional list of analytical functions per domain/equation
                                  If None, uses automatically extracted solutions from problems
+            alpha: Mesh-size scaling exponent for HDG formulation (default: 0.5)
+            use_hdg_formulation: If True, uses HDG h^alpha scaling; if False, uses standard L2 integration
         
         Returns:
-            Dictionary with error metrics per domain and equation
+            Dictionary with HDG-specific error metrics per domain and equation
         """
         # Use provided analytical functions or fall back to extracted ones
         if analytical_functions is None:
@@ -98,11 +106,14 @@ class ErrorEvaluator:
         
         results = {
             'domain_errors': [],
-            'equation_errors': {},  # New: organized by (domain_idx, eq_idx)
-            'global_error_per_equation': [],  # New: global error for each equation
+            'equation_errors': {},  # organized by (domain_idx, eq_idx)
+            'global_error_per_equation': [],  # global error for each equation
             'global_error': 0.0,
             'max_error': 0.0,
-            'time': time
+            'time': time,
+            'alpha': alpha,
+            'hdg_formulation': use_hdg_formulation,
+            'error_formulation': 'HDG trace error (h^alpha scaling)' if use_hdg_formulation else 'Standard L2 integration'
         }
         
         # Track errors per equation across all domains
@@ -116,9 +127,10 @@ class ErrorEvaluator:
             discretization = self.discretizations[domain_idx]
             numerical_sol = numerical_solutions[domain_idx]
             
-            domain_result = self._compute_domain_l2_error(
+            domain_result = self._compute_domain_hdg_trace_error(
                 problem, discretization, numerical_sol, time, 
-                analytical_functions[domain_idx] if analytical_functions and domain_idx < len(analytical_functions) else None
+                analytical_functions[domain_idx] if analytical_functions and domain_idx < len(analytical_functions) else None,
+                alpha, use_hdg_formulation
             )
             
             results['domain_errors'].append(domain_result)
@@ -130,14 +142,14 @@ class ErrorEvaluator:
                 
                 # Accumulate global error per equation
                 if eq_idx < len(global_error_squared_per_eq):
-                    global_error_squared_per_eq[eq_idx] += eq_error['l2_error_squared']
+                    global_error_squared_per_eq[eq_idx] += eq_error['hdg_error_squared'] if use_hdg_formulation else eq_error['l2_error_squared']
                     global_solution_norm_squared_per_eq[eq_idx] += eq_error['solution_norm_squared']
             
             max_pointwise_error = max(max_pointwise_error, domain_result['max_pointwise_error'])
         
         # Compute global errors per equation
         for eq_idx in range(max_equations):
-            global_l2_error = np.sqrt(global_error_squared_per_eq[eq_idx])
+            global_error = np.sqrt(global_error_squared_per_eq[eq_idx])
             if global_solution_norm_squared_per_eq[eq_idx] > 1e-14:
                 relative_error = np.sqrt(global_error_squared_per_eq[eq_idx] / global_solution_norm_squared_per_eq[eq_idx])
             else:
@@ -145,7 +157,7 @@ class ErrorEvaluator:
                 
             results['global_error_per_equation'].append({
                 'equation_idx': eq_idx,
-                'global_l2_error': global_l2_error,
+                'global_hdg_error' if use_hdg_formulation else 'global_l2_error': global_error,
                 'global_relative_error': relative_error,
                 'global_solution_norm': np.sqrt(global_solution_norm_squared_per_eq[eq_idx])
             })
@@ -164,14 +176,21 @@ class ErrorEvaluator:
             
         return results
     
-    def _compute_domain_l2_error(self, 
-                                problem, 
-                                discretization, 
-                                numerical_sol: np.ndarray, 
-                                time: float,
-                                analytical_functions: Optional[List[Callable]] = None) -> Dict:
+    def _compute_domain_hdg_trace_error(self, 
+                                       problem, 
+                                       discretization, 
+                                       numerical_sol: np.ndarray, 
+                                       time: float,
+                                       analytical_functions: Optional[List[Callable]] = None,
+                                       alpha: float = 0.5,
+                                       use_hdg_formulation: bool = True) -> Dict:
         """
-        Compute L2 error for a single domain.
+        Compute HDG trace error for a single domain using h^alpha scaling.
+        
+        HDG trace error formulation:
+        - For each node: pointwise_error = numerical_value - analytical_value
+        - Local mesh size: h = domain_length / n_elements
+        - HDG error: h^alpha * ||pointwise_errors||_2 (Euclidean norm)
         
         Args:
             problem: Problem object for the domain
@@ -179,13 +198,20 @@ class ErrorEvaluator:
             numerical_sol: Numerical solution array
             time: Current time
             analytical_functions: List of analytical functions per equation
+            alpha: Mesh-size scaling exponent
+            use_hdg_formulation: If True, uses HDG h^alpha scaling; if False, uses standard L2
         
         Returns:
-            Dictionary with domain-specific error metrics (WITHOUT accumulating equations)
+            Dictionary with domain-specific HDG trace error metrics
         """
         nodes = discretization.nodes
         n_nodes = len(nodes)
+        n_elements = discretization.n_elements
         neq = problem.neq
+        
+        # Compute characteristic mesh size for this domain
+        h = problem.domain_length / n_elements if n_elements > 0 else 1.0
+        h_alpha = h**alpha
         
         # Get analytical functions
         if analytical_functions is None:
@@ -211,34 +237,65 @@ class ErrorEvaluator:
             # Compute pointwise errors
             pointwise_errors = numerical_values - analytical_values
             
-            # Integrate using trapezoidal rule for L2 norm
-            eq_error_squared = self._integrate_trapezoidal(nodes, pointwise_errors**2)
+            if use_hdg_formulation:
+                # HDG formulation: h^alpha * ||pointwise_errors||_2 (Euclidean norm)
+                euclidean_norm_squared = np.sum(pointwise_errors**2)
+                hdg_error_squared = (h_alpha**2) * euclidean_norm_squared
+                hdg_error = h_alpha * np.sqrt(euclidean_norm_squared)
+                
+                # For consistency, also compute standard L2 error
+                l2_error_squared = self._integrate_trapezoidal(nodes, pointwise_errors**2)
+                l2_error = np.sqrt(l2_error_squared)
+            else:
+                # Standard L2 formulation (for comparison)
+                l2_error_squared = self._integrate_trapezoidal(nodes, pointwise_errors**2)
+                l2_error = np.sqrt(l2_error_squared)
+                hdg_error_squared = l2_error_squared
+                hdg_error = l2_error
+            
+            # Compute solution norm (always using L2 integration)
             eq_solution_norm_squared = self._integrate_trapezoidal(nodes, analytical_values**2)
+            eq_solution_norm = np.sqrt(eq_solution_norm_squared)
             
             # Track maximum pointwise error
             eq_max_error = np.max(np.abs(pointwise_errors))
             max_pointwise_error = max(max_pointwise_error, eq_max_error)
             
             # Store equation-specific results
-            equation_errors.append({
+            eq_result = {
                 'equation_idx': eq_idx,
-                'l2_error': np.sqrt(eq_error_squared),
-                'l2_error_squared': eq_error_squared,
-                'solution_norm': np.sqrt(eq_solution_norm_squared),
+                'hdg_error': hdg_error,
+                'hdg_error_squared': hdg_error_squared,
+                'l2_error': l2_error if use_hdg_formulation else hdg_error,
+                'l2_error_squared': l2_error_squared if use_hdg_formulation else hdg_error_squared,
+                'solution_norm': eq_solution_norm,
                 'solution_norm_squared': eq_solution_norm_squared,
                 'max_pointwise_error': eq_max_error,
-                'relative_error': np.sqrt(eq_error_squared / eq_solution_norm_squared) if eq_solution_norm_squared > 1e-14 else np.inf,
+                'relative_error': hdg_error / eq_solution_norm if eq_solution_norm > 1e-14 else np.inf,
+                'mesh_size': h,
+                'h_alpha': h_alpha,
+                'alpha': alpha,
+                'euclidean_norm': np.sqrt(np.sum(pointwise_errors**2)) if use_hdg_formulation else None,
+                'n_nodes': n_nodes,
                 'numerical_values': numerical_values.copy(),
                 'analytical_values': analytical_values.copy(),
-                'pointwise_errors': pointwise_errors.copy()
-            })
+                'pointwise_errors': pointwise_errors.copy(),
+                'formulation': 'HDG' if use_hdg_formulation else 'L2'
+            }
+            
+            equation_errors.append(eq_result)
         
         return {
             'domain_idx': getattr(problem, 'domain_idx', 0),
             'max_pointwise_error': max_pointwise_error,
             'equation_errors': equation_errors,
             'nodes': nodes.copy(),
-            'n_equations': neq
+            'n_equations': neq,
+            'mesh_size': h,
+            'h_alpha': h_alpha,
+            'alpha': alpha,
+            'n_elements': n_elements,
+            'formulation': 'HDG' if use_hdg_formulation else 'L2'
         }
 
     def _integrate_trapezoidal(self, x: np.ndarray, y: np.ndarray) -> float:
@@ -331,7 +388,7 @@ class ErrorEvaluator:
     
     def generate_error_report(self, error_results: Dict) -> str:
         """
-        Generate a formatted error analysis report.
+        Generate a formatted error analysis report with HDG-specific information.
         
         Args:
             error_results: Results from compute_trace_error
@@ -341,20 +398,28 @@ class ErrorEvaluator:
         """
         report = []
         report.append("="*60)
-        report.append("L2 ERROR ANALYSIS REPORT")
+        if error_results.get('hdg_formulation', False):
+            report.append("HDG TRACE ERROR ANALYSIS REPORT")
+            report.append(f"Error Formulation: {error_results.get('error_formulation', 'HDG trace error')}")
+            report.append(f"Mesh scaling parameter α = {error_results.get('alpha', 'N/A')}")
+        else:
+            report.append("L2 ERROR ANALYSIS REPORT")
         report.append("="*60)
         report.append(f"Time: {error_results['time']:.6f}")
-        report.append(f"Overall Global L2 Error: {error_results['global_error']:.6e}")
+        
+        error_type = 'HDG' if error_results.get('hdg_formulation', False) else 'L2'
+        report.append(f"Overall Global {error_type} Error: {error_results['global_error']:.6e}")
         report.append(f"Overall Relative Global Error: {error_results.get('relative_global_error', 'N/A'):.6e}")
         report.append(f"Maximum Pointwise Error: {error_results['max_error']:.6e}")
         report.append("")
         
         # Report global errors per equation
-        report.append("Global Errors per Equation:")
+        report.append(f"Global {error_type} Errors per Equation:")
         for eq_result in error_results['global_error_per_equation']:
             eq_idx = eq_result['equation_idx']
+            error_key = f'global_hdg_error' if error_results.get('hdg_formulation', False) else 'global_l2_error'
             report.append(f"  Equation {eq_idx + 1}:")
-            report.append(f"    Global L2 Error: {eq_result['global_l2_error']:.6e}")
+            report.append(f"    Global {error_type} Error: {eq_result[error_key]:.6e}")
             report.append(f"    Global Relative Error: {eq_result['global_relative_error']:.6e}")
             report.append(f"    Global Solution Norm: {eq_result['global_solution_norm']:.6e}")
         report.append("")
@@ -363,19 +428,51 @@ class ErrorEvaluator:
         report.append("Domain-wise Breakdown:")
         for domain_result in error_results['domain_errors']:
             domain_idx = domain_result['domain_idx']
-            report.append(f"Domain {domain_idx + 1} (Max pointwise error: {domain_result['max_pointwise_error']:.6e}):")
+            
+            # Fix the mesh_size formatting issue
+            mesh_size = domain_result.get('mesh_size', None)
+            if mesh_size is not None:
+                mesh_info = f" (h={mesh_size:.4f}"
+            else:
+                mesh_info = f" (h=N/A"
+                
+            if error_results.get('hdg_formulation', False):
+                h_alpha = domain_result.get('h_alpha', None)
+                if h_alpha is not None:
+                    mesh_info += f", h^α={h_alpha:.4f}"
+                else:
+                    mesh_info += f", h^α=N/A"
+            mesh_info += ")"
+            
+            report.append(f"Domain {domain_idx + 1}{mesh_info}:")
+            report.append(f"  Max pointwise error: {domain_result['max_pointwise_error']:.6e}")
             
             for eq_error in domain_result['equation_errors']:
                 eq_idx = eq_error['equation_idx']
                 report.append(f"    Equation {eq_idx + 1}:")
-                report.append(f"      L2 Error: {eq_error['l2_error']:.6e}")
+                
+                if error_results.get('hdg_formulation', False):
+                    report.append(f"      HDG Error (h^α·||e||₂): {eq_error['hdg_error']:.6e}")
+                    report.append(f"      L2 Error (integrated): {eq_error['l2_error']:.6e}")
+                    if eq_error.get('euclidean_norm') is not None:
+                        report.append(f"      Euclidean Norm ||e||₂: {eq_error['euclidean_norm']:.6e}")
+                else:
+                    report.append(f"      L2 Error: {eq_error['l2_error']:.6e}")
+                
                 report.append(f"      Relative Error: {eq_error['relative_error']:.6e}")
                 report.append(f"      Max Pointwise Error: {eq_error['max_pointwise_error']:.6e}")
                 report.append(f"      Solution Norm: {eq_error['solution_norm']:.6e}")
+                
+                # Fix the n_nodes formatting issue  
+                n_nodes = eq_error.get('n_nodes', None)
+                if n_nodes is not None:
+                    report.append(f"      Nodes: {n_nodes}")
+                else:
+                    report.append(f"      Nodes: N/A")
             report.append("")
         
         return "\n".join(report)
-
+    
     def get_equation_error(self, error_results: Dict, domain_idx: int, equation_idx: int) -> Optional[Dict]:
         """
         Get error results for a specific equation in a specific domain.

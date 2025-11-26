@@ -30,7 +30,7 @@ filename = "bionetflux.problems.KS_traveling_wave"  # Original test_problem2 for
 print("="*60)
 print("BIONETFLUX REAL INITIALIZATION TEST")
 print("="*60)
-print("Testing initialization with test_problem2 for MATLAB comparison")
+print("Testing initialization with HDG trace error evaluation")
 
 # =============================================================================
 # STEP 1: Initialize the solver setup
@@ -89,16 +89,21 @@ plotter = LeanMatplotlibPlotter(
 )
 
 # Initialize the L2 error evaluator
-print("\nInitializing L2 Error Evaluator...")
+print("\nInitializing HDG-compatible L2 Error Evaluator...")
 error_evaluator = ErrorEvaluator(
     problems=setup.problems,
     discretizations=setup.global_discretization.spatial_discretizations
 )
 
+# HDG trace error configuration
+alpha_hdg = 0.5  # HDG scaling parameter (h^0.5 scaling)
+use_hdg_formulation = True  # Enable HDG trace error formulation
 
 # The analytical solutions are now automatically extracted from problems
 analytical_solutions = error_evaluator.get_analytical_solutions()
-print("✓ L2 Error Evaluator initialized with automatically extracted analytical solutions")
+print("✓ HDG Error Evaluator initialized with automatically extracted analytical solutions")
+print(f"  HDG formulation: {'Enabled' if use_hdg_formulation else 'Disabled'}")
+print(f"  Scaling parameter α: {alpha_hdg}")
 
 # Print summary of available analytical solutions
 for i in range(len(setup.problems)):
@@ -107,56 +112,31 @@ for i in range(len(setup.problems)):
     else:
         print(f"  Domain {i}: No analytical solutions (will use zero)")
 
-# Compute initial L2 error
+# Compute initial HDG trace error
+print("\nComputing initial HDG trace error...")
 initial_error_results = error_evaluator.compute_trace_error(
     numerical_solutions=trace_solutions,
-    time=0.0
-    # No need to pass analytical_functions - will use auto-extracted ones
+    time=0.0,
+    analytical_functions=None,  # Use auto-extracted analytical solutions
+    alpha=alpha_hdg,
+    use_hdg_formulation=use_hdg_formulation
 )
 
-print("✓ Initial L2 error computed:")
-print(f"  Global L2 Error: {initial_error_results['global_error']:.6e}")
+print("✓ Initial HDG trace error computed:")
+print(f"  Global HDG Error: {initial_error_results['global_error']:.6e}")
 print(f"  Relative Global Error: {initial_error_results.get('relative_global_error', 'N/A'):.6e}")
+print(f"  Error formulation: {initial_error_results.get('error_formulation', 'Standard L2')}")
 
 # Store error history for convergence analysis
 error_history = [initial_error_results]
 time_history_error = [0.0]
 
-# Plot initial trace solutions
-
-# print("Plotting initial trace solutions...")
-
-# 2D curve visualization (all equations together)
-# print("Creating 2D curve visualization...")
-# curves_2d_fig = plotter.plot_2d_curves(
-#     trace_solutions=trace_solutions,
-#     title="Initial Solutions - 2D Curves",
-#     show_bounding_box=True,
-#     show_mesh_points=True,
-#     save_filename="bionetflux_initial_2d_curves.png"
-# )
-
-# Flat 3D visualization for each equation
-# for eq_idx in range(setup.problems[0].neq):
-#     flat_3d_fig = plotter.plot_flat_3d(
-#         trace_solutions=trace_solutions,
-#         equation_idx=eq_idx,
-#         title=f"Initial {plotter.equation_names[eq_idx]} Solution - Flat 3D",
-#         segment_width=0.1,
-#         save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_flat3d.png",
-#         view_angle=(30, 45)
-#     )
-    
-#     # Bird's eye view visualization
-#     birdview_fig = plotter.plot_birdview(
-#         trace_solutions=trace_solutions,
-#         equation_idx=eq_idx,
-#         segment_width=0.15,
-#         save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_birdview.png",
-#         show_colorbar=True,
-#         time=0.0
-#     )
-
+# Print mesh information for HDG analysis
+print("\nMesh information for HDG error analysis:")
+for i, discretization in enumerate(setup.global_discretization.spatial_discretizations):
+    h = setup.problems[i].domain_length / discretization.n_elements
+    h_alpha = h**alpha_hdg
+    print(f"  Domain {i+1}: h = {h:.6f}, h^α = {h_alpha:.6f} (α = {alpha_hdg})")
 
 # =============================================================================
 # STEP 3: Create global solution vector
@@ -235,8 +215,6 @@ if hasattr(setup, 'constraint_manager') and setup.constraint_manager is not None
 print(f"  Newton method parameters:")
 print(f"    Max iterations: {max_newton_iterations}")
 print(f"    Tolerance: {newton_tolerance:.1e}")
-# Note: residual variable not defined in this scope, would need to use final_residual if available
-
 
 # Time evolution loop
 while current_time+dt <= T and time_step <= max_time_steps:
@@ -345,12 +323,14 @@ while current_time+dt <= T and time_step <= max_time_steps:
     
     
     
-    # Compute L2 error at current time step
+    # Compute HDG trace error at current time step
     current_traces, current_multipliers = setup.extract_domain_solutions(global_solution)
     current_error_results = error_evaluator.compute_trace_error(
         numerical_solutions=current_traces,
-        time=current_time
-        # No need to pass analytical_functions - will use auto-extracted ones
+        time=current_time,
+        analytical_functions=None,  # Use auto-extracted analytical solutions
+        alpha=alpha_hdg,
+        use_hdg_formulation=use_hdg_formulation
     )
     
     # Compute bulk error at current time step
@@ -363,8 +343,18 @@ while current_time+dt <= T and time_step <= max_time_steps:
     error_history.append(current_error_results)
     time_history_error.append(current_time)
     
-    print(f"  Trace L2 Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
+    # Print error information with HDG-specific details
+    error_type = 'HDG' if use_hdg_formulation else 'L2'
+    print(f"  {error_type} Trace Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
     print(f"  Bulk L2 Error: {current_bulk_error_results['global_error']:.6e} (relative: {current_bulk_error_results.get('relative_global_error', 'N/A'):.6e})")
+    
+    # Print equation-specific HDG errors
+    if use_hdg_formulation and len(current_error_results['global_error_per_equation']) > 0:
+        print(f"  Per-equation {error_type} errors:")
+        for eq_result in current_error_results['global_error_per_equation']:
+            eq_idx = eq_result['equation_idx']
+            error_key = 'global_hdg_error' if use_hdg_formulation else 'global_l2_error'
+            print(f"    Eq {eq_idx+1}: {eq_result[error_key]:.6e}")
 
     print(f"✓ Newton solver completed")
     print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
@@ -448,13 +438,13 @@ print(f"\n✓ Final solution analysis completed!")
 print(f"✓ Matplotlib plots saved and displayed")
 
 # =============================================================================
-# STEP 6.8: Error Analysis and Reporting
+# STEP 6.8: Enhanced Error Analysis and Reporting with HDG
 # =============================================================================
-print("\nStep 6.8: Error analysis and reporting...")
+print("\nStep 6.8: Enhanced HDG error analysis and reporting...")
 
-# Generate final error report for trace solutions
+# Generate final HDG trace error report
 final_error_report = error_evaluator.generate_error_report(error_history[-1])
-print("TRACE ERROR REPORT:")
+print("HDG TRACE ERROR REPORT:")
 print(final_error_report)
 
 # Generate final bulk error report
@@ -466,37 +456,73 @@ final_bulk_error_report = error_evaluator.generate_error_report(final_bulk_error
 print("\nBULK ERROR REPORT:")
 print(final_bulk_error_report)
 
-# Plot error evolution over time
-plt.figure(figsize=(10, 6))
+# Enhanced error evolution plotting with HDG information
+fig, axes = plt.subplots(3, 1, figsize=(12, 10))
+
+# Extract error data
 global_errors = [err['global_error'] for err in error_history]
 relative_errors = [err.get('relative_global_error', np.nan) for err in error_history]
 
-plt.subplot(2, 1, 1)
-plt.semilogy(time_history_error, global_errors, 'b-o', markersize=4)
-plt.xlabel('Time')
-plt.ylabel('Global L2 Error')
-plt.title('L2 Error Evolution')
-plt.grid(True, alpha=0.3)
+# Plot 1: Global error evolution
+axes[0].semilogy(time_history_error, global_errors, 'b-o', markersize=4)
+axes[0].set_xlabel('Time')
+error_label = f'Global {"HDG" if use_hdg_formulation else "L2"} Error'
+if use_hdg_formulation:
+    error_label += f' (h^{alpha_hdg} scaling)'
+axes[0].set_ylabel(error_label)
+axes[0].set_title('HDG Trace Error Evolution' if use_hdg_formulation else 'L2 Trace Error Evolution')
+axes[0].grid(True, alpha=0.3)
 
-plt.subplot(2, 1, 2)
+# Plot 2: Relative error evolution
 valid_relative = [err for err in relative_errors if not np.isnan(err) and not np.isinf(err)]
 if valid_relative:
-    plt.semilogy(time_history_error[:len(valid_relative)], valid_relative, 'r-s', markersize=4)
-    plt.xlabel('Time')
-    plt.ylabel('Relative L2 Error')
-    plt.title('Relative L2 Error Evolution')
-    plt.grid(True, alpha=0.3)
+    axes[1].semilogy(time_history_error[:len(valid_relative)], valid_relative, 'r-s', markersize=4)
+    axes[1].set_xlabel('Time')
+    axes[1].set_ylabel('Relative Error')
+    axes[1].set_title('Relative Error Evolution')
+    axes[1].grid(True, alpha=0.3)
 else:
-    plt.text(0.5, 0.5, 'No valid relative errors', ha='center', va='center', transform=plt.gca().transAxes)
+    axes[1].text(0.5, 0.5, 'No valid relative errors', ha='center', va='center', transform=axes[1].transAxes)
+
+# Plot 3: Per-equation error evolution
+if use_hdg_formulation and len(error_history) > 1:
+    n_equations = len(error_history[0]['global_error_per_equation'])
+    colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown']
+    
+    for eq_idx in range(n_equations):
+        eq_errors = []
+        for err_result in error_history:
+            if eq_idx < len(err_result['global_error_per_equation']):
+                error_key = 'global_hdg_error' if use_hdg_formulation else 'global_l2_error'
+                eq_errors.append(err_result['global_error_per_equation'][eq_idx][error_key])
+            else:
+                eq_errors.append(np.nan)
+        
+        valid_eq_errors = [err for err in eq_errors if not np.isnan(err)]
+        if valid_eq_errors:
+            color = colors[eq_idx % len(colors)]
+            axes[2].semilogy(time_history_error[:len(valid_eq_errors)], valid_eq_errors, 
+                           f'{color[0]}-', marker='o', markersize=3, label=f'Equation {eq_idx+1}')
+    
+    axes[2].set_xlabel('Time')
+    axes[2].set_ylabel(f'Per-Equation {"HDG" if use_hdg_formulation else "L2"} Error')
+    axes[2].set_title('Per-Equation Error Evolution')
+    axes[2].grid(True, alpha=0.3)
+    axes[2].legend()
+else:
+    axes[2].text(0.5, 0.5, 'Per-equation data not available', ha='center', va='center', transform=axes[2].transAxes)
 
 plt.tight_layout()
-plt.savefig("outputs/plots/l2_error_evolution.png", dpi=300, bbox_inches='tight')
-print("✓ L2 error evolution plot saved")
+plt.savefig("outputs/plots/hdg_error_evolution.png", dpi=300, bbox_inches='tight')
+print("✓ HDG error evolution plot saved")
 
-# Error statistics summary
-print(f"\nError Statistics Summary:")
-print(f"  Initial global L2 error: {global_errors[0]:.6e}")
-print(f"  Final global L2 error: {global_errors[-1]:.6e}")
+# Enhanced error statistics summary
+print(f"\nEnhanced Error Statistics Summary:")
+print(f"  Error formulation: {error_history[0].get('error_formulation', 'Standard L2')}")
+if use_hdg_formulation:
+    print(f"  HDG scaling parameter α: {alpha_hdg}")
+print(f"  Initial global error: {global_errors[0]:.6e}")
+print(f"  Final global error: {global_errors[-1]:.6e}")
 print(f"  Maximum error during evolution: {max(global_errors):.6e}")
 print(f"  Minimum error during evolution: {min(global_errors):.6e}")
 
@@ -504,11 +530,62 @@ if len(global_errors) > 1:
     error_trend = (global_errors[-1] - global_errors[0]) / global_errors[0]
     print(f"  Error trend (relative change): {error_trend:.2%}")
 
-# Save error history to file
-error_data = np.column_stack((time_history_error, global_errors, relative_errors))
-np.savetxt("outputs/plots/error_history.txt", error_data, 
-           header="Time\tGlobal_L2_Error\tRelative_L2_Error", 
+# HDG convergence analysis (if multiple mesh sizes were available)
+print(f"\nMesh size analysis for HDG theory:")
+for i, discretization in enumerate(setup.global_discretization.spatial_discretizations):
+    h = setup.problems[i].domain_length / discretization.n_elements
+    final_domain_error = 0.0
+    
+    # Get final error for this domain
+    if len(error_history) > 0:
+        final_result = error_history[-1]
+        for domain_result in final_result['domain_errors']:
+            if domain_result['domain_idx'] == i:
+                # Sum errors over all equations in this domain
+                for eq_error in domain_result['equation_errors']:
+                    if use_hdg_formulation:
+                        final_domain_error += eq_error.get('hdg_error', eq_error['l2_error'])**2
+                    else:
+                        final_domain_error += eq_error['l2_error']**2
+                final_domain_error = np.sqrt(final_domain_error)
+                break
+    
+    print(f"  Domain {i+1}: h = {h:.6f}, final error = {final_domain_error:.6e}")
+    if use_hdg_formulation:
+        h_alpha = h**alpha_hdg
+        normalized_error = final_domain_error / h_alpha if h_alpha > 0 else np.inf
+        print(f"    h^α = {h_alpha:.6f}, normalized error = {normalized_error:.6e}")
+
+# Save enhanced error history to file
+error_data_columns = [time_history_error, global_errors, relative_errors]
+column_headers = ["Time", f"Global_{'HDG' if use_hdg_formulation else 'L2'}_Error", "Relative_Error"]
+
+# Add per-equation errors if available
+if use_hdg_formulation and len(error_history) > 0:
+    n_equations = len(error_history[0]['global_error_per_equation'])
+    for eq_idx in range(n_equations):
+        eq_errors = []
+        for err_result in error_history:
+            if eq_idx < len(err_result['global_error_per_equation']):
+                error_key = 'global_hdg_error' if use_hdg_formulation else 'global_l2_error'
+                eq_errors.append(err_result['global_error_per_equation'][eq_idx][error_key])
+            else:
+                eq_errors.append(np.nan)
+        error_data_columns.append(eq_errors)
+        column_headers.append(f"Equation_{eq_idx+1}_Error")
+
+error_data = np.column_stack(error_data_columns)
+np.savetxt("outputs/plots/hdg_error_history.txt", error_data, 
+           header="\t".join(column_headers), 
            delimiter='\t', fmt='%.6e')
-print("✓ Error history saved to outputs/plots/error_history.txt")
+print("✓ Enhanced error history saved to outputs/plots/hdg_error_history.txt")
+
+# Print final HDG-specific information
+if use_hdg_formulation:
+    print(f"\n📊 HDG TRACE ERROR SUMMARY:")
+    print(f"  Scaling formulation: error = h^{alpha_hdg} * ||pointwise_errors||₂")
+    print(f"  Theoretical convergence: error ∼ h^(α + p) where p is convergence order")
+    print(f"  Current α parameter: {alpha_hdg}")
+    print(f"  Expected optimal convergence for HDG: p ≈ k+1 (k = polynomial degree)")
 
 
