@@ -293,12 +293,19 @@ The factory class provides automatic selection of appropriate static condensatio
 	custom_sc = StaticCondensationFactory.create(custom_problem, ...)
 \end{lstlisting}
 
+\begin{warningbox}
+	There is an inconsistency regarding the static condensation matrices. The base method has an output (the static condensation matrices are seen as external to the class), in the derived implementations {\tt sc\_matrices} are an attribute to the class. This second behaviour is the one expected by {\tt flux\_jump}.
+\end{warningbox}
+
+
+
 \begin{todobox}
 	\begin{itemize}
 		\item 	Modify the {\tt static\_condensation} method so that it can return the bulk solution only (no flux jump or jacobian), or the bulk solution + flux jump (no jacobian)
 		\item Maybe we need it to be able to return the jacobian only? 
 		\item Could modify the factory by including also a check on the solution method: if Newton proceed as now, if Picard, do something else 
 		\item Add instructions to the documentation for adding a new type of problems 
+		\item Fix inconsistency between implementation and documentation of {\tt build\_matrices} method. It does not work by outputting a dictionary but initializes an {\tt sc\_matrices} attribute of the static condensation class
 	\end{itemize}
 \end{todobox}
 

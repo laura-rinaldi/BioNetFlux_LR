@@ -3,10 +3,10 @@
 %
 % Usage: \input{docs/flux_jump_module_api}
 
-\section{Flux Jump Module API Reference (Accurate Analysis)}
+\section{Flux Jump Module API Reference}
 \label{sec:flux_jump_module_api}
 
-This section provides an exact reference for the flux jump module (\texttt{bionetflux.core.flux\_jump}) based on detailed analysis of the actual implementation. The module computes local flux balance contributions for HDG methods, serving as the Python equivalent of MATLAB \texttt{fluxJump.m}.
+This section provides an exact reference for the flux jump module (\texttt{bionetflux.core.flux\_jump}) based on detailed analysis of the actual implementation. The module computes local flux balance contributions for HDG methods.
 
 \subsection{Module Overview}
 
@@ -133,7 +133,14 @@ print(f"Flux jumps F: {F.shape}")       # (8, 1)
 print(f"Jacobian JF: {JF.shape}")       # (8, 8)
 \end{lstlisting}
 
-\textbf{Local Index Construction:} For element k, the function constructs local indices as:
+\textbf{Local Index Construction:} 
+\begin{structurebox}
+	The data is of two types: trace data and bulk data. Bulk data is handled by the {\tt BulkData} and {\tt BulkDataManager} classes, and it is organized as {\tt 2 neq} $\times$ {\tt n\_elements} array. In each column, the 2 coefficients of  physical function of index {\tt i\_eq} (with $0 \leq {\tt i\_eq} \leq {\tt n\_eq}-1$) in the corresponding element are the $2 {\tt  i\_eq}$ and $2 {\tt i\_eq} + 1$. 
+	
+	Trace data are stacked in a single array of length {\tt n\_eq} $\times$ {\tt n\_nodes}. Here the value of the physical function of index {\tt i\_eq} in the node {\tt i\_node} is {\tt n\_nodes} $\times$ {\tt i\_eq} $+$ {\tt i\_node}.
+\end{structurebox}
+
+For element k, the function constructs local indices as:
 \begin{lstlisting}[language=Python, caption=Local Index Construction Algorithm]
 # Initialize local_indices as vector of length 2*neq
 local_indices = np.zeros(2 * neq, dtype=int)
@@ -148,25 +155,7 @@ for ieq in range(neq):
 # local_indices = [1, 2, 6, 7]  # [u_left, u_right, phi_left, phi_right]
 \end{lstlisting}
 
-\textbf{Static Condensation Interface:} The function expects the static condensation object to provide:
-\begin{lstlisting}[language=Python, caption=Required Static Condensation Interface]
-def static_condensation(self, local_trace, local_source):
-    """
-    Required interface for static condensation objects.
-    
-    Args:
-        local_trace: Local trace values, shape (2*neq, 1) or (2*neq,)
-        local_source: Local forcing term, shape (2*neq, 1) or (2*neq,)
-        
-    Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-            - local_solution: Bulk coefficients, shape (2*neq,)
-            - flux: Scalar flux value
-            - flux_trace: Flux contributions, shape (2*neq,)
-            - jacobian: Local Jacobian, shape (2*neq, 2*neq)
-    """
-    pass
-\end{lstlisting}
+
 
 \textbf{Error Handling:}
 \begin{itemize}
@@ -174,37 +163,11 @@ def static_condensation(self, local_trace, local_source):
     \item Includes element number in error message for debugging
 \end{itemize}
 
-\textbf{Integration with BioNetFlux:}
-\begin{lstlisting}[language=Python, caption=BioNetFlux Integration Example]
-# Integration with GlobalAssembler
-class GlobalAssembler:
-    def compute_element_contributions(self, trace_solutions, forcing_terms):
-        """Example integration in GlobalAssembler."""
-        all_bulk_solutions = []
-        all_flux_jumps = []
-        all_jacobians = []
-        
-        for domain_idx in range(self.n_domains):
-            # Get domain-specific data
-            trace_sol = trace_solutions[domain_idx]
-            forcing = forcing_terms[domain_idx]
-            static_cond = self.static_condensations[domain_idx]
-            
-            # Compute domain flux jump
-            U, F, JF = domain_flux_jump(
-                trace_solution=trace_sol,
-                forcing_term=forcing,
-                problem=self.problems[domain_idx],
-                discretization=self.discretizations[domain_idx],
-                static_condensation=static_cond
-            )
-            
-            all_bulk_solutions.append(U)
-            all_flux_jumps.append(F)
-            all_jacobians.append(JF)
-        
-        return all_bulk_solutions, all_flux_jumps, all_jacobians
-\end{lstlisting}
+
+
+\begin{todobox}
+	Add a section on data structures, somewhere.
+\end{todobox}
 
 \subsection{Testing Infrastructure}
 \label{subsec:flux_jump_testing}
@@ -355,7 +318,9 @@ def static_condensation(self, local_trace, local_source=None):
 \subsubsection{Integration with Real Static Condensation}
 
 \begin{lstlisting}[language=Python, caption=Real Static Condensation Integration]
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
 from bionetflux.core.flux_jump import domain_flux_jump
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
 from bionetflux.core.static_condensation_ooc import StaticCondensationOOC
 from bionetflux.core.problem import Problem
 from bionetflux.core.discretization import Discretization, GlobalDiscretization
@@ -365,25 +330,33 @@ import numpy as np
 # Setup OrganOnChip problem (4 equations)
 ooc_params = np.array([1.0, 2.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0])
 problem = Problem(
-    neq=4,
-    domain_start=0.0,
-    domain_length=1.0,
-    parameters=ooc_params,
-    problem_type="organ_on_chip"
+neq=4,
+domain_start=0.0,
+domain_length=1.0,
+parameters=ooc_params,
+problem_type="organ_on_chip",
+name ="OrganOnChipExample1"
 )
 
 # Setup discretization
 discretization = Discretization(n_elements=10)
+discretization.set_tau([1.0, 1.0, 1.0, 1.0])  # [tau_c, tau_b, tau_w, tau_s]
 global_disc = GlobalDiscretization([discretization])
+global_disc.set_time_parameters(dt=0.01, T=0.5)  
+
+
 
 # Create static condensation
 elementary_matrices = ElementaryMatrices()
-static_condensation = StaticCondensation(
-    problem=problem,
-    global_discretization=global_disc,
-    elementary_matrices=elementary_matrices,
-    domain_index=0
+
+static_condensation = StaticCondensationFactory.create(
+problem=problem,
+global_disc=global_disc,
+elementary_matrices=elementary_matrices,
+i=0
 )
+
+static_condensation.build_matrices()
 
 # Prepare realistic input data
 N = 10  # elements
@@ -398,11 +371,11 @@ forcing_term = np.random.rand(2 * neq, N)
 
 # Compute flux jump
 U, F, JF = domain_flux_jump(
-    trace_solution=trace_solution,
-    forcing_term=forcing_term,
-    problem=problem,
-    discretization=discretization,
-    static_condensation=static_condensation
+trace_solution=trace_solution,
+forcing_term=forcing_term,
+problem=None,
+discretization=None,
+static_condensation=static_condensation
 )
 
 print(f"OrganOnChip flux jump computation:")
@@ -518,10 +491,9 @@ else:
 \subsection{Key Features and Capabilities}
 
 \begin{itemize}
-    \item \textbf{MATLAB Compatibility}: Direct Python equivalent of MATLAB \texttt{fluxJump.m}
     \item \textbf{Multi-Equation Support}: Handles arbitrary number of equations (\texttt{neq})
     \item \textbf{Flexible Element Count}: Works with any number of elements (N)
-    \item \textbf{Static Condensation Integration}: Compatible with all static condensation implementations
+    \item \textbf{Static Condensation Integration}: Compatible with all admissible static condensation implementations
     \item \textbf{Comprehensive Testing}: Built-in test suite with mock objects and edge cases
     \item \textbf{Error Handling}: Robust error reporting with element-specific debugging
     \item \textbf{Shape Validation}: Automatic input/output shape verification
@@ -529,5 +501,12 @@ else:
 \end{itemize}
 
 This documentation provides an exact reference for the flux jump module, emphasizing its role in HDG static condensation and integration with the broader BioNetFlux framework.
+
+
+\begin{todobox}
+	\begin{itemize}
+		\item Clean up the implmenentation by removing the dummy placeholders for problem and discretization
+	\end{itemize}
+\end{todobox}
 
 % End of flux jump module API documentation

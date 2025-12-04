@@ -6,7 +6,7 @@
 \section{Lean Global Assembly Module API Reference}
 \label{sec:lean_global_assembly_api}
 
-This section provides an exact reference for the lean global assembly module (\texttt{ooc1d.core.lean\_global\_assembly.GlobalAssembler}) based on detailed analysis of the actual implementation. This class provides global assembly functionality using the lean BulkDataManager approach where framework objects are passed as parameters.
+This section provides an exact reference for the global assembly module based on  the actual implementation in \texttt{bionetflux.core.lean\_global\_assembly.GlobalAssembler}. This class provides global assembly functionality using the lean BulkDataManager approach where framework objects are passed as parameters. Aim of the module is the assembly of the global functionals and operators from the individual domain components. 
 
 \subsection{Module Overview}
 
@@ -15,7 +15,7 @@ The lean global assembly module provides:
     \item Global residual and Jacobian assembly from domain flux jumps
     \item Constraint integration for boundary and junction conditions
     \item Memory-efficient operation using lean BulkDataManager
-    \item DOF management for multi-domain systems
+    \item Degrees of freedom management for multi-domain systems
     \item Comprehensive testing infrastructure
 \end{itemize}
 
@@ -661,11 +661,11 @@ print(repr(assembler))
 \subsubsection{Complete Newton Solver Integration}
 
 \begin{lstlisting}[language=Python, caption=Complete Newton Solver Integration]
-from ooc1d.core.lean_global_assembly import GlobalAssembler
-from ooc1d.core.problem import Problem
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.core.constraints import ConstraintManager
-from ooc1d.core.lean_bulk_data_manager import BulkDataManager
+from bionetflux.core.lean_global_assembly import GlobalAssembler
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.core.constraints import ConstraintManager
+from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 import numpy as np
 
 def newton_solve_with_lean_assembler(problems, discretizations, static_condensations):
