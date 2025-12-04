@@ -69,6 +69,8 @@ class KellerSegelStaticCondensation(StaticCondensationBase):
         Ntil = eNtil
         Nhat = eNhat
         
+        
+        
         # Build matrices following MATLAB scBlocks.m exactly
         normali = np.array([[-1], [1]])
         Z = np.zeros((2, 2))

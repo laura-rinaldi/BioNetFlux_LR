@@ -57,16 +57,10 @@ class StaticCondensationBase(ABC):
         """
         pass
     
-    def get_matrices(self) -> Dict[str, np.ndarray]:
-        """Get all pre-computed matrices."""
-        return self.sc_matrices
-
     @abstractmethod
     def assemble_forcing_term(self, *args, **kwargs) -> np.ndarray:
         """
-        Assemble the right-hand side for the static condensation system.
-        Must be implemented by each problem type. Might depend on local sources, previous solutions, etc.
-
+        str
         Args:
             *args: Positional arguments
             **kwargs: Keyword arguments
@@ -75,4 +69,9 @@ class StaticCondensationBase(ABC):
             Assembled right-hand side in correct format for static condensation
         """
         pass 
+    
+    def get_matrices(self) -> Dict[str, np.ndarray]:
+        """Get all pre-computed matrices."""
+        return self.sc_matrices
+
  

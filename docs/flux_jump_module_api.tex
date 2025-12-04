@@ -6,7 +6,7 @@
 \section{Flux Jump Module API Reference (Accurate Analysis)}
 \label{sec:flux_jump_module_api}
 
-This section provides an exact reference for the flux jump module (\texttt{ooc1d.core.flux\_jump}) based on detailed analysis of the actual implementation. The module computes local flux balance contributions for HDG methods, serving as the Python equivalent of MATLAB \texttt{fluxJump.m}.
+This section provides an exact reference for the flux jump module (\texttt{bionetflux.core.flux\_jump}) based on detailed analysis of the actual implementation. The module computes local flux balance contributions for HDG methods, serving as the Python equivalent of MATLAB \texttt{fluxJump.m}.
 
 \subsection{Module Overview}
 
@@ -92,7 +92,7 @@ def domain_flux_jump(
 \textbf{Usage Examples:}
 \begin{lstlisting}[language=Python, caption=Domain Flux Jump Usage Examples]
 import numpy as np
-from ooc1d.core.flux_jump import domain_flux_jump
+from bionetflux.core.flux_jump import domain_flux_jump
 
 # Example 1: Single equation (neq=1), 4 elements
 N = 4
@@ -355,11 +355,11 @@ def static_condensation(self, local_trace, local_source=None):
 \subsubsection{Integration with Real Static Condensation}
 
 \begin{lstlisting}[language=Python, caption=Real Static Condensation Integration]
-from ooc1d.core.flux_jump import domain_flux_jump
-from ooc1d.core.static_condensation_ooc import StaticCondensationOOC
-from ooc1d.core.problem import Problem
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.flux_jump import domain_flux_jump
+from bionetflux.core.static_condensation_ooc import StaticCondensationOOC
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
 import numpy as np
 
 # Setup OrganOnChip problem (4 equations)

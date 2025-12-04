@@ -6,19 +6,21 @@
 \section{Static Condensation Modules API Reference}
 \label{sec:static_condensation_modules_api}
 
-The static condensation module is where the  problem specific HDG discretization happens. This section provides a comprehensive reference for the static condensation module hierarchy based on analysis of the MATLAB reference files and BioNetFlux architecture patterns. The modules implement HDG static condensation for different problem types.
+
+The static condensation module plays a crucial role in the BioNetFlux code. It is the module where the  problem specific HDG discretization happens, and it is therefore the module that needs to be implemented from scratch. This section provides a comprehensive reference for the static condensation module hierarchy based on analysis of the MATLAB reference files and BioNetFlux architecture patterns. The modules implement HDG static condensation for different problem types.
 
 \subsection{Module Overview}
 
 The static condensation system consists of:
 \begin{itemize}
     \item \textbf{StaticCondensationBase}: Abstract base class defining the interface
-    \item \textbf{Derived classes}
+    \item \textbf{Derived classes}:
+    Two example are presently available in the code
    \begin{itemize}
-    \item \textbf{KellerSegelStaticCondensation}: Implementation for 2-equation chemotaxis systems
-    \item \textbf{StaticCondensationOOC}: Implementation for 4-equation OrganOnChip systems
+    \item \textbf{KellerSegelStaticCondensation}: Implementation of full Newton method for 2-equations chemotaxis systems (Keller Segel)
+    \item \textbf{StaticCondensationOOC}: Implementation of full Newton method for 4-equation OrganOnChip systems
    \end{itemize}
-    \item \textbf{StaticCondensationFactory}: Factory for creating appropriate implementations
+    \item \textbf{StaticCondensationFactory}: Factory for referring to the appropriate implementation
 \end{itemize}
 
 %\subsection{MATLAB Reference Analysis}
@@ -81,23 +83,35 @@ def __init__(self,
 \texttt{domain\_index} & \texttt{int} & Domain index for multi-domain systems \\
 \hline
 
-\texttt{neq} & \texttt{int} & Number of equations (extracted from problem) \\
+{\color{gray}  \texttt{neq}} & {\color{gray}   \texttt{int} }& {\color{gray} Number of equations (extracted from problem)} \\
 \hline
 
-\texttt{n\_elements} & \texttt{int} & Number of elements (extracted from discretization) \\
+{\color{gray}  \texttt{n\_elements}  }& {\color{gray}  \texttt{int}  }& {\color{gray}  Number of elements (extracted from discretization) } \\
 \hline
 
-\texttt{element\_length} & \texttt{float} & Element size: \texttt{h = domain\_length / n\_elements} \\
+{\color{gray}   \texttt{element\_length}  }&{\color{gray}   \texttt{float}  }& {\color{gray}  Element size: \texttt{h = domain\_length / n\_elements}  }\\
 \hline
 
-\texttt{dt} & \texttt{Optional[float]} & Time step size (from discretization if available) \\
+{\color{gray}   \texttt{dt}  }&{\color{gray}   \texttt{Optional[float]}  }& {\color{gray} Time step size (from discretization if available)} \\
 \hline
 
 \end{longtable}
 
+\begin{warningbox}
+	The {\tt StaticCondensationBase} class stores references to {\tt self.problem} and {\tt self.discretization} but doesn't actually extract the commonly used parameters like:
+	\begin{itemize}
+	\item 	{\tt neq} (from {\tt problem.neq})
+\item	{\tt n\_elements} (from {\tt discretization.n\_elements})
+\item	{\tt element\_length }(from {\tt discretization.element\_length})
+\item	{\tt dt} (already extracted: {\tt self.dt} = {\tt global\_disc.dt})
+\end{itemize}
+	This is a design inconsistency rather than a functional bug. While the code works, it violates the principle of ``extract once, use many times" that's evident in {\tt DomainData}. The base class should probably extract these commonly used parameters to provide a consistent interface for derived classes and align with the framework's data extraction philosophy.
+		The inconsistency is more about maintainability and design clarity than immediate functionality.
+\end{warningbox}
+
 \subsubsection{Abstract Methods (Must be Implemented by Subclasses)}
 
-\paragraph{build\_matrices()}
+\paragraph{build\_matrices()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Abstract Build Matrices Method]
 @abstractmethod
 def build_matrices(self) -> dict
@@ -113,73 +127,180 @@ def build_matrices(self) -> dict
 def static_condensation(self, 
                        trace_values: np.ndarray, 
                        rhs: np.ndarray, 
-                       time: float = 0.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
+                       **kwargs ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
 \end{lstlisting}
 
 \textbf{Parameters:}
 \begin{itemize}
     \item \texttt{trace\_values}: Local trace values $\hat{U}$ (size: \texttt{neq*(n\_elements+1)})
     \item \texttt{rhs}: Right-hand side vector (size: \texttt{2*neq*n\_elements})
-    \item \texttt{time}: Current time for time-dependent problems (default: 0.0)
+    \item \texttt{**kwargs}: Additional problem specific parameters
 \end{itemize}
 
-\textbf{Returns:} \texttt{Tuple[np.ndarray, np.ndarray, np.ndarray]} - (bulk\_solution, flux\_jump, jacobian)
+\textbf{Returns:} \texttt{Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]} - (bulk\_solution, flux,  flux\_trace, jacobian)
 
 \textbf{Purpose:} Perform local static condensation step
 
-\subsubsection{Concrete Methods (Provided by Base Class)}
 
-\paragraph{get\_problem\_parameters()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Get Problem Parameters Method]
-def get_problem_parameters(self) -> np.ndarray
-\end{lstlisting}
-
-\textbf{Returns:} \texttt{np.ndarray} - Problem parameters array
-
-\textbf{Usage:}
-\begin{lstlisting}[language=Python, caption=Get Parameters Usage]
-params = static_condensation.get_problem_parameters()
-# For OrganOnChip: [nu, mu, epsilon, sigma, a, b, c, d, chi]
-# For Keller-Segel: [mu, nu, a, b]
-\end{lstlisting}
-
-\paragraph{get\_stabilization\_parameters()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Get Stabilization Parameters Method]
-def get_stabilization_parameters(self) -> np.ndarray
-\end{lstlisting}
-
-\textbf{Returns:} \texttt{np.ndarray} - Stabilization parameters $\tau$ for each equation
-
-\textbf{Usage:}
-\begin{lstlisting}[language=Python, caption=Get Stabilization Usage]
-tau_values = static_condensation.get_stabilization_parameters()
-# For OrganOnChip: [tu, to, tv, tp] (4 equations)
-# For Keller-Segel: [tu, tp] (2 equations)
-\end{lstlisting}
-
-\paragraph{validate\_input()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Validate Input Method]
-def validate_input(self, 
-                  trace_values: np.ndarray, 
-                  rhs: np.ndarray) -> None
+\paragraph{assemble\_forcing\_term}\leavevmode
+\begin{lstlisting}[language=Python, caption=Abstract Static Condensation forcing term assembly]
+	@abstractmethod
+	def assemble_forcing_term(self, *args, **kwargs) -> np.ndarray
 \end{lstlisting}
 
 \textbf{Parameters:}
 \begin{itemize}
-    \item \texttt{trace\_values}: Trace values to validate
-    \item \texttt{rhs}: Right-hand side to validate
+	\item \texttt{*args}: Positional arguments
+	\item \texttt{**kwargs}: Keyword arguments
 \end{itemize}
 
-\textbf{Returns:} \texttt{None}
+\textbf{Returns:} \texttt{np.ndarray} - Assembled right-hand side in correct format for static condensation
 
-\textbf{Raises:} \texttt{ValueError} for invalid input dimensions or content
+\textbf{Purpose:} Assemble the right-hand side for the static condensation system.
+Must be implemented by each problem type. Might depend on local sources, previous solutions, etc.
 
-\textbf{Validation Checks:}
+
+\subsubsection{Concrete Methods (Provided by Base Class)}
+
+\paragraph{get\_matrices}\leavevmode
+\begin{lstlisting}[language=Python, caption=Get Matrices]
+def get_matrices(self) -> Dict[str, np.ndarray]
+\end{lstlisting}
+
+%\paragraph{get\_problem\_parameters()}\leavevmode
+%\begin{lstlisting}[language=Python, caption=Get Problem Parameters Method]
+%def get_problem_parameters(self) -> np.ndarray
+%\end{lstlisting}
+
+\textbf{Returns:} \texttt{Dict[np.ndarray]} - Matrices needed for the static condensation
+%
+%\textbf{Usage:}
+%\begin{lstlisting}[language=Python, caption=Get Parameters Usage]
+%params = static_condensation.get_problem_parameters()
+%# For OrganOnChip: [nu, mu, epsilon, sigma, a, b, c, d, chi]
+%# For Keller-Segel: [mu, nu, a, b]
+%\end{lstlisting}
+%
+%\paragraph{get\_stabilization\_parameters()}\leavevmode
+%\begin{lstlisting}[language=Python, caption=Get Stabilization Parameters Method]
+%def get_stabilization_parameters(self) -> np.ndarray
+%\end{lstlisting}
+%
+%\textbf{Returns:} \texttt{np.ndarray} - Stabilization parameters $\tau$ for each equation
+%
+%\textbf{Usage:}
+%\begin{lstlisting}[language=Python, caption=Get Stabilization Usage]
+%tau_values = static_condensation.get_stabilization_parameters()
+%# For OrganOnChip: [tu, to, tv, tp] (4 equations)
+%# For Keller-Segel: [tu, tp] (2 equations)
+%\end{lstlisting}
+%
+%\paragraph{validate\_input()}\leavevmode
+%\begin{lstlisting}[language=Python, caption=Validate Input Method]
+%def validate_input(self, 
+%                  trace_values: np.ndarray, 
+%                  rhs: np.ndarray) -> None
+%\end{lstlisting}
+%
+%\textbf{Parameters:}
+%\begin{itemize}
+%    \item \texttt{trace\_values}: Trace values to validate
+%    \item \texttt{rhs}: Right-hand side to validate
+%\end{itemize}
+%
+%\textbf{Returns:} \texttt{None}
+%
+%\textbf{Raises:} \texttt{ValueError} for invalid input dimensions or content
+%
+%\textbf{Validation Checks:}
+%\begin{itemize}
+%    \item Trace values size: \texttt{neq * (n\_elements + 1)}
+%    \item RHS size: \texttt{2 * neq * n\_elements}
+%    \item No NaN or infinite values
+%\end{itemize}
+
+\subsection{StaticCondensationFactory Usage}
+\label{subsec:factory_usage}
+
+The factory class provides automatic selection of appropriate static condensation implementation.
+
+\subsubsection{Factory Methods}
+
+\paragraph{create()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Factory Create Method]
+	@classmethod
+	def create(cls, problem: Problem, global_disc, elementary_matrices,
+	i: int = 0) -> StaticCondensationBase
+\end{lstlisting}
+
+\textbf{Parameters:}
 \begin{itemize}
-    \item Trace values size: \texttt{neq * (n\_elements + 1)}
-    \item RHS size: \texttt{2 * neq * n\_elements}
-    \item No NaN or infinite values
+	\item \texttt{problem}: Problem instance with \texttt{type} attribute
+	\item \texttt{global\_disc}: GlobalDiscretization instance
+	\item \texttt{elementary\_matrices}: ElementaryMatrices instance
+	\item \texttt{i}: Domain index (default: 0)
 \end{itemize}
+
+\textbf{Returns:} Appropriate StaticCondensation implementation
+
+\textbf{Usage:}
+\begin{lstlisting}[language=Python, caption=Factory Usage Examples]
+	from bionetflux.core.static_condensation_factory import StaticCondensationFactory
+	
+	# Automatic selection for Keller-Segel
+	ks_problem = Problem(neq=2, ..., problem_type="keller_segel")
+	ks_sc = StaticCondensationFactory.create(
+	problem=ks_problem,
+	global_disc=global_discretization,
+	elementary_matrices=elem_matrices,
+	i=0
+	)
+	# Returns: KellerSegelStaticCondensation instance
+	
+	# Automatic selection for OrganOnChip  
+	ooc_problem = Problem(neq=4, ..., problem_type="organ_on_chip")
+	ooc_sc = StaticCondensationFactory.create(
+	problem=ooc_problem,
+	global_disc=global_discretization,
+	elementary_matrices=elem_matrices,
+	i=0
+	)
+	# Returns: StaticCondensationOOC instance
+\end{lstlisting}
+
+\paragraph{register\_implementation()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Register Implementation Method]
+	@classmethod
+	def register_implementation(cls, problem_type: str, 
+	implementation_class: Type[StaticCondensationBase])
+\end{lstlisting}
+
+\textbf{Purpose:} Register new static condensation implementations
+
+\textbf{Usage:}
+\begin{lstlisting}[language=Python, caption=Register New Implementation]
+	# Register custom implementation
+	class CustomStaticCondensation(StaticCondensationBase):
+	# ... implementation ...
+	pass
+	
+	StaticCondensationFactory.register_implementation(
+	"custom_problem", CustomStaticCondensation
+	)
+	
+	# Now available through factory
+	custom_problem = Problem(neq=3, ..., problem_type="custom_problem")
+	custom_sc = StaticCondensationFactory.create(custom_problem, ...)
+\end{lstlisting}
+
+\begin{todobox}
+	\begin{itemize}
+		\item 	Modify the {\tt static\_condensation} method so that it can return the bulk solution only (no flux jump or jacobian), or the bulk solution + flux jump (no jacobian)
+		\item Maybe we need it to be able to return the jacobian only? 
+		\item Could modify the factory by including also a check on the solution method: if Newton proceed as now, if Picard, do something else 
+		\item Add instructions to the documentation for adding a new type of problems 
+	\end{itemize}
+\end{todobox}
 
 \subsection{KellerSegelStaticCondensation Class}
 \label{subsec:keller_segel_static_condensation}
@@ -278,7 +399,7 @@ For Keller-Segel system:
 def static_condensation(self, 
                        trace_values: np.ndarray, 
                        rhs: np.ndarray, 
-                       time: float = 0.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]
+                       time: float = 0.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]
 \end{lstlisting}
 
 \textbf{Algorithm:} 
@@ -287,7 +408,7 @@ def static_condensation(self,
     \item Reconstruct bulk solutions: $u = B_1 \hat{u} + L_1 g_u$, $\phi = B_2 \hat{\phi} + L_2 g_\phi$
     \item Compute chemotaxis terms if $\chi$ functions available
     \item Compute flux jumps and Jacobian contributions
-    \item Return bulk solutions, flux jumps, and Jacobian
+    \item Return bulk solutions, flux, flux trace, and Jacobian
 \end{enumerate}
 
 \textbf{Usage:}
@@ -297,7 +418,7 @@ trace_vals = np.random.rand(2 * (n_elements + 1))  # u and phi traces
 rhs = np.random.rand(2 * 2 * n_elements)  # RHS for both equations
 
 # Perform static condensation
-bulk_solution, flux_jump, jacobian = ks_sc.static_condensation(
+bulk_solution, flux, flux_trace, jacobian = ks_sc.static_condensation(
     trace_values=trace_vals,
     rhs=rhs,
     time=0.5
@@ -504,79 +625,7 @@ print(f"Jacobian shape: {jacobian.shape}")  # (8, 4*(n_elements+1))
 \end{lstlisting}
 
 
-\subsection{StaticCondensationFactory Usage}
-\label{subsec:factory_usage}
 
-The factory class provides automatic selection of appropriate static condensation implementation.
-
-\subsubsection{Factory Methods}
-
-\paragraph{create()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Factory Create Method]
-@classmethod
-def create(cls, problem: Problem, global_disc, elementary_matrices,
-           i: int = 0) -> StaticCondensationBase
-\end{lstlisting}
-
-\textbf{Parameters:}
-\begin{itemize}
-    \item \texttt{problem}: Problem instance with \texttt{type} attribute
-    \item \texttt{global\_disc}: GlobalDiscretization instance
-    \item \texttt{elementary\_matrices}: ElementaryMatrices instance
-    \item \texttt{i}: Domain index (default: 0)
-\end{itemize}
-
-\textbf{Returns:} Appropriate StaticCondensation implementation
-
-\textbf{Usage:}
-\begin{lstlisting}[language=Python, caption=Factory Usage Examples]
-from ooc1d.core.static_condensation_factory import StaticCondensationFactory
-
-# Automatic selection for Keller-Segel
-ks_problem = Problem(neq=2, ..., problem_type="keller_segel")
-ks_sc = StaticCondensationFactory.create(
-    problem=ks_problem,
-    global_disc=global_discretization,
-    elementary_matrices=elem_matrices,
-    i=0
-)
-# Returns: KellerSegelStaticCondensation instance
-
-# Automatic selection for OrganOnChip  
-ooc_problem = Problem(neq=4, ..., problem_type="organ_on_chip")
-ooc_sc = StaticCondensationFactory.create(
-    problem=ooc_problem,
-    global_disc=global_discretization,
-    elementary_matrices=elem_matrices,
-    i=0
-)
-# Returns: StaticCondensationOOC instance
-\end{lstlisting}
-
-\paragraph{register\_implementation()}\leavevmode
-\begin{lstlisting}[language=Python, caption=Register Implementation Method]
-@classmethod
-def register_implementation(cls, problem_type: str, 
-                           implementation_class: Type[StaticCondensationBase])
-\end{lstlisting}
-
-\textbf{Purpose:} Register new static condensation implementations
-
-\textbf{Usage:}
-\begin{lstlisting}[language=Python, caption=Register New Implementation]
-# Register custom implementation
-class CustomStaticCondensation(StaticCondensationBase):
-    # ... implementation ...
-    pass
-
-StaticCondensationFactory.register_implementation(
-    "custom_problem", CustomStaticCondensation
-)
-
-# Now available through factory
-custom_problem = Problem(neq=3, ..., problem_type="custom_problem")
-custom_sc = StaticCondensationFactory.create(custom_problem, ...)
-\end{lstlisting}
 
 \subsection{Complete Usage Examples}
 \label{subsec:complete_usage_examples}
@@ -585,41 +634,42 @@ custom_sc = StaticCondensationFactory.create(custom_problem, ...)
 
 \begin{lstlisting}[language=Python, caption=Complete KellerSegel Workflow]
 import numpy as np
-from ooc1d.core.problem import Problem
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
-from ooc1d.core.static_condensation_factory import StaticCondensationFactory
+from bionetflux.core.problem import Problem
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
 
 # Step 1: Create Keller-Segel problem
 problem = Problem(
-    neq=2,
-    domain_start=0.0,
-    domain_length=1.0,
-    parameters=np.array([2.0, 1.0, 0.1, 1.0]),  # [mu, nu, a, b]
-    problem_type="keller_segel",
-    name="chemotaxis_problem"
+neq=2,
+domain_start=0.0,
+domain_length=1.0,
+parameters=np.array([2.0, 1.0, 0.1, 1.0]),  # [mu, nu, a, b]
+problem_type="keller_segel",
+name="chemotaxis_problem"
 )
 
 # Set chemotaxis functions
 problem.set_chemotaxis(
-    chi=lambda phi: np.ones_like(phi),
-    dchi=lambda phi: np.zeros_like(phi)
+chi=lambda phi: np.ones_like(phi),
+dchi=lambda phi: np.zeros_like(phi)
 )
 
 # Step 2: Create discretization
 discretization = Discretization(n_elements=20)
 discretization.set_tau([1.0, 1.0])  # [tau_u, tau_phi]
 global_disc = GlobalDiscretization([discretization])
+global_disc.set_time_parameters(dt=0.01, T=0.1)
 
 # Step 3: Create elementary matrices
 elementary_matrices = ElementaryMatrices()
 
 # Step 4: Create static condensation via factory
 static_condensation = StaticCondensationFactory.create(
-    problem=problem,
-    global_disc=global_disc,
-    elementary_matrices=elementary_matrices,
-    i=0
+problem=problem,
+global_disc=global_disc,
+elementary_matrices=elementary_matrices,
+i=0
 )
 
 print(f"Created: {type(static_condensation).__name__}")  # KellerSegelStaticCondensation
@@ -632,38 +682,45 @@ print(f"Available matrices: {list(matrices.keys())}")
 trace_values = np.random.rand(2 * 21)  # 2 equations, 21 nodes
 rhs = np.random.rand(2 * 2 * 20)  # 2 equations, 2 DOFs per element, 20 elements
 
-bulk_solution, flux_jump, jacobian = static_condensation.static_condensation(
-    trace_values=trace_values,
-    rhs=rhs,
-    time=0.0
+for i_element in range(20):
+local_trace = trace_values[2 * i_element: 2 * (i_element + 2)]
+local_rhs = rhs[4 * i_element: 4 * (i_element + 1)]
+bulk_solution, flux, flux_trace, jacobian = static_condensation.static_condensation(
+local_trace=local_trace,
+local_source=local_rhs
 )
 
 print(f"Static condensation completed:")
 print(f"  Bulk solution: {bulk_solution.shape}")
-print(f"  Flux jump: {flux_jump.shape}")
+print(f"  Flux jump: {flux_trace.shape}")
 print(f"  Jacobian: {jacobian.shape}")
 \end{lstlisting}
+
+\begin{warningbox}
+	This example runs but it is not trustworthy. I am not sure that the local to global extraction is performed in the correct way, this needs to be checked. Compare with the actual examples. Also, this example hard-codes the {\tt neq=2} of the KS system. It would be nicer to use an example where {\tt neq} is used in a parametric way
+\end{warningbox}
+
 
 \subsubsection{OrganOnChip Complete Workflow (MATLAB Compatible)}
 
 \begin{lstlisting}[language=Python, caption=Complete OrganOnChip Workflow]
-# Step 1: Create OrganOnChip problem (matching MATLAB TestProblem.m)
+# Step 1: Create OrganOnChip problem (microfluidic device)
 ooc_params = np.array([1.0, 2.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 1.0])
 # [nu, mu, epsilon, sigma, a, b, c, d, chi]
 
 problem = Problem(
-    neq=4,
-    domain_start=0.0,  # A = 0 (MATLAB)
-    domain_length=1.0, # L = 1 (MATLAB)
-    parameters=ooc_params,
-    problem_type="organ_on_chip",
-    name="microfluidic_device"
+neq=4,
+domain_start=0.0,  # A = 0 (MATLAB)
+domain_length=1.0, # L = 1 (MATLAB)
+parameters=ooc_params,
+problem_type="organ_on_chip",
+name="microfluidic_device"
 )
 
 # Set initial conditions (matching MATLAB TestProblem.m)
 problem.set_initial_condition(0, lambda x, t: np.sin(2*np.pi*x))  # u
 for eq_idx in [1, 2, 3]:  # omega, v, phi
-    problem.set_initial_condition(eq_idx, lambda x, t: np.zeros_like(x))
+problem.set_initial_condition(eq_idx, lambda x, t: np.zeros_like(x))
 
 # Set lambda function (matching MATLAB: constant_function)
 problem.set_function('lambda_function', lambda x: np.ones_like(x))
@@ -678,49 +735,45 @@ global_disc.set_time_parameters(dt=0.01, T=0.5)  # Matching MATLAB
 # Step 3: Create static condensation
 elementary_matrices = ElementaryMatrices()
 static_condensation = StaticCondensationFactory.create(
-    problem=problem,
-    global_disc=global_disc,
-    elementary_matrices=elementary_matrices,
-    i=0
+problem=problem,
+global_disc=global_disc,
+elementary_matrices=elementary_matrices,
+i=0
 )
 
 print(f"Created: {type(static_condensation).__name__}")  # StaticCondensationOOC
 
-# Set lambda functions for nonlinear coupling
-static_condensation.set_lambda_functions(
-    lambda_function=lambda omega: np.ones_like(omega),  # Constant (MATLAB)
-    dlambda_function=lambda omega: np.zeros_like(omega)
-)
-
-# Step 4: Build matrices (following MATLAB scBlocks.m structure)
+# Step 4: Build matrices 
 matrices = static_condensation.build_matrices()
 required_matrices = ['M', 'T', 'B1', 'L1', 'B2', 'C2', 'L2', 'A3', 'S3', 'H3', 
-                    'B4', 'C4', 'L4', 'D1', 'D2', 'Q', 'Av']
+'B4', 'C4', 'L4', 'D1', 'D2', 'Q', 'Av']
 print(f"Required matrices available: {all(m in matrices for m in required_matrices)}")
 
-# Step 5: Perform static condensation (following MATLAB StaticC.m)
+# Step 5: Perform static condensation 
 trace_values = np.random.rand(4 * 41)  # 4 equations, 41 nodes
 rhs = np.random.rand(2 * 4 * 40)  # 4 equations, 2 DOFs per element, 40 elements
 
-bulk_solution, flux_jump, jacobian = static_condensation.static_condensation(
-    trace_values=trace_values,
-    rhs=rhs,
-    time=0.0
+for i_element in range(40):
+local_trace_values = trace_values[4 * i_element: 4 * (i_element + 2)]
+local_rhs = rhs[8 * i_element: 8 * (i_element + 1)]
+
+bulk_solution, flux, flux_trace, jacobian = static_condensation.static_condensation(
+local_trace_values,
+local_rhs,
+time=0.0
 )
 
-# Verify MATLAB compatibility
 print(f"OrganOnChip static condensation results:")
 print(f"  Bulk solution (U): {bulk_solution.shape}")  # Should be (8, 40)
-print(f"  Flux jump (hJ): {flux_jump.shape}")  # Should be (4,) or (8,)
+print(f"  Flux trace (hJ): {flux_trace.shape}")  # Should be (4,) or (8,)
 print(f"  Jacobian (dhJ): {jacobian.shape}")  # Should be (8, 4*41)
-
-# Check parameter extraction matches MATLAB
-params = static_condensation.get_problem_parameters()
-matlab_params = {'nu': params[0], 'mu': params[1], 'epsilon': params[2], 
-                'sigma': params[3], 'a': params[4], 'b': params[5], 
-                'c': params[6], 'd': params[7], 'chi': params[8]}
-print(f"MATLAB-compatible parameters: {matlab_params}")
 \end{lstlisting}
+
+\begin{warningbox}
+	This example runs but it is not trustworthy. I am not sure that the local to global extraction is performed in the correct way, this needs to be checked. Compare with the actual examples. Also, this example hard-codes the {\tt neq=4} of the OoC system. It would be nicer to use an example where {\tt neq} is used in a parametric way. Look at {\tt flux\_jump} for how to do this
+\end{warningbox}
+
+
 
 \subsection{Method Summary Table}
 \label{subsec:static_condensation_method_summary}
@@ -739,16 +792,14 @@ print(f"MATLAB-compatible parameters: {matlab_params}")
 \texttt{build\_matrices} & \texttt{dict} & Abstract: build problem-specific matrices \\
 \hline
 
+\texttt{assemble\_forcing\_term} & \texttt{np.ndarray} & Abstract: assembles right hand side in correct form\\
+\hline
+
 \texttt{static\_condensation} & \texttt{Tuple} & Abstract: perform local static condensation \\
 \hline
 
-\texttt{get\_problem\_parameters} & \texttt{np.ndarray} & Extract problem parameter array \\
-\hline
 
-\texttt{get\_stabilization\_parameters} & \texttt{np.ndarray} & Extract stabilization parameters \\
-\hline
-
-\texttt{validate\_input} & \texttt{None} & Validate trace values and RHS dimensions \\
+\texttt{get\_matrices} & \texttt{dict} & Returns matrices for static condensation\\
 \hline
 
 \end{longtable}
@@ -767,9 +818,11 @@ print(f"MATLAB-compatible parameters: {matlab_params}")
 \texttt{static\_condensation} & \texttt{Tuple} & Perform Keller-Segel static condensation \\
 \hline
 
-\texttt{set\_chemotaxis\_functions} & \texttt{None} & Set nonlinear chemotaxis functions \\
+\texttt{\_compute\_jacobian} & \texttt{np.ndarray} & Computes the Jacobian \\
 \hline
 
+\texttt{assemble\_forcing\_term} & \texttt{np.ndarray} & Abstract: assembles right hand side in correct form\\
+\hline
 \end{longtable}
 
 \subsubsection{StaticCondensationOOC Methods}
@@ -780,17 +833,25 @@ print(f"MATLAB-compatible parameters: {matlab_params}")
 \hline
 \endhead
 
-\texttt{build\_matrices} & \texttt{dict} & Build 4-equation OrganOnChip matrices (MATLAB compatible) \\
+\texttt{build\_matrices} & \texttt{dict} & Build 4-equation OrganOnChip matrices  \\
 \hline
 
-\texttt{static\_condensation} & \texttt{Tuple} & Perform OrganOnChip static condensation (MATLAB StaticC.m) \\
+\texttt{static\_condensation} & \texttt{Tuple} & Perform OrganOnChip static condensation  \\
 \hline
 
-\texttt{set\_lambda\_functions} & \texttt{None} & Set nonlinear response functions $\lambda(\omega)$ \\
+\texttt{assemble\_forcing\_term} & \texttt{np.ndarray} & Abstract: assembles right hand side in correct form\\
 \hline
 
 \end{longtable}
 
 This documentation provides a comprehensive reference for the static condensation module hierarchy, with implementations that follow the MATLAB reference files while integrating with the BioNetFlux Python architecture.
+
+\begin{todobox}
+\begin{itemize}
+	\item Fix inconsistencies bewteen KS, OoC and Base methods, particularly as computing bulk solution, local jacobian independently from each other are concerned. 
+	\item (Related to the previous one) Reduce duplicating implementation
+	\item Build new examples of usage that rely on parametric number of equations
+\end{itemize}
+\end{todobox}
 
 % End of static condensation modules API documentation
