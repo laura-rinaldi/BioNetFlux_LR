@@ -3,21 +3,51 @@
 %
 % Usage: \input{docs/elementary_matrices_module_api}
 
+\renewcommand{\vec}[1]{\boldsymbol{#1}}
+
 \section{Elementary Matrices Module API Reference}
 \label{sec:elementary_matrices_module_api}
 
-This section provides reference  based on detailed analysis of the actual implementation for the  module \texttt{ooc1d.utils.elementary\_matrices.ElementaryMatrices}. The module computes elementary matrices for HDG methods on the reference element, serving as the Python equivalent of MATLAB \texttt{build\_eMatrices.m}.
+The module \texttt{bionetflux.utils.elementary\_matrices.ElementaryMatrices} initializes, on the reference element, the elementary matrices needed for the HDG P1 and P0 discretizations. The matrices are evaluated on the reference element $(0,1)$.
+
+\begin{warningbox}
+The module does not work properly for {\tt orthonormal\_basis = True}
+\end{warningbox}
+
+
+\subsection{Spaces, bases and bilinear forms}
+On the reference element $E = (0,1)$ we have the following local spaces:
+\begin{gather*}
+	V = \mathbb{P}_1(0,1), \qquad \text{with scalar product } (u,v)_E =  \int_0^1 u(x)v(x)\,dx \qquad \text{and basis }\{e_0, e_1\}\\
+	\hat V  = \mathbb{P}_1(0,1)\qquad \text{with scalar product } (u,v)_{\partial E} =  u(0)v(0) + u(1)v(1)\qquad \text{and basis }\{\hat e_0, \hat e_1\}\\
+	W = \mathbb{P}_0(E), \qquad  \text{with scalar product } (u,v)_E =  \int_0^1 u(x)v(x)\,dx \qquad \text{and basis }\{\eta_0\}
+	\end{gather*}
+The functions in the different spaces are expressed in terms of the  basis functions as
+\begin{gather*}
+u = \sum_{i=0}^1 u_i e_i = \vec u^T \vec e, \qquad \hat u = \sum_{i=0}^1 \hat  u_i \hat e_i =\hat{\vec u}^T \hat {\vec e}, \qquad \phi = \phi_0 \eta_0
+\end{gather*}
+We have the following biinear forms and the relative elementary matrices
+\begin{gather*}
+(\cdot,\cdot)_E: V \times V \to \mathbb{R} \longrightarrow M, \qquad M = (m_{ij}), \qquad m_{ij} = \int_0^1 e_j e_i \\
+(\cdot,\cdot)_{\partial E}:  V \times V \to \mathbb{R} \longrightarrow M^\partial, \qquad M^\partial = (m^\partial_{ij}), \qquad m^\partial_{ij} =  e_j(0) e_i(0) + e_j(1) e_i(1) \\
+(\cdot,\cdot)_{\partial E}: \hat V \times V \to \mathbb{R} \longrightarrow G^\partial  \qquad G^\partial = (g^\partial_{ij}), \qquad g^\partial_{ij} =  \hat e_j(0) e_i(0) + \hat e_j(1) e_i(1)\\
+(\cdot , \partial_x \cdot)_E: V \times V \to \mathbb{R} \longrightarrow D, \qquad D = (d_{ij}), \qquad d_{ij} = \int_0^1 e_j \partial_x e_i\\
+(\cdot n , \cdot)_{\partial E} : V \times V \to \mathbb{R}, \longrightarrow \widetilde N, \qquad  \widetilde N = (\widetilde n_{ij}), \qquad \widetilde n_{ij} =
+\underbrace{e_i(1) e_j(1) -  e_i(0) e_j(0)}_{= n(0) e_i(0) e_j(0) + n(1) e_i(1) e_j(1) }\\
+(\cdot n , \cdot)_{\partial E} : \hat V \times V \to \mathbb{R}, \longrightarrow \widetilde N, \qquad  \widehat N = (\widehat n_{ij}), \qquad \widehat n_{ij} =
+\underbrace{e_i(1) \hat e_j(1) -  e_i(0) \hat  e_j(0)}_{= n(0) e_i(0) \hat e_j(0) + n(1) e_i(1) \hat e_j(1) }
+\end{gather*}
+If more building blocks are needed the corresponding elementary matrices can be added 
 
 \subsection{Module Overview}
 
 The elementary matrices module provides:
 \begin{itemize}
     \item Elementary matrix computation for HDG methods on reference element [0,1]
-    \item Support for both Lagrange and orthonormal basis functions
+    \item Support for both Lagrange basis functions for the P1 space (support for orthonormal basis is incomplete)
     \item Symbolic computation using SymPy for exact mathematical operations
     \item Quadrature integration using Legendre-Gauss-Lobatto nodes
     \item Comprehensive matrix validation and testing
-    \item MATLAB compatibility for existing HDG implementations
 \end{itemize}
 
 \subsection{Module Imports and Dependencies}
@@ -163,6 +193,25 @@ Trace = Gb.T
 # For Lagrange basis: T = [[1, 0], [0, 1]]
 \end{lstlisting}
 
+\begin{warningbox}
+	Error in the code: the trace and gramian matrices seem to be equal and not the transpose of each other. One of the two is wrong! It works only beacuse it is symmetric
+\end{warningbox}
+
+
+\textbf{Boundary Gramian Matrix:} $G^\partial_{ij} = e_i(x_j) = e_i(x_0) \hat e_j(x_0) + e_i(x_1) \hat e_j(x_1)$
+\begin{lstlisting}[language=Python, caption=Trace Matrix Computation]
+	Gb = base.subs(y, x0) * hbase.T.subs(y, x0) + base.subs(y, x1) * hbase.T.subs(y, x1)
+	Trace = Gb.T
+	# For Lagrange basis: T = [[1, 0], [0, 1]]
+\end{lstlisting}
+
+\textbf{Boundary Mass Matrix:} $M^\partial_{ij} = \hat e_i(x_0) \hat e_j(x_0) + \hat e_i(x_1) \hat e_j(x_1)$
+\begin{lstlisting}[language=Python, caption=Trace Matrix Computation]
+	Gb = base.subs(y, x0) * hbase.T.subs(y, x0) + base.subs(y, x1) * hbase.T.subs(y, x1)
+	Trace = Gb.T
+	# For Lagrange basis: T = [[1, 0], [0, 1]]
+\end{lstlisting}
+
 \textbf{Derivative Matrix:} $D_{ij} = \int_0^1 e_j \frac{\partial e_i}{\partial x} \, dy$
 \begin{lstlisting}[language=Python, caption=Derivative Matrix Computation]
 D = sp.integrate(sp.diff(base, y) * base.T, (y, x0, x1))
@@ -260,7 +309,7 @@ all_matrices['M'] *= 2.0  # Doesn't affect internal matrices
 \texttt{Gb} & $(2, 2)$ & Gramian matrix: $G^b_{ij} = e_i(0)\hat{e}_j(0) + e_i(1)\hat{e}_j(1)$ \\
 \hline
 
-\texttt{Mb} & $(2, 2)$ & Boundary mass matrix: $M^{\partial}_{ij} = e_i(0)e_j(0) + e_i(1)e_j(1)$ \\
+\texttt{Mb} & $(2, 2)$ & Boundary mass matrix: $M^{\partial}_{ij} =  e_i(0)  e_j(0) + e_i(1)  e_j(1)$ \\
 \hline
 
 \texttt{T} & $(2, 2)$ & Trace matrix: $T_{ij} = e_j(x_i)$ (transpose of Gramian) \\
@@ -635,7 +684,6 @@ print(f"Bulk coefficients: {bulk_coeffs}")
 \subsection{Key Features and Mathematical Properties}
 
 \begin{itemize}
-    \item \textbf{MATLAB Compatibility}: Direct Python equivalent of MATLAB \texttt{build\_eMatrices.m}
     \item \textbf{Symbolic Computation}: Uses SymPy for exact mathematical operations
     \item \textbf{Multiple Basis Support}: Both Lagrange and orthonormal basis functions
     \item \textbf{Automatic Validation}: Built-in mathematical consistency tests
@@ -646,5 +694,14 @@ print(f"Bulk coefficients: {bulk_coeffs}")
 \end{itemize}
 
 This documentation provides an exact reference for the elementary matrices module, emphasizing its role as the foundation for HDG method computations and its seamless integration with other BioNetFlux components.
+
+\begin{todobox}
+	\begin{itemize}
+		\item Add support for orthonormal basis ({\tt orthonormal\_basis} is hard-coded as {\tt False} in the {\tt SetupSolver} initialization)
+		\item Add support for higher order polynomials (P2)
+		\item Decide whether to add a method allowing to add case-by-case elementary matrices
+	\end{itemize}
+\end{todobox}
+
 
 % End of elementary matrices module API documentation

@@ -6,7 +6,7 @@
 \usepackage{geometry}
 \usepackage{fancyhdr}
 \usepackage{listings}
-\usepackage{xcolor}
+\usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
 \usepackage{tocloft}
 \usepackage{titlesec}
@@ -67,9 +67,24 @@
 
 % Define a custom box for deprecated notices
 \newtcolorbox{structurebox}{
-	colback=blue!5!white,
-	colframe=blue!75!black,
+	colback=teal!5!white,
+	colframe=teal!75!black,
 	title=DATA STRUCTURE,
+	fonttitle=\bfseries,
+	boxrule=0.8pt,
+	arc=4pt,
+	left=1mm,
+	right=1mm,
+	top=1mm,
+	bottom=1mm
+}
+
+
+
+\newtcolorbox{notebox}{
+	colback=olive!5!white,
+	colframe=olive!75!black,
+	title=NOTE,
 	fonttitle=\bfseries,
 	boxrule=0.8pt,
 	arc=4pt,

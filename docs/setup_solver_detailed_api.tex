@@ -6,7 +6,7 @@
 \section{Setup Solver Module Detailed API Reference}
 \label{sec:setup_solver_detailed_api}
 
-This section provides an exact reference for the setup solver module (\texttt{setup\_solver.py}) based on detailed analysis of the actual implementation. The module provides lean solver orchestration for OOC1D problems on networks, minimizing data redundancy while providing clean interfaces for different problem types.
+This section provides an exact reference for the setup solver module (\texttt{setup\_solver.py}) based on detailed analysis of the actual implementation. The module provides lean solver orchestration for problems on networks, minimizing data redundancy while providing clean interfaces for different problem types.
 
 \subsection{Module Overview}
 
@@ -28,12 +28,12 @@ from typing import List, Tuple, Optional, Dict, Any
 import importlib
 
 # Core imports
-from ooc1d.core.discretization import Discretization, GlobalDiscretization
-from ooc1d.utils.elementary_matrices import ElementaryMatrices
-from ooc1d.core.static_condensation_factory import StaticCondensationFactory
-from ooc1d.core.constraints import ConstraintManager
-from ooc1d.core.lean_global_assembly import GlobalAssembler
-from ooc1d.core.lean_bulk_data_manager import BulkDataManager
+from bionetflux.core.discretization import Discretization, GlobalDiscretization
+from bionetflux.utils.elementary_matrices import ElementaryMatrices
+from bionetflux.core.static_condensation_factory import StaticCondensationFactory
+from bionetflux.core.constraints import ConstraintManager
+from bionetflux.core.lean_global_assembly import GlobalAssembler
+from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 \end{lstlisting}
 
 \subsection{SolverSetup Class}
@@ -43,14 +43,14 @@ Main class that orchestrates initialization of all solver components with lean d
 
 \subsubsection{Constructor}
 
-\paragraph{\_\_init\_\_()}
+\paragraph{\_\_init\_\_()}\leavevmode
 \begin{lstlisting}[language=Python, caption=SolverSetup Constructor]
-def __init__(self, problem_module: str = "ooc1d.problems.test_problem2")
+def __init__(self, problem_module: str = "bionetflux.problems.test_problem2")
 \end{lstlisting}
 
 \textbf{Parameters:}
 \begin{itemize}
-    \item \texttt{problem\_module}: String path to problem module containing \texttt{create\_global\_framework} (default: "ooc1d.problems.test\_problem2")
+    \item \texttt{problem\_module}: String path to problem module containing \texttt{create\_global\_framework} (default: "bionetflux.problems.test\_problem2")
 \end{itemize}
 
 \textbf{Side Effects:} 
@@ -67,15 +67,15 @@ def __init__(self, problem_module: str = "ooc1d.problems.test_problem2")
 setup = SolverSetup()
 
 # Custom problem module
-setup = SolverSetup("ooc1d.problems.ooc_test_problem")
+setup = SolverSetup("bionetflux.problems.ooc_test_problem")
 
 # OrganOnChip problem
-setup = SolverSetup("ooc1d.problems.organ_on_chip_example")
+setup = SolverSetup("bionetflux.problems.organ_on_chip_example")
 \end{lstlisting}
 
 \subsubsection{Core Attributes}
 
-\begin{longtable}{|p{3.5cm}|p{2.5cm}|p{7cm}|}
+\begin{longtable}{|p{4.1cm}|p{5.8cm}|p{4cm}|}
 \hline
 \textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
 \hline
@@ -99,14 +99,14 @@ setup = SolverSetup("ooc1d.problems.organ_on_chip_example")
 \texttt{problem\_name} & \texttt{Optional[str]} & Descriptive name of the problem \\
 \hline
 
-\texttt{constraints} & \texttt{Optional[ConstraintManager]} & Alias for \texttt{constraint\_manager} (backward compatibility) \\
+\texttt{constraints} & \texttt{Optional[ConstraintManager]} & \texttt{constraint\_manager} alias for backward compatibility \\
 \hline
 
 \end{longtable}
 
 \subsubsection{Cached Component Attributes (Private)}
 
-\begin{longtable}{|p{3.5cm}|p{2.5cm}|p{7cm}|}
+\begin{longtable}{|p{5cm}|p{5.5cm}|p{4cm}|}
 \hline
 \textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
 \hline
@@ -131,7 +131,7 @@ setup = SolverSetup("ooc1d.problems.organ_on_chip_example")
 
 \subsubsection{Initialization Methods}
 
-\paragraph{initialize()}
+\paragraph{initialize()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Initialize Method]
 def initialize(self) -> None
 \end{lstlisting}
@@ -160,14 +160,14 @@ def initialize(self) -> None
 
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Initialize Usage]
-setup = SolverSetup("ooc1d.problems.ooc_test_problem")
+setup = SolverSetup("bionetflux.problems.ooc_test_problem")
 setup.initialize()  # Explicit initialization
 
 # Or use properties that auto-initialize
 print(setup.problem_name)  # Triggers initialization if needed
 \end{lstlisting}
 
-\paragraph{\_ensure\_initialized()}
+\paragraph{\_ensure\_initialized()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Ensure Initialized Method]
 def _ensure_initialized(self) -> None
 \end{lstlisting}
@@ -184,7 +184,7 @@ if not self._initialized:
 
 \subsubsection{Component Properties (Cached)}
 
-\paragraph{elementary\_matrices}
+\paragraph{elementary\_matrices}\leavevmode
 \begin{lstlisting}[language=Python, caption=Elementary Matrices Property]
 @property
 def elementary_matrices(self) -> ElementaryMatrices
@@ -213,7 +213,7 @@ D = elem_matrices.get_matrix('D')        # Derivative matrix
 QUAD = elem_matrices.get_matrix('QUAD')  # Quadrature matrix
 \end{lstlisting}
 
-\paragraph{static\_condensations}
+\paragraph{static\_condensations}\leavevmode
 \begin{lstlisting}[language=Python, caption=Static Condensations Property]
 @property
 def static_condensations(self) -> List
@@ -261,7 +261,7 @@ for i, sc in enumerate(static_condensations):
     print(f"Domain {i}: {type(sc).__name__}")
 \end{lstlisting}
 
-\paragraph{global\_assembler}
+\paragraph{global\_assembler}\leavevmode
 \begin{lstlisting}[language=Python, caption=Global Assembler Property]
 @property
 def global_assembler(self) -> GlobalAssembler
@@ -300,7 +300,7 @@ residual, jacobian = assembler.assemble_residual_and_jacobian(
 )
 \end{lstlisting}
 
-\paragraph{bulk\_data\_manager}
+\paragraph{bulk\_data\_manager}\leavevmode
 \begin{lstlisting}[language=Python, caption=Bulk Data Manager Property]
 @property
 def bulk_data_manager(self) -> BulkDataManager
@@ -350,7 +350,7 @@ forcing_terms = bulk_manager.compute_forcing_terms(
 
 \subsubsection{Information and Analysis Methods}
 
-\paragraph{get\_problem\_info()}
+\paragraph{get\_problem\_info()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Get Problem Info Method]
 def get_problem_info(self) -> Dict[str, Any]
 \end{lstlisting}
@@ -435,7 +435,7 @@ for domain_info in info['domains']:
 
 \subsubsection{Initial Condition and Solution Vector Management}
 
-\paragraph{create\_initial\_conditions()}
+\paragraph{create\_initial\_conditions()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Create Initial Conditions Method]
 def create_initial_conditions(self) -> Tuple[List[np.ndarray], np.ndarray]
 \end{lstlisting}
@@ -500,7 +500,7 @@ for i, trace_sol in enumerate(trace_solutions):
 print(f"Initial multipliers: {len(multipliers)} (all zero)")
 \end{lstlisting}
 
-\paragraph{create\_global\_solution\_vector()}
+\paragraph{create\_global\_solution\_vector()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Create Global Solution Vector Method]
 def create_global_solution_vector(self, trace_solutions: List[np.ndarray], 
                                  multipliers: np.ndarray) -> np.ndarray
@@ -557,7 +557,7 @@ expected_size = setup.global_assembler.total_dofs
 print(f"Matches assembler DOFs: {len(global_solution) == expected_size}")
 \end{lstlisting}
 
-\paragraph{extract\_domain\_solutions()}
+\paragraph{extract\_domain\_solutions()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Extract Domain Solutions Method]
 def extract_domain_solutions(self, global_solution: np.ndarray) -> Tuple[List[np.ndarray], np.ndarray]
 \end{lstlisting}
@@ -613,7 +613,7 @@ print(f"Multiplier round-trip consistent: {multiplier_consistent}")
 
 \subsubsection{Validation and Testing}
 
-\paragraph{validate\_setup()}
+\paragraph{validate\_setup()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Validate Setup Method]
 def validate_setup(self, verbose: bool = False) -> bool
 \end{lstlisting}
@@ -744,14 +744,14 @@ Total DOFs: 86
 \subsection{Factory Functions}
 \label{subsec:factory_functions_detailed}
 
-\paragraph{create\_solver\_setup()}
+\paragraph{create\_solver\_setup()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Create Solver Setup Function]
-def create_solver_setup(problem_module: str = "ooc1d.problems.test_problem2") -> SolverSetup
+def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2") -> SolverSetup
 \end{lstlisting}
 
 \textbf{Parameters:}
 \begin{itemize}
-    \item \texttt{problem\_module}: String path to problem module (default: "ooc1d.problems.test\_problem2")
+    \item \texttt{problem\_module}: String path to problem module (default: "bionetflux.problems.test\_problem2")
 \end{itemize}
 
 \textbf{Returns:} \texttt{SolverSetup} - Initialized SolverSetup instance
@@ -766,22 +766,22 @@ return setup
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Factory Function Usage]
 # Create and initialize setup
-setup = create_solver_setup("ooc1d.problems.ooc_test_problem")
+setup = create_solver_setup("bionetflux.problems.ooc_test_problem")
 
 # Immediate access to components
 assembler = setup.global_assembler
 bulk_manager = setup.bulk_data_manager
 \end{lstlisting}
 
-\paragraph{quick\_setup()}
+\paragraph{quick\_setup()}\leavevmode
 \begin{lstlisting}[language=Python, caption=Quick Setup Function]
-def quick_setup(problem_module: str = "ooc1d.problems.test_problem2", 
+def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", 
                validate: bool = True) -> SolverSetup
 \end{lstlisting}
 
 \textbf{Parameters:}
 \begin{itemize}
-    \item \texttt{problem\_module}: String path to problem module (default: "ooc1d.problems.test\_problem2")
+    \item \texttt{problem\_module}: String path to problem module (default: "bionetflux.problems.test\_problem2")
     \item \texttt{validate}: If True, run validation tests (default: True)
 \end{itemize}
 
@@ -802,10 +802,10 @@ return setup
 \textbf{Usage:}
 \begin{lstlisting}[language=Python, caption=Quick Setup Usage]
 # Quick setup with validation
-setup = quick_setup("ooc1d.problems.ooc_test_problem", validate=True)
+setup = quick_setup("bionetflux.problems.ooc_test_problem", validate=True)
 
 # Quick setup without validation (faster)
-setup = quick_setup("ooc1d.problems.test_problem", validate=False)
+setup = quick_setup("bionetflux.problems.test_problem", validate=False)
 \end{lstlisting}
 
 \subsection{Complete Usage Examples}
@@ -822,7 +822,7 @@ def complete_solver_example():
     
     # Step 1: Initialize solver with validation
     print("Setting up solver...")
-    setup = quick_setup("ooc1d.problems.ooc_test_problem", validate=True)
+    setup = quick_setup("bionetflux.problems.ooc_test_problem", validate=True)
     
     # Step 2: Get problem information
     info = setup.get_problem_info()
@@ -907,7 +907,7 @@ setup, solution, traces, multipliers = complete_solver_example()
 \subsection{Method Summary Table}
 \label{subsec:method_summary_detailed}
 
-\begin{longtable}{|p{4cm}|p{2.5cm}|p{6.5cm}|}
+\begin{longtable}{|p{6cm}|p{4cm}|p{4cm}|}
 \hline
 \textbf{Method/Property} & \textbf{Returns} & \textbf{Purpose} \\
 \hline
@@ -970,5 +970,13 @@ setup, solution, traces, multipliers = complete_solver_example()
 \end{itemize}
 
 This documentation provides an exact reference for the setup solver module, emphasizing its role as the central orchestrator for BioNetFlux solver initialization and its lean, efficient approach to component management.
+
+\begin{todobox}
+	\begin{itemize}
+		\item Choose (possibly new) default problem to be used in {\tt \_\_init\_\_}
+		\item Replace calls to {\tt SolverSetup.constraints} with calls to {\tt SolverSetup.constraint\_manager}
+	\end{itemize}
+\end{todobox}
+
 
 % End of setup solver module detailed API documentation
