@@ -1,411 +1,788 @@
+% Sections 2-7 for BioNetFlux Documentation
+% Based on actual implementation as documented in detailed API files
+
 \section{Architecture Overview}
+\label{sec:architecture}
 
-The \bionetflux{} framework is organized into several interconnected modules following a clean, modular architecture:
+\bionetflux{} implements a modular architecture for multi-domain HDG simulations with clear separation of concerns and efficient component interaction. The framework consists of several interconnected modules that work together to provide a complete simulation environment.
 
-\begin{lstlisting}[language=bash, caption={BioNetFlux Directory Structure}]
-BioNetFlux/
-├── src/
-│   └── bionetflux/
-│       ├── core/                    # Core mathematical components
-│       │   ├── problem.py           # Problem definitions and parameters
-│       │   ├── discretization.py    # Spatial and temporal discretization
-│       │   ├── constraints.py       # Boundary and interface conditions
-│       │   ├── bulk_data.py         # Element-level data management
-│       │   ├── lean_bulk_data_manager.py  # Memory-efficient data handling
-│       │   ├── lean_global_assembly.py   # Global system assembly
-│       │   ├── static_condensation_*.py  # Problem-specific condensation
-│       │   └── flux_jump.py         # Interface flux calculations
-│       ├── geometry/                # Geometry management
-│       │   └── domain_geometry.py   # Network topology and layout
-│       ├── problems/                # Problem definitions
-│       │   ├── test_problem.py      # Reference test problems
-│       │   ├── test_problem2.py     # Alternative test configurations
-│       │   └── ooc_test_problem.py  # OrganOnChip examples
-│       ├── utils/                   # Utility modules
-│       │   └── elementary_matrices.py  # Finite element matrices
-│       └── visualization/           # Plotting and visualization
-│           └── lean_matplotlib_plotter.py  # Multi-mode plotting
-├── tests/                          # Pytest test suite
-│   ├── test_geometry.py            # Geometry module tests
-│   ├── test_problem.py             # Problem class tests
-│   ├── test_lean_bulk_data_manager.py  # Data manager tests
-│   ├── test_lean_global_assembly.py    # Assembly tests
-│   ├── test_static_condensation_setup.py  # SC setup tests
-│   └── test_lean_setup.py          # Complete setup tests
-├── setup_solver.py                 # Main solver setup interface
-├── matlab_reference/               # MATLAB reference implementations
-│   ├── TestProblem.m               # MATLAB test problem (4-eq OoC)
-│   ├── EmptyProblem.m              # MATLAB empty template
-│   ├── StaticC.m                   # Static condensation reference
-│   └── scBlocks.m                  # Matrix building blocks
-└── docs/                          # Documentation
+\subsection{Core Module Structure}
+
+The framework is organized into the following key modules:
+
+\begin{itemize}
+    \item \textbf{Setup Solver Module}: Central orchestrator for solver initialization and component management
+    \item \textbf{Problem Module}: Defines PDE systems with physical parameters and boundary conditions
+    \item \textbf{Discretization Module}: Manages spatial and temporal discretizations for multi-domain networks
+    \item \textbf{Domain Geometry Module}: Handles complex network geometries and coordinate mapping
+    \item \textbf{Constraints Module}: Manages boundary conditions and inter-domain coupling
+    \item \textbf{Static Condensation Modules}: Problem-specific implementations for element-level solution
+    \item \textbf{Global Assembly Module}: Assembles global systems from local contributions
+    \item \textbf{Bulk Data Management}: Efficient handling of element-wise solution data
+    \item \textbf{Visualization System}: Multi-modal plotting for network solutions
+\end{itemize}
+
+\subsection{Data Flow Architecture}
+
+The framework follows a lean data extraction pattern where essential information is extracted once from complex objects and stored in lightweight containers:
+
+\begin{enumerate}
+    \item \textbf{Initialization}: Problem modules are dynamically loaded using \code{importlib}
+    \item \textbf{Data Extraction}: Essential domain data is extracted into \code{DomainData} containers
+    \item \textbf{Component Caching}: Expensive objects are created once and cached for reuse
+    \item \textbf{On-Demand Access}: Components are initialized lazily through property accessors
+\end{enumerate}
+
+\subsection{HDG Method Implementation}
+
+The HDG method is implemented through:
+
+\begin{itemize}
+    \item \textbf{Static Condensation}: Element-level elimination using problem-specific implementations
+    \item \textbf{Trace Variables}: Interface unknowns connecting domains through the network
+    \item \textbf{Hybridization}: Global system assembly focusing only on trace unknowns
+    \item \textbf{Post-Processing}: Recovery of bulk solutions from trace values
+\end{itemize}
+
+\section{Framework Components}
+\label{sec:framework_components}
+
+\subsection{Setup Solver Module}
+
+The \code{SolverSetup} class serves as the main entry point and orchestrator for the entire framework. It provides lazy initialization and component caching for optimal performance.
+
+\subsubsection{Key Features}
+\begin{itemize}
+    \item \textbf{Dynamic Problem Loading}: Imports problem modules at runtime
+    \item \textbf{Component Caching}: Creates expensive objects once and reuses them
+    \item \textbf{Validation System}: Comprehensive testing of setup consistency
+    \item \textbf{Clean Interfaces}: Property-based access to all components
+\end{itemize}
+
+\subsubsection{Usage Pattern}
+\begin{lstlisting}[language=Python, caption=Setup Solver Usage]
+from setup_solver import quick_setup
+
+# Initialize and validate setup
+setup = quick_setup("bionetflux.problems.KS_traveling_wave", validate=True)
+
+# Access components (created and cached automatically)
+assembler = setup.global_assembler
+bulk_manager = setup.bulk_data_manager
+static_condensations = setup.static_condensations
+
+# Get problem information
+info = setup.get_problem_info()
+print(f"Problem: {info['problem_name']}")
+print(f"Domains: {info['num_domains']}")
+print(f"Total DOFs: {info['total_trace_dofs']}")
 \end{lstlisting}
 
-\subsection{Core Architecture Principles}
+\subsection{Problem Definition System}
 
+Problems in \bionetflux{} are defined through a standardized interface that supports arbitrary numbers of equations and physical parameters.
+
+\subsubsection{Problem Structure}
+Each problem module must provide a \code{create\_global\_framework()} function that returns:
+\begin{itemize}
+    \item \code{problems}: List of \code{Problem} instances for each domain
+    \item \code{global\_discretization}: \code{GlobalDiscretization} instance
+    \item \code{constraint\_manager}: \code{ConstraintManager} for interface conditions
+    \item \code{problem\_name}: Descriptive problem name
+\end{itemize}
+
+\subsubsection{Problem Class Features}
+\begin{itemize}
+    \item \textbf{Parametric Equations}: Support for arbitrary numbers of coupled PDEs
+    \item \textbf{Physical Parameters}: Flexible parameter arrays for problem-specific coefficients
+    \item \textbf{Function Support}: Initial conditions, forcing terms, and nonlinear functions
+    \item \textbf{Domain Mapping}: Integration with \code{DomainGeometry} for complex networks
+\end{itemize}
+
+\subsection{Discretization Management}
+
+The discretization system handles both spatial and temporal aspects with support for multi-domain networks.
+
+\subsubsection{Spatial Discretization}
+\begin{itemize}
+    \item \textbf{Uniform Meshes}: Each domain uses uniform element spacing
+    \item \textbf{Linear Elements}: P1 finite elements with 2 DOFs per element
+    \item \textbf{Stabilization Parameters}: Configurable \code{tau} parameters for HDG stability
+    \item \textbf{Node Management}: Automatic coordinate generation and boundary identification
+\end{itemize}
+
+\subsubsection{Global Discretization}
+\begin{itemize}
+    \item \textbf{Time Parameters}: Global time step and final time settings
+    \item \textbf{Domain Coordination}: Manages discretizations across all domains
+    \item \textbf{DOF Counting}: Automatic calculation of total degrees of freedom
+\end{itemize}
+
+\subsection{Domain Geometry System}
+
+The \code{DomainGeometry} class enables intuitive definition of complex network topologies.
+
+\subsubsection{Geometry Features}
+\begin{itemize}
+    \item \textbf{Extrema-Based Definition}: Domains defined by start and end coordinates in 2D space
+    \item \textbf{Automatic Parameter Mapping}: Conversion between 2D coordinates and 1D parameters
+    \item \textbf{Bounding Box Management}: Automatic spatial extent calculation
+    \item \textbf{Metadata Support}: Custom properties and naming for domains
+\end{itemize}
+
+\subsubsection{Network Topologies}
+\begin{lstlisting}[language=Python, caption=Geometry Definition Examples]
+# Linear chain network
+geometry = DomainGeometry("linear_chain")
+geometry.add_domain(extrema_start=(0.0, 0.0), extrema_end=(1.0, 0.0))
+geometry.add_domain(extrema_start=(1.0, 0.0), extrema_end=(2.0, 0.0))
+
+# T-junction network
+geometry = DomainGeometry("t_junction")
+geometry.add_domain(extrema_start=(0.0, -1.0), extrema_end=(0.0, 1.0))
+geometry.add_domain(extrema_start=(0.0, 0.0), extrema_end=(1.0, 0.0))
+\end{lstlisting}
+
+\subsection{Constraint Management}
+
+The constraint system handles boundary conditions and inter-domain coupling through a unified interface.
+
+\subsubsection{Constraint Types}
+\begin{itemize}
+    \item \textbf{Neumann Boundary Conditions}: Specified flux values at domain boundaries
+    \item \textbf{Dirichlet Boundary Conditions}: Fixed solution values at boundaries
+    \item \textbf{Robin Boundary Conditions}: Linear combination of solution and flux
+    \item \textbf{Interface Constraints}: Coupling conditions between connected domains
+\end{itemize}
+
+\subsubsection{Implementation Features}
+\begin{itemize}
+    \item \textbf{Flexible Mapping}: Constraints map to discretization nodes automatically
+    \item \textbf{Time Dependence}: Support for time-varying constraint data
+    \item \textbf{Lagrange Multipliers}: Enforcement through multiplier variables
+    \item \textbf{Validation System}: Comprehensive constraint consistency checking
+\end{itemize}
+
+\section{Static Condensation Framework}
+\label{sec:static_condensation}
+
+\bionetflux{} implements HDG through a flexible static condensation framework that supports problem-specific implementations while maintaining a consistent interface.
+
+\subsection{Base Class Architecture}
+
+The \code{StaticCondensationBase} class provides a common interface for all problem types:
+
+\begin{lstlisting}[language=Python, caption=Static Condensation Interface]
+class StaticCondensationBase(ABC):
+    @abstractmethod
+    def build_matrices(self) -> Dict[str, np.ndarray]:
+        """Build problem-specific matrices for static condensation."""
+        pass
+    
+    @abstractmethod
+    def static_condensation(self, local_trace, local_source, **kwargs):
+        """Perform element-level static condensation."""
+        pass
+    
+    @abstractmethod
+    def assemble_forcing_term(self, *args, **kwargs) -> np.ndarray:
+        """Assemble right-hand side for the condensed system."""
+        pass
+\end{lstlisting}
+
+\subsection{Problem-Specific Implementations}
+
+\subsubsection{Keller-Segel Implementation}
+The \code{KellerSegelStaticCondensation} class handles chemotaxis problems:
+\begin{itemize}
+    \item \textbf{Nonlinear Coupling}: Chemotaxis sensitivity functions \code{chi(x)} and \code{dchi(x)}
+    \item \textbf{Matrix Assembly}: Builds L1, L2 matrices and coupling terms
+    \item \textbf{Jacobian Computation}: Automatic differentiation for Newton's method
+    \item \textbf{Flux Recovery}: Proper flux computation including nonlinear terms
+\end{itemize}
+
+\subsubsection{Factory Pattern}
+The \code{StaticCondensationFactory} automatically selects the appropriate implementation:
+\begin{lstlisting}[language=Python, caption=Factory Usage]
+# Automatic selection based on problem type
+sc = StaticCondensationFactory.create(
+    problem=problem,
+    global_discretization=global_disc,
+    elementary_matrices=elem_matrices,
+    domain_index=0
+)
+\end{lstlisting}
+
+\subsection{Elementary Matrices}
+
+The \code{ElementaryMatrices} class provides precomputed reference element matrices:
+\begin{itemize}
+    \item \textbf{Mass Matrix (M)}: Element mass matrix for time integration
+    \item \textbf{Trace Matrix (T)}: Relates bulk DOFs to boundary traces
+    \item \textbf{Derivative Matrix (D)}: Spatial differentiation operators
+    \item \textbf{Integration Matrices}: Quadrature and boundary integration
+\end{itemize}
+
+\section{Global Assembly System}
+\label{sec:global_assembly}
+
+The global assembly system coordinates element-level computations into a global nonlinear system suitable for Newton iteration.
+
+\subsection{Assembly Architecture}
+
+The \code{GlobalAssembler} class provides:
+\begin{itemize}
+    \item \textbf{DOF Management}: Automatic tracking of trace and multiplier DOFs
+    \item \textbf{Residual Assembly}: Global residual vector construction
+    \item \textbf{Jacobian Assembly}: Global Jacobian matrix for Newton's method
+    \item \textbf{Bulk Recovery}: Post-processing of bulk solutions from traces
+\end{itemize}
+
+\subsection{Assembly Process}
+
+\subsubsection{Residual Assembly Algorithm}
 \begin{enumerate}
-    \item \textbf{Lean Design}: Minimal data storage with on-demand component creation
-    \item \textbf{Parameter Passing}: Framework objects passed as parameters rather than stored
-    \item \textbf{Component Caching}: Expensive objects created once and cached for efficiency
-    \item \textbf{MATLAB Reference Alignment}: Python implementations follow MATLAB reference structure
-    \item \textbf{Modular Problem Types}: Static condensation implementations for different physics
-    \item \textbf{Comprehensive Testing}: Pytest-compatible test suite with fixtures and parametrization
+    \item Extract trace solutions for each domain
+    \item Call \code{domain\_flux\_jump} for each element
+    \item Assemble local contributions into global residual
+    \item Apply constraint contributions via multipliers
 \end{enumerate}
 
-\subsection{Core Components}
-
+\subsubsection{Jacobian Assembly}
 \begin{enumerate}
-    \item \textbf{Problem Definition}: Physical parameters following MATLAB OoC structure (4-equation systems)
-    \item \textbf{Geometry Management}: Network topology using DomainGeometry class
-    \item \textbf{Static Condensation}: Element-level solution elimination following StaticC.m algorithm
-    \item \textbf{Global Assembly}: Lean system assembly with parameter-based validation
-    \item \textbf{Discretization System}: Spatial mesh and temporal discretization management
-    \item \textbf{Constraint Management}: Interface conditions and boundary constraints
-    \item \textbf{Visualization System}: Multi-mode plotting with 2D curves, 3D flat views, and bird's eye views
+    \item Compute element-level Jacobian matrices
+    \item Assemble into global Jacobian structure
+    \item Include constraint Jacobian contributions
+    \item Ensure proper sparsity pattern
 \end{enumerate}
 
-\section{Modules}
+\subsection{Bulk Data Management}
 
-\subsection{Core Module (\code{bionetflux.core})}
+The \code{BulkDataManager} provides efficient handling of element-wise data:
 
-The core module contains the fundamental mathematical and computational components:
+\subsubsection{Design Principles}
+\begin{itemize}
+    \item \textbf{Lean Storage}: Extracts only essential data into \code{DomainData} containers
+    \item \textbf{Framework Integration}: Accepts framework objects as method parameters
+    \item \textbf{Validation}: Comprehensive consistency checking
+    \item \textbf{Memory Efficiency}: Minimal data redundancy
+\end{itemize}
 
-\subsubsection{Problem Class (\code{problem.py})}
+\subsubsection{Key Operations}
+\begin{lstlisting}[language=Python, caption=Bulk Data Management]
+# Extract essential data once
+domain_data_list = BulkDataManager.extract_domain_data_list(
+    problems, discretizations, static_condensations
+)
 
-The \code{Problem} class encapsulates the physics of a single domain/arc, following the MATLAB OoC parameter structure:
+# Create lean manager
+bulk_manager = BulkDataManager(domain_data_list)
 
-\begin{lstlisting}[language=Python, caption={Problem Class Structure}]
-class Problem:
-    def __init__(self, neq=2, domain_start=0.0, domain_length=1.0, 
-                 parameters=None, problem_type="keller_segel", 
-                 name="unnamed_problem"):
-        # Physical domain definition and equation parameters
-        # Follows MATLAB OoC structure: [nu, mu, epsilon, sigma, a, b, c, d, chi]
+# Initialize bulk data for all domains
+bulk_data_list = bulk_manager.initialize_all_bulk_data(
+    problems, discretizations, time=0.0
+)
+
+# Compute forcing terms
+forcing_terms = bulk_manager.compute_forcing_terms(
+    bulk_data_list, problems, discretizations, time=0.1, dt=0.01
+)
+\end{lstlisting}
+
+\section{Visualization System}
+\label{sec:visualization}
+
+\bionetflux{} provides a comprehensive visualization system through the \code{LeanMatplotlibPlotter} class, designed specifically for multi-domain network solutions.
+
+\subsection{Visualization Modes}
+
+\subsubsection{2D Curve Plots}
+Perfect for analyzing solution profiles along domains:
+\begin{itemize}
+    \item \textbf{Domain Separation}: Individual subplots for each domain
+    \item \textbf{Multi-Equation Support}: All equations shown with different colors
+    \item \textbf{Mesh Visualization}: Optional display of mesh points
+    \item \textbf{Boundary Markers}: Domain boundary indicators
+\end{itemize}
+
+\subsubsection{Flat 3D Visualization}
+Ideal for understanding network topology with solution values:
+\begin{itemize}
+    \item \textbf{Spatial Layout}: Network segments displayed in physical coordinates
+    \item \textbf{Solution Mapping}: Values shown as colored scatter points above network
+    \item \textbf{Connecting Lines}: Visual links between network and solution
+    \item \textbf{Interactive Views}: Rotatable 3D perspective
+\end{itemize}
+
+\subsubsection{Bird's Eye View}
+Optimized for network-level analysis:
+\begin{itemize}
+    \item \textbf{Overhead Perspective}: Top-down view of entire network
+    \item \textbf{Color Coding}: Solution values mapped to segment colors
+    \item \textbf{Network Structure}: Clear display of connectivity
+    \item \textbf{Time Evolution}: Time-aware title generation
+\end{itemize}
+
+\subsection{Coordinate System Management}
+
+The visualization system automatically handles coordinate transformations:
+\begin{itemize}
+    \item \textbf{Parameter Coordinates}: 1D coordinates along each domain
+    \item \textbf{Physical Coordinates}: 2D spatial layout from \code{DomainGeometry}
+    \item \textbf{Automatic Mapping}: Seamless conversion between coordinate systems
+    \item \textbf{Bounding Box}: Automatic spatial extent calculation
+\end{itemize}
+
+\subsection{Advanced Features}
+
+\subsubsection{Solution Comparison}
+\begin{lstlisting}[language=Python, caption=Solution Comparison]
+# Compare solutions at different times
+plotter.plot_comparison(
+    initial_traces=trace_t0,
+    final_traces=trace_t1,
+    initial_time=0.0,
+    final_time=1.0,
+    save_filename="evolution_comparison.png"
+)
+\end{lstlisting}
+
+\subsubsection{Flexible Output Management}
+\begin{itemize}
+    \item \textbf{Directory Management}: Configurable output directories
+    \item \textbf{Format Support}: PNG, PDF, and other matplotlib formats
+    \item \textbf{Filename Resolution}: Smart path handling with backward compatibility
+    \item \textbf{Batch Processing}: Efficient multiple plot generation
+\end{itemize}
+
+\section{Time Evolution and Newton Solver}
+\label{sec:time_evolution}
+
+\bionetflux{} implements implicit Euler time stepping with Newton's method for solving the resulting nonlinear systems at each time step.
+
+\subsection{Time Evolution Framework}
+
+\subsubsection{Implicit Euler Integration}
+The framework uses backward Euler for stability:
+\begin{equation}
+\frac{U^{n+1} - U^n}{\Delta t} + \mathcal{L}(U^{n+1}) = f^{n+1}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $U^{n+1}$ represents the solution at time step $n+1$
+    \item $\mathcal{L}$ is the spatial differential operator
+    \item $f^{n+1}$ represents source terms at the new time level
+\end{itemize}
+
+\subsubsection{Newton's Method Implementation}
+At each time step, the nonlinear system is solved using Newton's method:
+\begin{enumerate}
+    \item \textbf{Residual Computation}: $R(U^{(k)}) = 0$ where $k$ is the Newton iteration
+    \item \textbf{Jacobian Assembly}: $J^{(k)} = \frac{\partial R}{\partial U}\Big|_{U^{(k)}}$
+    \item \textbf{Linear System}: Solve $J^{(k)} \delta U = -R(U^{(k)})$
+    \item \textbf{Solution Update}: $U^{(k+1)} = U^{(k)} + \delta U$
+    \item \textbf{Convergence Check}: $\|R(U^{(k+1)})\| < \text{tolerance}$
+\end{enumerate}
+
+\subsection{Complete Time Evolution Example}
+
+\begin{lstlisting}[language=Python, caption=Time Evolution Implementation]
+from setup_solver import quick_setup
+import numpy as np
+
+def time_evolution_example():
+    # Initialize solver
+    setup = quick_setup("bionetflux.problems.KS_traveling_wave", validate=True)
+    
+    # Get time parameters
+    dt = setup.global_discretization.dt
+    T = 2.0  # Final time
+    
+    # Initialize solution
+    trace_solutions, multipliers = setup.create_initial_conditions()
+    global_solution = setup.create_global_solution_vector(trace_solutions, multipliers)
+    
+    # Newton parameters
+    newton_tolerance = 1e-10
+    max_newton_iterations = 20
+    
+    # Time evolution loop
+    current_time = 0.0
+    time_step = 0
+    
+    while current_time < T:
+        current_time += dt
+        time_step += 1
         
-    # Parameter management (aligned with MATLAB TestProblem.m)
-    def get_parameter(self, index)
-    def set_parameter(self, index, value)  
-    def set_parameters(self, parameters)
+        print(f"\n--- Time Step {time_step}: t = {current_time:.4f} ---")
+        
+        # Compute forcing terms
+        bulk_data_list = setup.bulk_data_manager.initialize_all_bulk_data(
+            setup.problems,
+            setup.global_discretization.spatial_discretizations,
+            time=current_time
+        )
+        
+        forcing_terms = setup.bulk_data_manager.compute_forcing_terms(
+            bulk_data_list, setup.problems,
+            setup.global_discretization.spatial_discretizations,
+            current_time, dt
+        )
+        
+        # Newton iteration
+        newton_solution = global_solution.copy()
+        
+        for newton_iter in range(max_newton_iterations):
+            # Assemble system
+            residual, jacobian = setup.global_assembler.assemble_residual_and_jacobian(
+                global_solution=newton_solution,
+                forcing_terms=forcing_terms,
+                static_condensations=setup.static_condensations,
+                time=current_time
+            )
+            
+            # Check convergence
+            residual_norm = np.linalg.norm(residual)
+            print(f"  Newton {newton_iter}: ||R|| = {residual_norm:.6e}")
+            
+            if residual_norm < newton_tolerance:
+                print(f"  ✓ Newton converged in {newton_iter + 1} iterations")
+                break
+            
+            # Newton update
+            try:
+                delta_x = np.linalg.solve(jacobian, -residual)
+                newton_solution += delta_x
+            except np.linalg.LinAlgError:
+                print(f"  ✗ Newton failed: singular Jacobian")
+                break
+        
+        # Update solution
+        global_solution = newton_solution
+        
+        # Extract and analyze solution
+        current_traces, current_multipliers = setup.extract_domain_solutions(global_solution)
+        
+        # Optional: Visualization at specific time points
+        if time_step % 10 == 0:
+            plotter = setup.get_plotter()  # Assuming this method exists
+            plotter.plot_birdview(current_traces, equation_idx=0, time=current_time,
+                                save_filename=f"solution_t{current_time:.3f}.png")
     
-    # Function management (compatible with MATLAB u0, force functions)
-    def set_initial_condition(self, eq_idx, ic_func)  # Maps to problem.u0{i}
-    def set_force(self, eq_idx, force_func)           # Maps to force{i}
-    def set_solution(self, eq_idx, sol_func)
-    def set_chemotaxis(self, chi_func, dchi_func)     # Maps to lambda, dlambda
-    
-    # Validation and testing
-    def validate_problem(self, verbose=False)
-    def test_functions(self, verbose=False)
-    def run_self_test(self, verbose=False)
+    return global_solution, current_traces, current_multipliers
+
+# Run example
+final_solution, final_traces, final_multipliers = time_evolution_example()
 \end{lstlisting}
 
-\textbf{MATLAB Parameter Mapping:}
+\subsection{Convergence Monitoring}
+
+\subsubsection{Residual Analysis}
+The framework provides tools for monitoring convergence:
 \begin{itemize}
-    \item \code{parameters[0:3]}: Viscosity parameters (\code{nu, mu, epsilon, sigma})
-    \item \code{parameters[4:7]}: Reaction parameters (\code{a, b, c, d})
-    \item \code{parameters[8]}: Coupling parameter (\code{chi})
-    \item \code{lambda}: Nonlinear function (set via \code{set\_chemotaxis})
+    \item \textbf{Residual Norms}: Track $\|R\|_2$ at each Newton iteration
+    \item \textbf{Solution Updates}: Monitor $\|\delta U\|$ for step size analysis
+    \item \textbf{Jacobian Conditioning}: Check condition numbers for stability
 \end{itemize}
 
-\subsubsection{Static Condensation System}
-
-Problem-specific static condensation implementations following the MATLAB StaticC.m algorithm:
-
-\begin{lstlisting}[language=Python, caption={Static Condensation Architecture}]
-# Factory pattern for different problem types
-StaticCondensationFactory.create(problem, global_disc, 
-                                elementary_matrices, domain_idx)
-
-# Available implementations (following StaticC.m structure):
-# - static_condensation_keller_segel.py  # 2-equation Keller-Segel
-# - static_condensation_organ_on_chip.py # 4-equation OoC (matches MATLAB)
-# - static_condensation_base.py          # Base class interface
-
-# Each implementation follows MATLAB StaticC.m pattern:
-class StaticCondensationBase:
-    def build_matrices()  # Pre-compute matrices (follows scBlocks.m)
-    def static_condensation(local_trace, local_source)  # StaticC.m algorithm
-        # Returns: (U, hJ, dhJ) matching MATLAB output structure
-\end{lstlisting}
-
-\textbf{MATLAB Alignment:}
+\subsubsection{Adaptive Parameters}
 \begin{itemize}
-    \item \code{build\_matrices()}: Implements scBlocks.m matrix construction
-    \item \code{static\_condensation()}: Follows StaticC.m algorithm exactly
-    \item Matrix naming: Uses MATLAB convention (L1, B1, C2, etc.)
-    \item Input/Output: \code{(hU, rhs)} → \code{(U, hJ, dhJ)}
+    \item \textbf{Time Step Control}: Adjust $\Delta t$ based on Newton convergence
+    \item \textbf{Tolerance Adjustment}: Relax tolerance for difficult time steps
+    \item \textbf{Damping Strategies}: Implement line search for robustness
 \end{itemize}
 
-\subsubsection{Lean Global Assembly (\code{lean\_global\_assembly.py})}
+\section{Creating New Problems}
+\label{sec:creating_problems}
 
-Memory-efficient global system assembly with parameter-passing design:
+\bionetflux{} supports extension through new problem definitions that follow the established framework patterns.
 
-\begin{lstlisting}[language=Python, caption={Lean Global Assembly}]
-class GlobalAssembler:
-    # Factory method creation
-    @classmethod
-    def from_framework_objects(problems, global_discretization, 
-                              static_condensations, constraint_manager=None)
-    
-    # Core assembly methods
-    def assemble_residual_and_jacobian(global_solution, forcing_terms,
-                                      static_condensations, time)
-    def initialize_bulk_data(problems, discretizations, time)
-    def compute_forcing_terms(bulk_data_list, problems, 
-                             discretizations, time, dt)
-    
-    # Solution management
-    def create_initial_guess_from_problems(problems, discretizations, time)
-    def create_initial_guess_from_bulk_data(bulk_data_list)
-    def get_domain_solutions(global_solution)
-\end{lstlisting}
+\subsection{Problem Module Structure}
 
-\subsubsection{Lean Bulk Data Manager (\code{lean\_bulk\_data\_manager.py})}
+Each problem module must provide a \code{create\_global\_framework()} function with the following signature:
 
-Efficient element-level data management with minimal storage:
+\begin{lstlisting}[language=Python, caption=Problem Module Template]
+# File: bionetflux/problems/my_new_problem.py
+import numpy as np
+from ..core.problem import Problem
+from ..core.discretization import Discretization, GlobalDiscretization
+from ..core.constraints import ConstraintManager
+from ..geometry.domain_geometry import DomainGeometry
 
-\begin{lstlisting}[language=Python, caption={Lean Bulk Data Manager}]
-class BulkDataManager:
-    def __init__(self, domain_data_list)  # Minimal storage approach
-    
-    # Static factory method for domain data extraction
-    @staticmethod
-    def extract_domain_data_list(problems, discretizations, 
-                                static_condensations)
-    
-    # Core operations with parameter passing
-    def create_bulk_data(domain_idx, problem, discretization, dual=False)
-    def initialize_all_bulk_data(problems, discretizations, time)
-    def compute_forcing_terms(bulk_data_list, problems, 
-                             discretizations, time, dt)
-    def compute_total_mass(bulk_data_list)
-    
-    # Parameter validation
-    def _validate_framework_objects(problems, discretizations, 
-                                   static_condensations, operation_name)
-\end{lstlisting}
-
-\subsection{Geometry Module (\code{bionetflux.geometry})}
-
-\subsubsection{DomainGeometry Class (\code{domain\_geometry.py})}
-
-Intuitive network topology definition with comprehensive validation:
-
-\begin{lstlisting}[language=Python, caption={DomainGeometry Class}]
-class DomainGeometry:
-    def __init__(self, name="unnamed_geometry")
-    
-    # Domain management
-    def add_domain(self, extrema_start, extrema_end, 
-                   domain_start=None, domain_length=None,
-                   name=None, **metadata)
-    def remove_domain(self, domain_id)
-    def get_domain(self, domain_id)
-    def find_domain_by_name(self, name)
-    
-    # Network analysis
-    def get_connectivity_info(self)
-    def find_intersections(self, tolerance=1e-6)
-    def get_bounding_box(self)
-    def suggest_parameter_spacing(self, gap=0.1)
-    
-    # Validation and testing
-    def validate_geometry(self, verbose=False)
-    def run_self_test(self, verbose=False)
-    
-    # Predefined test geometries
-    @staticmethod
-    def create_test_geometries()
-\end{lstlisting}
-
-\textbf{Domain Information Structure:}
-\begin{lstlisting}[language=Python, caption={Domain Information Dataclass}]
-@dataclass
-class DomainInfo:
-    domain_id: int
-    extrema_start: Tuple[float, float]  # Physical coordinates
-    extrema_end: Tuple[float, float]
-    domain_start: float                 # Parameter space
-    domain_length: float
-    name: str
-    metadata: Dict[str, Any]
-\end{lstlisting}
-
-\subsection{Problems Module (\code{bionetflux.problems})}
-
-Problem-specific implementations following standardized \code{create\_global\_framework} pattern and MATLAB reference structure:
-
-\subsubsection{Problem Module Structure}
-
-Each problem module implements the standard pattern with MATLAB compatibility:
-
-\begin{lstlisting}[language=Python, caption={Standard Problem Module Pattern}]
 def create_global_framework():
     """
-    Standard problem creation pattern (follows MATLAB TestProblem.m structure).
+    Create complete problem framework.
     
     Returns:
-        Tuple: (problems, global_discretization, constraint_manager, problem_name)
+        Tuple[List[Problem], GlobalDiscretization, ConstraintManager, str]
     """
-    # 1. Parameter Configuration (matches MATLAB parameter order)
-    # MATLAB: nu, mu, epsilon, sigma, a, b, c, d, chi, lambda
-    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
+    # 1. Define problem parameters
+    neq = 2  # Number of equations per domain
+    problem_name = "My New Problem"
     
-    # 2. Function Definitions (compatible with MATLAB problem.u0{i}, force{i})
-    def initial_conditions_u(s, t=0.0):  # Maps to problem.u0{1}
-    def initial_conditions_omega(s, t=0.0):  # Maps to problem.u0{2}  
-    def initial_conditions_v(s, t=0.0):  # Maps to problem.u0{3}
-    def initial_conditions_phi(s, t=0.0):  # Maps to problem.u0{4}
+    # Physical parameters
+    parameters = np.array([D1, D2, k1, k2])  # Diffusion, reaction, etc.
     
-    def lambda_func(x):  # Maps to MATLAB lambda function
-    def dlambda_func(x):  # Maps to MATLAB dlambda function
+    # 2. Create geometry
+    geometry = DomainGeometry("my_geometry")
     
-    # 3. Domain and Discretization Setup
-    # 4. Problem Instance Creation with MATLAB-compatible parameters
-    # 5. Constraint Setup
-    # 6. Global Discretization and Time Configuration
+    # Add domains (example: linear chain)
+    geometry.add_domain(
+        extrema_start=(0.0, 0.0),
+        extrema_end=(1.0, 0.0),
+        name="domain_1"
+    )
+    geometry.add_domain(
+        extrema_start=(1.0, 0.0), 
+        extrema_end=(2.0, 0.0),
+        name="domain_2"
+    )
+    
+    # 3. Define mathematical functions
+    def initial_condition_u(x, t=0.0):
+        return np.exp(-x**2)  # Gaussian initial condition
+    
+    def initial_condition_phi(x, t=0.0):
+        return np.zeros_like(x)  # Zero chemical initially
+    
+    def source_u(x, t):
+        return 0.0 * x  # No source for cells
+    
+    def source_phi(x, t):
+        return np.sin(np.pi * x) * np.exp(-t)  # Decaying source
+    
+    # 4. Create Problem instances
+    problems = []
+    discretizations = []
+    
+    for domain_id in range(geometry.num_domains()):
+        domain_info = geometry.get_domain(domain_id)
+        
+        # Create Problem
+        problem = Problem(
+            type="MyProblemType",
+            neq=neq,
+            domain_start=domain_info.domain_start,
+            domain_end=domain_info.domain_end,
+            domain_length=domain_info.domain_length,
+            extrema=[domain_info.extrema_start, domain_info.extrema_end],
+            parameters=parameters.copy(),
+            name=domain_info.name
+        )
+        
+        # Set initial conditions
+        problem.u0 = [initial_condition_u, initial_condition_phi]
+        
+        # Set source terms
+        problem.force = [source_u, source_phi]
+        
+        # Add problem-specific functions (e.g., for Keller-Segel)
+        if hasattr(problem, 'set_chemotaxis'):
+            def chi_function(phi):
+                return 1.0 / (1.0 + phi)  # Example chemotaxis
+            
+            def dchi_function(phi):
+                return -1.0 / (1.0 + phi)**2  # Derivative
+            
+            problem.set_chemotaxis(chi_function, dchi_function)
+        
+        problems.append(problem)
+        
+        # Create Discretization
+        n_elements = 20  # Adjust based on problem needs
+        discretization = Discretization(
+            domain_start=problem.domain_start,
+            domain_end=problem.domain_end,
+            n_elements=n_elements,
+            tau=np.array([1.0, 1.0])  # Stabilization parameters
+        )
+        discretizations.append(discretization)
+    
+    # 5. Create GlobalDiscretization
+    global_discretization = GlobalDiscretization(
+        spatial_discretizations=discretizations,
+        dt=0.01,  # Time step
+        T=1.0     # Final time
+    )
+    
+    # 6. Set up constraints
+    constraint_manager = ConstraintManager()
+    
+    # Example: Neumann boundary conditions
+    constraint_manager.add_neumann_constraint(
+        domain_index=0,
+        equation_index=0,
+        boundary="left",
+        value=0.0,
+        name="inlet_zero_flux"
+    )
+    
+    constraint_manager.add_neumann_constraint(
+        domain_index=len(problems)-1,
+        equation_index=0,
+        boundary="right", 
+        value=0.0,
+        name="outlet_zero_flux"
+    )
+    
+    # Example: Interface continuity (automatic for connected domains)
+    for i in range(len(problems) - 1):
+        constraint_manager.add_interface_constraint(
+            left_domain=i,
+            right_domain=i+1,
+            equations=[0, 1],  # Both equations continuous
+            name=f"interface_{i}_{i+1}"
+        )
+    
+    # Map constraints to discretizations
+    constraint_manager.map_to_discretizations(discretizations)
     
     return problems, global_discretization, constraint_manager, problem_name
 \end{lstlisting}
 
-\subsubsection{Available Problem Modules}
+\subsection{Specialized Problem Types}
 
-\begin{itemize}
-    \item \textbf{test\_problem.py}: Multi-domain reference problem with comprehensive constraint testing
-    \item \textbf{test\_problem2.py}: Alternative test configuration for validation
-    \item \textbf{ooc\_test\_problem.py}: OrganOnChip analytical test case following MATLAB TestProblem.m structure
-\end{itemize}
+\subsubsection{Keller-Segel Chemotaxis Problems}
 
-\subsection{Setup Interface (\code{setup\_solver.py})}
+For chemotaxis problems, implement the following additional components:
 
-\subsubsection{SolverSetup Class}
+\begin{lstlisting}[language=Python, caption=Keller-Segel Problem Extensions]
+# Chemotaxis sensitivity function
+def chi_function(phi):
+    """Chemotaxis sensitivity: cells move up chemical gradients."""
+    chi_0 = 1.0e-6  # Base sensitivity
+    phi_0 = 1.0e-3  # Saturation concentration
+    return chi_0 / (phi_0 + phi**2)
 
-Lean orchestration of solver components with lazy loading and caching:
+def dchi_function(phi):
+    """Derivative of chemotaxis function for Newton's method."""
+    chi_0 = 1.0e-6
+    phi_0 = 1.0e-3
+    return -chi_0 * 2 * phi / (phi_0 + phi**2)**2
 
-\begin{lstlisting}[language=Python, caption={SolverSetup Interface}]
-class SolverSetup:
-    def __init__(self, problem_module="bionetflux.problems.test_problem2")
+# Set chemotaxis for all domains
+for problem in problems:
+    problem.set_chemotaxis(chi_function, dchi_function)
     
-    # Lazy-loaded properties (cached on first access)
-    @property
-    def elementary_matrices(self)    # ElementaryMatrices instance
-    @property 
-    def static_condensations(self)   # List of SC implementations
-    @property
-    def global_assembler(self)       # GlobalAssembler instance
-    @property
-    def bulk_data_manager(self)      # BulkDataManager instance
-    
-    # Solution vector management
-    def create_initial_conditions(self)
-    def create_global_solution_vector(self, trace_solutions, multipliers)
-    def extract_domain_solutions(self, global_solution)
-    
-    # System information and validation
-    def get_problem_info(self)
-    def validate_setup(self, verbose=False)
-
-# Factory functions
-def create_solver_setup(problem_module)
-def quick_setup(problem_module, validate=True)
+    # Keller-Segel specific parameters
+    # parameters = [mu, nu, a, b] where:
+    # mu: diffusion coefficient for chemical
+    # nu: diffusion coefficient for cells  
+    # a: chemical degradation rate
+    # b: chemical production rate by cells
+    problem.parameters = np.array([1.0e-3, 1.0e-4, 0.1, 0.5])
 \end{lstlisting}
 
-\subsection{Visualization Module (\code{bionetflux.visualization})}
+\subsubsection{Organ-on-Chip Problems}
 
-\subsubsection{LeanMatplotlibPlotter (\code{lean\_matplotlib\_plotter.py})}
+For microfluidic device modeling:
 
-Three complementary visualization modes optimized for network analysis:
+\begin{lstlisting}[language=Python, caption=Organ-on-Chip Problem Setup]
+# Multi-compartment geometry
+geometry = DomainGeometry("microfluidic_device")
 
-\begin{lstlisting}[language=Python, caption={Visualization System}]
-class LeanMatplotlibPlotter:
-    def __init__(self, problems, discretizations, 
-                 equation_names=None, figsize=(12, 8))
-    
-    # Primary visualization modes
-    def plot_2d_curves(self, trace_solutions, title=None,
-                       show_mesh_points=True, save_filename=None)
-    def plot_flat_3d(self, trace_solutions, equation_idx=0,
-                     view_angle=(30, 45), save_filename=None)
-    def plot_birdview(self, trace_solutions, equation_idx=0,
-                      time=0.0, save_filename=None)
-    
-    # Comparison and analysis
-    def plot_comparison(self, initial_traces, final_traces,
-                       initial_time=0.0, final_time=1.0,
-                       save_filename=None)
-    
-    # Utility methods
-    def show_all(self)
-    def close_all(self)
-\end{lstlisting}
-
-\textbf{Visualization Features:}
-\begin{enumerate}
-    \item \textbf{2D Curve Plots}: Domain-by-domain solution profiles with mesh points
-    \item \textbf{Flat 3D View}: Network topology with solution-colored scatter points above
-    \item \textbf{Bird's Eye View}: Top-down network overview with color-coded solution values
-    \item \textbf{Comparison Plots}: Side-by-side initial vs. final state analysis
-\end{enumerate}
-
-\section{Getting Started}
-
-\subsection{Installation}
-
-\begin{enumerate}
-    \item Clone the repository:
-    \begin{lstlisting}[language=bash]
-git clone <repository-url>
-cd BioNetFlux
-    \end{lstlisting}
-    
-    \item Set up Python path:
-    \begin{lstlisting}[language=Python]
-import sys
-sys.path.insert(0, '/path/to/BioNetFlux/src')
-    \end{lstlisting}
-\end{enumerate}
-
-\subsection{Basic Usage}
-
-\begin{lstlisting}[language=Python, caption={Basic Usage Example}]
-from setup_solver import quick_setup
-from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
-
-# Load a problem (follows MATLAB TestProblem.m structure)
-setup = quick_setup("bionetflux.problems.ooc_test_problem", validate=True)
-
-# Create initial conditions
-trace_solutions, multipliers = setup.create_initial_conditions()
-
-# Initialize visualization
-plotter = LeanMatplotlibPlotter(
-    problems=setup.problems,
-    discretizations=setup.global_discretization.spatial_discretizations
+# Inlet channel
+geometry.add_domain(
+    extrema_start=(-2.0, 0.0),
+    extrema_end=(-1.0, 0.0),
+    name="inlet_channel"
 )
 
-# Plot initial conditions (all 4 equations for OoC problems)
-plotter.plot_2d_curves(trace_solutions, title="Initial Conditions")
-plotter.plot_birdview(trace_solutions, equation_idx=0, time=0.0)
+# Cell culture chamber
+geometry.add_domain(
+    extrema_start=(-1.0, 0.0),
+    extrema_end=(1.0, 0.0), 
+    name="cell_chamber"
+)
+
+# Outlet channel
+geometry.add_domain(
+    extrema_start=(1.0, 0.0),
+    extrema_end=(2.0, 0.0),
+    name="outlet_channel"
+)
+
+# Waste channel (perpendicular)
+geometry.add_domain(
+    extrema_start=(0.0, 0.0),
+    extrema_end=(0.0, -1.0),
+    name="waste_channel"
+)
+
+# Different parameters per compartment
+parameter_sets = [
+    np.array([D_high, v_high, 0.0, 0.0]),      # Inlet: high flow
+    np.array([D_low, v_low, k_cell, k_prod]),  # Cell chamber: reactions
+    np.array([D_med, v_med, 0.0, 0.0]),        # Outlet: medium flow
+    np.array([D_low, v_waste, 0.0, 0.0])       # Waste: drainage
+]
+
+# Apply different parameters to each domain
+for i, (problem, params) in enumerate(zip(problems, parameter_sets)):
+    problem.parameters = params
+    problem.name = f"compartment_{i}"
 \end{lstlisting}
 
-\subsection{MATLAB Reference Integration}
+\subsection{Static Condensation Implementation}
 
-The Python implementation closely follows the MATLAB reference structure:
+For new problem types, you may need to implement custom static condensation:
 
-\begin{lstlisting}[language=Python, caption={MATLAB-Python Parameter Mapping}]
-# MATLAB TestProblem.m parameters:
-# nu = 1., mu = 2., epsilon = 1., sigma = 1.
-# a = 0., b = 1., c = 0., d = 1., chi = 1.
+\begin{lstlisting}[language=Python, caption=Custom Static Condensation]
+# File: bionetflux/core/static_condensation_my_problem.py
+from .static_condensation_base import StaticCondensationBase
+import numpy as np
 
-# Python equivalent:
-parameters = np.array([1.0, 2.0, 1.0, 1.0,  # nu, mu, epsilon, sigma
-                      0.0, 1.0, 0.0, 1.0,   # a, b, c, d  
-                      1.0])                  # chi
-
-# MATLAB initial conditions: problem.u0{1} = @(x,t) sin(2*pi*x);
-# Python equivalent:
-problem.set_initial_condition(0, lambda s: np.sin(2*np.pi*s))
-
-# MATLAB Neumann data: problem.fluxu0{1} = @(t) 0.;
-# Python equivalent: handled by constraint_manager.add_neumann()
+class MyProblemStaticCondensation(StaticCondensationBase):
+    """Static condensation for my custom problem type."""
+    
+    def build_matrices(self) -> Dict[str, np.ndarray]:
+        """Build problem-specific matrices."""
+        # Extract parameters
+        D1, D2, k1, k2 = self.problem.parameters
+        dt = self.dt
+        h = self.discretization.element_length
+        
+        # Get elementary matrices
+        M = self.elementary_matrices.get_matrix('M') * h
+        D = self.elementary_matrices.get_matrix('D') / h
+        T = self.elementary_matrices.get_matrix('T')
+        
+        # Build static condensation matrices
+        # (Implementation depends on specific PDE system)
+        
+        self.sc_matrices = {
+            'M': M,
+            'D': D, 
+            'T': T,
+            # Add problem-specific matrices
+        }
+        
+        return self.sc_matrices
+    
+    def static_condensation(self, local_trace, local_source, **kwargs):
+        """Perform element-level static condensation."""
+        # Implementation specific to your PDE system
+        # Return: local_solution, flux, flux_trace, jacobian
+        pass
+    
+    def assemble_forcing_term(self, previous_bulk_solution, external_force):
+        """Assemble right-hand side."""
+        # Implementation for your specific time integration scheme
+        pass
 \end{lstlisting}
+
+Then register your implementation in the factory:
+
+\begin{lstlisting}[language=Python, caption=Factory Registration]
+# In static_condensation_factory.py
+@staticmethod
+def create(problem, global_discretization, elementary_matrices, domain_index):
+    if problem.type == "MyProblemType":
+        return MyProblemStaticCondensation(
+            problem, global_discretization, elementary_matrices, domain_index
+        )
+    # ... other problem types
+\end{lstlisting}
+
+This modular approach allows \bionetflux{} to support arbitrary PDE systems while maintaining consistent interfaces and efficient implementation patterns.
