@@ -28,7 +28,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Add BioNetFlux to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'code'))
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'code'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from setup_solver import quick_setup
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter

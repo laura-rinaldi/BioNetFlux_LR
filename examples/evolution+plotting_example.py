@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from setup_solver import quick_setup
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
-from bionetflux.analysis.error_evaluation import L2ErrorEvaluator, create_analytical_solutions_example
+# from bionetflux.analysis.error_evaluation import L2ErrorEvaluator, create_analytical_solutions_example
 
 filename = "bionetflux.problems.reduced_ooc_problem"  # New geometry-based problem
 # filename = "bionetflux.problems.KS_traveling_wave"  # Original test_problem2 for MATL
@@ -65,17 +65,17 @@ print("✓ Initial trace solutions created:")
 for i, trace in enumerate(trace_solutions):
     print(f"  Domain {i+1}: shape {trace.shape}, range [{np.min(trace):.6e}, {np.max(trace):.6e}]")
     
-    # Debug: Print solution values for each equation
-    discretization = setup.global_discretization.spatial_discretizations[i]
-    n_nodes = len(discretization.nodes)
-    for eq_idx in range(setup.problems[0].neq):
-        eq_start = eq_idx * n_nodes
-        eq_end = eq_start + n_nodes
-        eq_values = trace[eq_start:eq_end]
-        eq_name = plotter.equation_names[eq_idx] if 'plotter' in locals() else f'Eq{eq_idx}'
-        print(f"    {eq_name}: range [{np.min(eq_values):.6f}, {np.max(eq_values):.6f}]")
-        if eq_idx == 1:  # omega should be sinusoidal
-            print(f"    {eq_name} values (first 10): {eq_values[:10]}")
+    # # Debug: Print solution values for each equation
+    # discretization = setup.global_discretization.spatial_discretizations[i]
+    # n_nodes = len(discretization.nodes)
+    # for eq_idx in range(setup.problems[0].neq):
+    #     eq_start = eq_idx * n_nodes
+    #     eq_end = eq_start + n_nodes
+    #     eq_values = trace[eq_start:eq_end]
+    #     eq_name = plotter.equation_names[eq_idx] if 'plotter' in locals() else f'Eq{eq_idx}'
+    #     print(f"    {eq_name}: range [{np.min(eq_values):.6f}, {np.max(eq_values):.6f}]")
+    #     if eq_idx == 1:  # omega should be sinusoidal
+    #         print(f"    {eq_name} values (first 10): {eq_values[:10]}")
 
 # Initialize the lean matplotlib plotter
 print("\nInitializing LeanMatplotlibPlotter...")
@@ -88,43 +88,43 @@ plotter = LeanMatplotlibPlotter(
     output_dir="outputs/plots"  # Set directory for saving figures
 )
 
-# Initialize the L2 error evaluator
-print("\nInitializing L2 Error Evaluator...")
-error_evaluator = L2ErrorEvaluator(
-    problems=setup.problems,
-    discretizations=setup.global_discretization.spatial_discretizations
-)
+# # Initialize the L2 error evaluator
+# print("\nInitializing L2 Error Evaluator...")
+# error_evaluator = L2ErrorEvaluator(
+#     problems=setup.problems,
+#     discretizations=setup.global_discretization.spatial_discretizations
+# )
 
 
-# The analytical solutions are now automatically extracted from problems
-analytical_solutions = error_evaluator.get_analytical_solutions()
-print("✓ L2 Error Evaluator initialized with automatically extracted analytical solutions")
+# # The analytical solutions are now automatically extracted from problems
+# analytical_solutions = error_evaluator.get_analytical_solutions()
+# print("✓ L2 Error Evaluator initialized with automatically extracted analytical solutions")
 
 # Print summary of available analytical solutions
-for i in range(len(setup.problems)):
-    if error_evaluator.has_analytical_solution(i):
-        print(f"  Domain {i}: Analytical solutions available")
-    else:
-        print(f"  Domain {i}: No analytical solutions (will use zero)")
+# for i in range(len(setup.problems)):
+#     if error_evaluator.has_analytical_solution(i):
+#         print(f"  Domain {i}: Analytical solutions available")
+#     else:
+#         print(f"  Domain {i}: No analytical solutions (will use zero)")
 
-# Compute initial L2 error
-initial_error_results = error_evaluator.compute_trace_error(
-    numerical_solutions=trace_solutions,
-    time=0.0
-    # No need to pass analytical_functions - will use auto-extracted ones
-)
+# # Compute initial L2 error
+# initial_error_results = error_evaluator.compute_trace_error(
+#     numerical_solutions=trace_solutions,
+#     time=0.0
+#     # No need to pass analytical_functions - will use auto-extracted ones
+# )
 
-print("✓ Initial L2 error computed:")
-print(f"  Global L2 Error: {initial_error_results['global_error']:.6e}")
-print(f"  Relative Global Error: {initial_error_results.get('relative_global_error', 'N/A'):.6e}")
+# print("✓ Initial L2 error computed:")
+# print(f"  Global L2 Error: {initial_error_results['global_error']:.6e}")
+# print(f"  Relative Global Error: {initial_error_results.get('relative_global_error', 'N/A'):.6e}")
 
-# Store error history for convergence analysis
-error_history = [initial_error_results]
-time_history_error = [0.0]
+# # Store error history for convergence analysis
+# error_history = [initial_error_results]
+# time_history_error = [0.0]
 
 # Plot initial trace solutions
 
-print("Plotting initial trace solutions...")
+# print("Plotting initial trace solutions...")
 
 # 2D curve visualization (all equations together)
 # print("Creating 2D curve visualization...")
@@ -347,22 +347,22 @@ while current_time+dt <= T and time_step <= max_time_steps:
     
     
     
-    # Compute L2 error at current time step
-    current_traces, current_multipliers = setup.extract_domain_solutions(global_solution)
-    current_error_results = error_evaluator.compute_trace_error(
-        numerical_solutions=current_traces,
-        time=current_time
-        # No need to pass analytical_functions - will use auto-extracted ones
-    )
+    # # Compute L2 error at current time step
+    # current_traces, current_multipliers = setup.extract_domain_solutions(global_solution)
+    # current_error_results = error_evaluator.compute_trace_error(
+    #     numerical_solutions=current_traces,
+    #     time=current_time
+    #     # No need to pass analytical_functions - will use auto-extracted ones
+    # )
     
-    # Store error history
-    error_history.append(current_error_results)
-    time_history_error.append(current_time)
+    # # Store error history
+    # error_history.append(current_error_results)
+    # time_history_error.append(current_time)
     
-    print(f"  L2 Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
+    # print(f"  L2 Error: {current_error_results['global_error']:.6e} (relative: {current_error_results.get('relative_global_error', 'N/A'):.6e})")
 
-    print(f"✓ Newton solver completed")
-    print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
+    # print(f"✓ Newton solver completed")
+    # print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
 
 print("  Time evolution completed.")
 
@@ -464,55 +464,38 @@ print(f"✓ Matplotlib plots saved and displayed")
 # =============================================================================
 # STEP 6.8: Error Analysis and Reporting
 # =============================================================================
-print("\nStep 6.8: Error analysis and reporting...")
+# print("\nStep 6.8: Error analysis and reporting...")
 
-# Generate final error report
-final_error_report = error_evaluator.generate_error_report(error_history[-1])
-print(final_error_report)
+# # Generate final error report
+# final_error_report = error_evaluator.generate_error_report(error_history[-1])
+# print(final_error_report)
 
-# Plot error evolution over time
-plt.figure(figsize=(10, 6))
-global_errors = [err['global_error'] for err in error_history]
-relative_errors = [err.get('relative_global_error', np.nan) for err in error_history]
+# # Plot error evolution over time
+# plt.figure(figsize=(10, 6))
+# global_errors = [err['global_error'] for err in error_history]
+# relative_errors = [err.get('relative_global_error', np.nan) for err in error_history]
 
-plt.subplot(2, 1, 1)
-plt.semilogy(time_history_error, global_errors, 'b-o', markersize=4)
-plt.xlabel('Time')
-plt.ylabel('Global L2 Error')
-plt.title('L2 Error Evolution')
-plt.grid(True, alpha=0.3)
+# plt.subplot(2, 1, 1)
+# plt.semilogy(time_history_error, global_errors, 'b-o', markersize=4)
+# plt.xlabel('Time')
+# plt.ylabel('Global L2 Error')
+# plt.title('L2 Error Evolution')
+# plt.grid(True, alpha=0.3)
 
-plt.subplot(2, 1, 2)
-valid_relative = [err for err in relative_errors if not np.isnan(err) and not np.isinf(err)]
-if valid_relative:
-    plt.semilogy(time_history_error[:len(valid_relative)], valid_relative, 'r-s', markersize=4)
-    plt.xlabel('Time')
-    plt.ylabel('Relative L2 Error')
-    plt.title('Relative L2 Error Evolution')
-    plt.grid(True, alpha=0.3)
-else:
-    plt.text(0.5, 0.5, 'No valid relative errors', ha='center', va='center', transform=plt.gca().transAxes)
+# plt.subplot(2, 1, 2)
+# valid_relative = [err for err in relative_errors if not np.isnan(err) and not np.isinf(err)]
+# if valid_relative:
+#     plt.semilogy(time_history_error[:len(valid_relative)], valid_relative, 'r-s', markersize=4)
+#     plt.xlabel('Time')
+#     plt.ylabel('Relative L2 Error')
+#     plt.title('Relative L2 Error Evolution')
+#     plt.grid(True, alpha=0.3)
+# else:
+#     plt.text(0.5, 0.5, 'No valid relative errors', ha='center', va='center', transform=plt.gca().transAxes)
 
-plt.tight_layout()
-plt.savefig("outputs/plots/l2_error_evolution.png", dpi=300, bbox_inches='tight')
-print("✓ L2 error evolution plot saved")
+# plt.tight_layout()
+# plt.savefig("outputs/plots/l2_error_evolution.png", dpi=300, bbox_inches='tight')
+# print("✓ L2 error evolution plot saved")
 
 # Error statistics summary
-print(f"\nError Statistics Summary:")
-print(f"  Initial global L2 error: {global_errors[0]:.6e}")
-print(f"  Final global L2 error: {global_errors[-1]:.6e}")
-print(f"  Maximum error during evolution: {max(global_errors):.6e}")
-print(f"  Minimum error during evolution: {min(global_errors):.6e}")
-
-if len(global_errors) > 1:
-    error_trend = (global_errors[-1] - global_errors[0]) / global_errors[0]
-    print(f"  Error trend (relative change): {error_trend:.2%}")
-
-# Save error history to file
-error_data = np.column_stack((time_history_error, global_errors, relative_errors))
-np.savetxt("outputs/plots/error_history.txt", error_data, 
-           header="Time\tGlobal_L2_Error\tRelative_L2_Error", 
-           delimiter='\t', fmt='%.6e')
-print("✓ Error history saved to outputs/plots/error_history.txt")
-
 
