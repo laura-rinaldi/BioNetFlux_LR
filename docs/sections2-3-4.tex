@@ -38,9 +38,8 @@ The framework follows a lean data extraction pattern where essential information
 The HDG method is implemented through:
 
 \begin{itemize}
-    \item \textbf{Static Condensation}: Element-level elimination using problem-specific implementations
-    \item \textbf{Trace Variables}: Interface unknowns connecting domains through the network
     \item \textbf{Hybridization}: Global system assembly focusing only on trace unknowns
+    \item \textbf{Static Condensation}: Element-level elimination using problem-specific implementations
     \item \textbf{Post-Processing}: Recovery of bulk solutions from trace values
 \end{itemize}
 
@@ -93,7 +92,7 @@ Each problem module must provide a \code{create\_global\_framework()} function t
 
 \subsubsection{Problem Class Features}
 \begin{itemize}
-    \item \textbf{Parametric Equations}: Support for arbitrary numbers of coupled PDEs
+    \item \textbf{Parametric Equation Count}: Support for arbitrary numbers of coupled PDEs
     \item \textbf{Physical Parameters}: Flexible parameter arrays for problem-specific coefficients
     \item \textbf{Function Support}: Initial conditions, forcing terms, and nonlinear functions
     \item \textbf{Domain Mapping}: Integration with \code{DomainGeometry} for complex networks
@@ -125,9 +124,10 @@ The \code{DomainGeometry} class enables intuitive definition of complex network 
 \subsubsection{Geometry Features}
 \begin{itemize}
     \item \textbf{Extrema-Based Definition}: Domains defined by start and end coordinates in 2D space
-    \item \textbf{Automatic Parameter Mapping}: Conversion between 2D coordinates and 1D parameters
+    \item \textbf{Automatic Parameter Mapping}: Conversion between 2D coordinates and 1D parametrization
     \item \textbf{Bounding Box Management}: Automatic spatial extent calculation
     \item \textbf{Metadata Support}: Custom properties and naming for domains
+    \item \textbf{Inter Domain Coupling}: Handled by {\tt ConstraintManager}
 \end{itemize}
 
 \subsubsection{Network Topologies}
@@ -152,16 +152,18 @@ The constraint system handles boundary conditions and inter-domain coupling thro
     \item \textbf{Neumann Boundary Conditions}: Specified flux values at domain boundaries
     \item \textbf{Dirichlet Boundary Conditions}: Fixed solution values at boundaries
     \item \textbf{Robin Boundary Conditions}: Linear combination of solution and flux
-    \item \textbf{Interface Constraints}: Coupling conditions between connected domains
+    \item \textbf{Interface Constraints}: Continuity and membrane coupling conditions
 \end{itemize}
 
 \subsubsection{Implementation Features}
 \begin{itemize}
     \item \textbf{Flexible Mapping}: Constraints map to discretization nodes automatically
-    \item \textbf{Time Dependence}: Support for time-varying constraint data
+    \item \textbf{Time Dependence}: Support for time-varying constraint coefficients and data
     \item \textbf{Lagrange Multipliers}: Enforcement through multiplier variables
     \item \textbf{Validation System}: Comprehensive constraint consistency checking
 \end{itemize}
+
+\input{HDGDataStructure}
 
 \section{Static Condensation Framework}
 \label{sec:static_condensation}
