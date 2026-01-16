@@ -7,6 +7,7 @@ import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
 import importlib
 
+
 # Core imports
 from bionetflux.core.discretization import Discretization, GlobalDiscretization
 from bionetflux.utils.elementary_matrices import ElementaryMatrices
@@ -21,7 +22,7 @@ class SolverSetup:
     Maintains minimal data storage and provides efficient access to components.
     """
     
-    def __init__(self, problem_module: str = "bionetflux.problems.test_problem2"):
+    def __init__(self, problem_module: str = "bionetflux.problems.test_problem2", y=None):
         """
         Initialize solver setup with specified problem module.
         
@@ -29,10 +30,12 @@ class SolverSetup:
             problem_module: String path to problem module containing create_global_framework
         """
         self.problem_module = problem_module
+        self.y = y
         self._initialized = False
         
         # Core problem data (lean storage)
         self.problems = None
+        self.parameters = None
         self.global_discretization = None
         self.constraint_manager = None
         self.problem_name = None
@@ -56,7 +59,7 @@ class SolverSetup:
             raise ImportError(f"Cannot import create_global_framework from {self.problem_module}: {e}")
         
         # Get core problem configuration
-        self.problems, self.global_discretization, self.constraint_manager, self.problem_name = create_global_framework()
+        self.problems, self.parameters, self.global_discretization, self.constraint_manager, self.problem_name = create_global_framework(self.y)
         self.constraints = self.constraint_manager  # For backward compatibility if needed  
 
         self._initialized = True
@@ -128,6 +131,7 @@ class SolverSetup:
         info = {
             'problem_name': self.problem_name,
             'num_domains': len(self.problems),
+            'params': self.parameters,
             'total_elements': sum(disc.n_elements for disc in self.global_discretization.spatial_discretizations),
             'total_trace_dofs': self.global_assembler.total_trace_dofs,
             'num_constraints': self.constraint_manager.n_multipliers if self.constraint_manager else 0,
@@ -341,7 +345,7 @@ class SolverSetup:
             return False
 
 
-def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2") -> SolverSetup:
+def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2", y=None) -> SolverSetup:
     """
     Factory function to create and initialize a solver setup.
     
@@ -352,13 +356,13 @@ def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2
         Initialized SolverSetup instance
     """
    
-    setup = SolverSetup(problem_module)
+    setup = SolverSetup(problem_module, y)
     setup.initialize()
     return setup
 
 
 # Convenience functions for common operations
-def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", validate: bool = True) -> SolverSetup:
+def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", y=None, validate: bool = True) -> SolverSetup:
     """
     Quick setup with optional validation.
     
@@ -370,7 +374,7 @@ def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", valid
         Validated SolverSetup instance
     """
     
-    setup = create_solver_setup(problem_module)
+    setup = create_solver_setup(problem_module, y)
     if validate:
         if not setup.validate_setup(verbose=True):
             raise RuntimeError("Setup validation failed")

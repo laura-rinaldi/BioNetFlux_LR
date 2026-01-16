@@ -1,9 +1,10 @@
 import numpy as np
+import time as ts
 from ..core.problem import Problem
 from ..core.discretization import Discretization, GlobalDiscretization
 from ..core.constraints import ConstraintManager
 
-def create_global_framework():
+def create_global_framework(y=None):
     """
     OrganOnChip test problem - Python port from MATLAB TestProblem.m
     """
@@ -38,7 +39,10 @@ def create_global_framework():
     
     
     # Parameter vector [nu, mu, epsilon, sigma, a, b, c, d, chi]
-    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
+    if y:
+        parameters = y
+    else:
+        parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi]) 
     
     # Domain definition
     domain_start = 1.0  # A in MATLAB
@@ -196,5 +200,5 @@ def create_global_framework():
     
     # Map constraints to discretizations
     constraint_manager.map_to_discretizations([discretization])
-    
-    return [problem], global_disc, constraint_manager, problem_name
+   
+    return [problem], parameters, global_disc, constraint_manager, problem_name

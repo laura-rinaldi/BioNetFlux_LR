@@ -6,7 +6,7 @@ from ..geometry import DomainGeometry
 
 
 
-def create_global_framework():
+def create_global_framework(y=None):
     """
     Organ-on-Chip problem with complex grid geometry:
     - Two parallel vertical segments at x=-0.5 and x=0.5 (flow channels)
@@ -45,7 +45,11 @@ def create_global_framework():
     
     
     # Parameter vector [nu, mu, epsilon, sigma, a, b, c, d, chi]
-     
+    if y.size >0:
+        parameters = y
+    else:
+        parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])  
+    print(parameters)
     # Domain definition
     domain_start = 1.0  # A in MATLAB
     domain_length = 1.0  # L in MATLAB
@@ -194,7 +198,7 @@ def create_global_framework():
     # Note: static_condensation_ooc.py expects 5 parameters including reaction parameter at index 4
     
     # Different parameters for different domain types
-    problem_parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
+    problem_parameters = y# np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
 
     # parameters_vertical = parameters   # Flow channels: higher flow
     # parameters_horizontal = parameters  # Culture chambers: lower flow, higher reaction
@@ -296,6 +300,7 @@ def create_global_framework():
             stab_constant=1.0
         )
         discretization.set_tau([1.0/discretization.element_length, 1.0, 1.0, 1.0])
+        
         discretizations.append(discretization)
     
     # Global discretization
@@ -374,4 +379,4 @@ def create_global_framework():
     print(f"  - Species-specific permeabilities for selective transport")
     print(f"✓ Geometry bounding box: {geometry.get_bounding_box()}")
     
-    return problems, global_disc, constraint_manager, problem_name
+    return problems, parameters, global_disc, constraint_manager, problem_name
