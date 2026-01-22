@@ -23,7 +23,7 @@ class ooc_sol(umbridge.Model):
         return [2]
 
     def get_output_sizes(self, config):
-        return [3]
+        return [5]
 
     def __call__(self, parameters, config):
             filename = parameters[0][0]#"bionetflux.problems.OoC_grid_new"
@@ -221,8 +221,10 @@ class ooc_sol(umbridge.Model):
             # Note: residual variable not defined in this scope, would need to use final_residual if available
 
             sol_all_times = []
-            I_all_times = []
-            M_all_times = []
+            I_all_times_phi = []
+            I_all_times_w = []
+            M_all_times_u = []
+            M_all_times_v = []
             # Time evolution loop
             while current_time+dt <= T and time_step <= max_time_steps:
                 print(f"\n--- Time Step {time_step}: t = {current_time+dt:.6f} ---")
@@ -341,6 +343,11 @@ class ooc_sol(umbridge.Model):
                 print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
 
                 tr =  np.hstack(extracted_traces)
+                p_number= len(np.hstack(discretization_nodes_all_domains))
+                tr_u = tr[ 0:p_number]
+                tr_w=  tr[p_number: 2*p_number]
+                tr_v= tr[2*p_number : 3*p_number]
+                tr_phi= tr[3*p_number:]
                 sol_all_times.append(tr) 
 
                 print(f"Compute QoI")
@@ -349,31 +356,45 @@ class ooc_sol(umbridge.Model):
                 # Composite trapezoidal rule:
                 # sum over h[i] * (sol[i] + sol[i+1]) / 2
                 
-                I = np.sum(h * (tr[:-1] + tr[1:]) / 2)
-                I_all_times.append(I)
+                I_phi = np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2)
+                I_all_times_phi.append(I_phi)
 
-                x_tile = np.tile(np.hstack(discretization_nodes_all_domains), 4)
+                I_w = np.sum(h * (tr_w[:-1] + tr_w[1:]) / 2)
+                I_all_times_w.append(I_w)
+
+                I_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
+                I_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+
+
+
+                x_tile = np.hstack(discretization_nodes_all_domains)
+                #np.tile(np.hstack(discretization_nodes_all_domains), 4)
 
 
                 # Barycenter numerator (Simpson-like rule)
-                fa = x_tile[:-1] * tr[:-1]
-                fb = x_tile[1:]  * tr[1:]
-                fc = (x_tile[:-1] + x_tile[1:]) * (tr[:-1] + tr[1:]) / 4
+                fa_u = x_tile[:-1] * tr_u[:-1]
+                fb_u = x_tile[1:]  * tr_u[1:]
+                fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
 
-                numerator = np.sum(h * (fa + fb + 4 * fc) / 6)
-                M = numerator/I
-                M_all_times.append(M)
+                numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
+                M_u = numerator_u/I_u
+                M_all_times_u.append(M_u)
 
-            # sol_all_times = np.array(sol_all_times) # diventa array NumPy 
-            # I_all_times = np.array(I_all_times)
-            # M_all_times = np.array(M_all_times)
-            # print("  Time evolution completed.")
-            # # Note: residual variable not defined in this scope, would need to use final_residual if available
-            # return [[I]]  #sol_all_times, I_all_times, M_all_times]]
+                fa_v = x_tile[:-1] * tr_v[:-1]
+                fb_v = x_tile[1:]  * tr_v[1:]
+                fc_v = (x_tile[:-1] + x_tile[1:]) * (tr_v[:-1] + tr_v[1:]) / 4
+
+                numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
+                M_v = numerator_v/I_v
+                M_all_times_v.append(M_v)
+
+
             sol_all_times = np.array(sol_all_times).tolist() 
-            I_all_times = np.array(I_all_times).tolist() 
-            M_all_times = np.array(M_all_times).tolist() 
-            return [[sol_all_times, I_all_times, M_all_times]]
+            I_all_times_phi = np.array(I_all_times_phi).tolist() 
+            I_all_times_w = np.array(I_all_times_w).tolist() 
+            M_all_times_u = np.array(M_all_times_u).tolist() 
+            M_all_times_v = np.array(M_all_times_v).tolist() 
+            return [[sol_all_times, I_all_times_phi, I_all_times_w, M_all_times_u, M_all_times_v]]
         
 
     def supports_evaluate(self):

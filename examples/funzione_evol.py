@@ -72,51 +72,6 @@ def function_evol_ooc( filename, y=None):
             if eq_idx == 1:  # omega should be sinusoidal
                 print(f"    {eq_name} values (first 10): {eq_values[:10]}")
 
-    # Initialize the lean matplotlib plotter
-    print("\nInitializing LeanMatplotlibPlotter...")
-
-    plotter = LeanMatplotlibPlotter(
-        problems=setup.problems,
-        discretizations=setup.global_discretization.spatial_discretizations,
-        equation_names=None,  # Will auto-detect based on problem type
-        figsize=(12, 8),
-        output_dir="outputs/plots"  # Set directory for saving figures
-    )
-
-    # Plot initial trace solutions
-
-    print("Plotting initial trace solutions...")
-
-    # 2D curve visualization (all equations together)
-    print("Creating 2D curve visualization...")
-    curves_2d_fig = plotter.plot_2d_curves(
-        trace_solutions=trace_solutions,
-        title="Initial Solutions - 2D Curves",
-        show_bounding_box=True,
-        show_mesh_points=True,
-        save_filename="bionetflux_initial_2d_curves.png"
-    )
-
-    # Flat 3D visualization for each equation
-    for eq_idx in range(setup.problems[0].neq):
-        flat_3d_fig = plotter.plot_flat_3d(
-            trace_solutions=trace_solutions,
-            equation_idx=eq_idx,
-            title=f"Initial {plotter.equation_names[eq_idx]} Solution - Flat 3D",
-            segment_width=0.1,
-            save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_flat3d.png",
-            view_angle=(30, 45)
-        )
-        
-        # Bird's eye view visualization
-        birdview_fig = plotter.plot_birdview(
-            trace_solutions=trace_solutions,
-            equation_idx=eq_idx,
-            segment_width=0.15,
-            save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_birdview.png",
-            show_colorbar=True,
-            time=0.0
-        )
 
 
     # =============================================================================
@@ -200,8 +155,10 @@ def function_evol_ooc( filename, y=None):
     # Note: residual variable not defined in this scope, would need to use final_residual if available
 
     sol_all_times = []
-    I_all_times = []
-    M_all_times = []
+    I_all_times_phi = []
+    I_all_times_w = []
+    M_all_times_u = []
+    M_all_times_v = []
     # Time evolution loop
     while current_time+dt <= T and time_step <= max_time_steps:
         print(f"\n--- Time Step {time_step}: t = {current_time+dt:.6f} ---")
@@ -320,37 +277,75 @@ def function_evol_ooc( filename, y=None):
         print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
 
         tr =  np.hstack(extracted_traces)
+
+        #singole soluzioni
+        # ['u', 'ω', 'v', 'φ']
+        p_number= len(np.hstack(discretization_nodes_all_domains))
+        tr_u = tr[ 0:p_number]
+        tr_w=  tr[p_number: 2*p_number]
+        tr_v= tr[2*p_number : 3*p_number]
+        tr_phi= tr[3*p_number:]
         sol_all_times.append(tr) 
 
-        print(f"Compute QoI")
+        print(f"  Compute QoI")
         # Compute mesh size (vector of spacings)
         h =  np.diff(np.hstack(discretization_nodes_all_domains))[0]
         # Composite trapezoidal rule:
         # sum over h[i] * (sol[i] + sol[i+1]) / 2
         
-        I = np.sum(h * (tr[:-1] + tr[1:]) / 2)
-        I_all_times.append(I)
+        I_phi = np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2)
+        I_all_times_phi.append(I_phi)
 
-        x_tile = np.tile(np.hstack(discretization_nodes_all_domains), 4)
+        I_w = np.sum(h * (tr_w[:-1] + tr_w[1:]) / 2)
+        I_all_times_w.append(I_w)
+
+        I_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
+        I_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+
+
+
+        x_tile = np.hstack(discretization_nodes_all_domains)
+        #np.tile(np.hstack(discretization_nodes_all_domains), 4)
 
 
         # Barycenter numerator (Simpson-like rule)
-        fa = x_tile[:-1] * tr[:-1]
-        fb = x_tile[1:]  * tr[1:]
-        fc = (x_tile[:-1] + x_tile[1:]) * (tr[:-1] + tr[1:]) / 4
+        fa_u = x_tile[:-1] * tr_u[:-1]
+        fb_u = x_tile[1:]  * tr_u[1:]
+        fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
 
-        numerator = np.sum(h * (fa + fb + 4 * fc) / 6)
-        M = numerator/I
-        M_all_times.append(M)
+        numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
+        M_u = numerator_u/I_u
+        M_all_times_u.append(M_u)
+
+        fa_v = x_tile[:-1] * tr_v[:-1]
+        fb_v = x_tile[1:]  * tr_v[1:]
+        fc_v = (x_tile[:-1] + x_tile[1:]) * (tr_v[:-1] + tr_v[1:]) / 4
+
+        numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
+        M_v = numerator_v/I_v
+        M_all_times_v.append(M_v)
 
     sol_all_times = np.array(sol_all_times) # diventa array NumPy 
-    I_all_times = np.array(I_all_times)
-    M_all_times = np.array(M_all_times)
+
+    #singole soluzioni
+    # ['u', 'ω', 'v', 'φ']
+    p_number= len(np.hstack(discretization_nodes_all_domains))
+    sol_u = sol_all_times[:, 0:p_number]
+    sol_w=  sol_all_times[:,p_number: 2*p_number]
+    sol_v= sol_all_times[:, 2*p_number : 3*p_number]
+    sol_phi= sol_all_times[:, 3*p_number:]
+
+    I_all_times_phi = np.array(I_all_times_phi)
+    I_all_times_w = np.array(I_all_times_w)
+    M_all_times_v = np.array(M_all_times_v)
+    M_all_times_u = np.array(M_all_times_u)
     print("  Time evolution completed.")
+    print(np.shape(sol_u))
+
     # Note: residual variable not defined in this scope, would need to use final_residual if available
-    return sol_all_times, I_all_times, M_all_times
+    return sol_all_times, I_all_times_phi , I_all_times_w ,  M_all_times_v,  M_all_times_u
 
 
-sol, I, M =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) )
+sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) )
 
 
