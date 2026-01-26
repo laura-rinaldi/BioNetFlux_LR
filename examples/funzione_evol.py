@@ -248,7 +248,6 @@ def function_evol_ooc( filename, y=None):
         # Update variables for subsequent steps
         global_solution = newton_solution
         
-
         # Update bulk solutions by static condensation for next time step
         bulk_sol = global_assembler.bulk_by_static_condensation(
             global_solution=newton_solution,
@@ -275,9 +274,9 @@ def function_evol_ooc( filename, y=None):
 
         print(f"✓ Newton solver completed")
         print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
-
-        tr =  np.hstack(extracted_traces)
-
+        extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(global_solution)
+        tr =  np.hstack(extracted_traces_n)
+  
         #singole soluzioni
         # ['u', 'ω', 'v', 'φ']
         p_number= len(np.hstack(discretization_nodes_all_domains))
@@ -346,6 +345,53 @@ def function_evol_ooc( filename, y=None):
     return sol_all_times, I_all_times_phi , I_all_times_w ,  M_all_times_v,  M_all_times_u
 
 
-sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) )
+#sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) )
 
 
+##########################################################
+#Generare un plot della soluzione al variare del parametro
+##########################################################
+
+# Creazione del grafico 
+for i in range(4):
+    sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([1,1, 1,i*10000.0, 1, 1, 1, 1, 1]) )
+    plt.figure(1)
+    plt.plot(  M1[:], label="M1", color="blue")
+    plt.title("M1")
+    plt.xlabel("times")
+    plt.ylabel("Asse Y")
+    plt.legend()
+    plt.grid(True) 
+    # Salvataggio del grafico 
+    plt.savefig(r"./outputs/plots/plot_salvato.png" , bbox_inches="tight")
+
+    plt.figure(2)
+    plt.plot(  M2[:], label="M2", color="blue")
+    plt.title("M2")
+    plt.xlabel("times")
+    plt.ylabel("Asse Y")
+    plt.legend()
+    plt.grid(True) 
+    # Salvataggio del grafico 
+    plt.savefig(r"./outputs/plots/plot_salvato2.png" , bbox_inches="tight")
+
+    plt.figure(3)
+    plt.plot(  I1[:], label="I1", color="blue")
+    plt.title("I1")
+    plt.xlabel("times")
+    plt.ylabel("Asse Y")
+    plt.legend()
+    plt.grid(True) 
+    # Salvataggio del grafico 
+    plt.savefig(r"./outputs/plots/plot_salvato3.png" , bbox_inches="tight")
+
+    plt.figure(4)
+    plt.plot(  I2[:], label="I2", color="blue")
+    plt.title("I2")
+    plt.xlabel("times")
+    plt.ylabel("Asse Y")
+    plt.legend()
+    plt.grid(True) 
+    # Salvataggio del grafico 
+    plt.savefig(r"./outputs/plots/plot_salvato4.png" , bbox_inches="tight")
+    print(f"PlotS salvati in: /outputs/plots")

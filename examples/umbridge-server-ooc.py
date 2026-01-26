@@ -1,3 +1,5 @@
+# first, run the server as: python3 umbridge-server-ooc.py
+
 import umbridge
 import sys
 import os
@@ -5,13 +7,7 @@ import numpy as np
 import time as ts
 import matplotlib.pyplot as plt
 plt.close('all')
-# sys.path.append("../../src/limit-equilibrium")
-# from base_classes import SoilProperties,SoilState,UniformQuadrature,Options,np,plt
-# from circularSlipSurface import circularSlipSurface
-# from bishop import bishop
-# from gle import spencer,morgerstern_price
-# from gridOfCircles import GridOptions, gridComputation,computeEtaMinForSurface
-# from gridSimplexComputation import simplexComputation
+
 
 
 class ooc_sol(umbridge.Model):
@@ -20,15 +16,16 @@ class ooc_sol(umbridge.Model):
         super().__init__("forward")
 
     def get_input_sizes(self, config):
-        return [2]
+        return [9]
 
     def get_output_sizes(self, config):
         return [5]
 
     def __call__(self, parameters, config):
-            filename = parameters[0][0]#"bionetflux.problems.OoC_grid_new"
-
-            y = np.array(parameters[0][1])
+            filename = "bionetflux.problems.OoC_grid_new"#parameters[0][0]#
+            
+            y = np.array([parameters[0][0], parameters[0][1],parameters[0][2],parameters[0][3],parameters[0][4],parameters[0][5],parameters[0][6],parameters[0][7],parameters[0][8]])
+            print('laura', len(parameters))
 
             # Add the python_port directory to path for absolute imports
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -92,52 +89,6 @@ class ooc_sol(umbridge.Model):
                     print(f"    {eq_name}: range [{np.min(eq_values):.6f}, {np.max(eq_values):.6f}]")
                     if eq_idx == 1:  # omega should be sinusoidal
                         print(f"    {eq_name} values (first 10): {eq_values[:10]}")
-
-            # Initialize the lean matplotlib plotter
-            print("\nInitializing LeanMatplotlibPlotter...")
-
-            plotter = LeanMatplotlibPlotter(
-                problems=setup.problems,
-                discretizations=setup.global_discretization.spatial_discretizations,
-                equation_names=None,  # Will auto-detect based on problem type
-                figsize=(12, 8),
-                output_dir="outputs/plots"  # Set directory for saving figures
-            )
-
-            # Plot initial trace solutions
-
-            print("Plotting initial trace solutions...")
-
-            # 2D curve visualization (all equations together)
-            print("Creating 2D curve visualization...")
-            curves_2d_fig = plotter.plot_2d_curves(
-                trace_solutions=trace_solutions,
-                title="Initial Solutions - 2D Curves",
-                show_bounding_box=True,
-                show_mesh_points=True,
-                save_filename="bionetflux_initial_2d_curves.png"
-            )
-
-            # Flat 3D visualization for each equation
-            for eq_idx in range(setup.problems[0].neq):
-                flat_3d_fig = plotter.plot_flat_3d(
-                    trace_solutions=trace_solutions,
-                    equation_idx=eq_idx,
-                    title=f"Initial {plotter.equation_names[eq_idx]} Solution - Flat 3D",
-                    segment_width=0.1,
-                    save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_flat3d.png",
-                    view_angle=(30, 45)
-                )
-                
-                # Bird's eye view visualization
-                birdview_fig = plotter.plot_birdview(
-                    trace_solutions=trace_solutions,
-                    equation_idx=eq_idx,
-                    segment_width=0.15,
-                    save_filename=f"bionetflux_initial_{plotter.equation_names[eq_idx]}_birdview.png",
-                    show_colorbar=True,
-                    time=0.0
-                )
 
 
             # =============================================================================
@@ -342,7 +293,8 @@ class ooc_sol(umbridge.Model):
                 print(f"✓ Newton solver completed")
                 print(f"  Solution range: [{np.min(global_solution):.6e}, {np.max(global_solution):.6e}]")
 
-                tr =  np.hstack(extracted_traces)
+                extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(global_solution)
+                tr =  np.hstack(extracted_traces_n)
                 p_number= len(np.hstack(discretization_nodes_all_domains))
                 tr_u = tr[ 0:p_number]
                 tr_w=  tr[p_number: 2*p_number]

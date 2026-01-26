@@ -1,4 +1,3 @@
-# first, run the server as: python3 umbridge-server-ooc.py
 # run this script as:       python3 test_umbridge-server-ooc.py http://localhost:4242  
 
 import argparse
@@ -24,7 +23,7 @@ print(output)
 
 
 #test model output
-param = [["bionetflux.problems.OoC_grid_new",[2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]]#[["bionetflux.problems.OoC_grid_new", [2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]]
+param = [[2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]#[["bionetflux.problems.OoC_grid_new", [2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]]
 output = model(param)
 print(output)
 
