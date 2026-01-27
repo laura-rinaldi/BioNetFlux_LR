@@ -397,11 +397,11 @@ for i in range(1,4):                                                            
 
     plt.figure(5)
     plt.plot( times,  np.abs(M1[:]-M2[:]), label=f"c=10*{i}")
-    plt.title("QoI: distance between center of masses")
+    plt.title("QoI: distance between the centers of the masses")
     plt.xlabel("time")
-    plt.ylabel("M_u - M_v")
+    plt.ylabel("dM")
     plt.legend()
     plt.grid(True) 
     # Salvataggio del grafico 
-    plt.savefig(r"./outputs/plots/plot_M_u_M_v.png" , bbox_inches="tight")
+    plt.savefig(r"./outputs/plots/plot_dM.png" , bbox_inches="tight")
     print(f"PlotS salvati in: /outputs/plots")
