@@ -347,51 +347,61 @@ def function_evol_ooc( filename, y=None):
 
 #sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]) )
 
-
+# Parameter vector y= [nu, mu, epsilon, sigma, a, b, c, d, chi]
 ##########################################################
 #Generare un plot della soluzione al variare del parametro
 ##########################################################
-
+times= np.linspace(0,1,10)
 # Creazione del grafico 
-for i in range(4):
-    sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([1,1, 1,i*10000.0, 1, 1, 1, 1, 1]) )
+for i in range(1,4):                                                                    #y= [nu, mu, epsilon, sigma, a, b, c, d, chi]
+    sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([100,1000, 1,1,10, 1, i*10, 1, 0.001]) )
     plt.figure(1)
-    plt.plot(  M1[:], label="M1", color="blue")
-    plt.title("M1")
-    plt.xlabel("times")
-    plt.ylabel("Asse Y")
+    plt.plot( times, M1[:], label=f"c=10*{i}")
+    plt.title("QoI: center of mass of tumoral cells")
+    plt.xlabel("time")
+    plt.ylabel("M_v")
     plt.legend()
     plt.grid(True) 
     # Salvataggio del grafico 
-    plt.savefig(r"./outputs/plots/plot_salvato.png" , bbox_inches="tight")
+    plt.savefig(r"./outputs/plots/plot_M_v.png" , bbox_inches="tight")
 
     plt.figure(2)
-    plt.plot(  M2[:], label="M2", color="blue")
-    plt.title("M2")
-    plt.xlabel("times")
-    plt.ylabel("Asse Y")
+    plt.plot( times,  M2[:], label=f"c=10*{i}")
+    plt.title("QoI: center of mass of immune cells")
+    plt.xlabel("time")
+    plt.ylabel("M_u")
     plt.legend()
     plt.grid(True) 
     # Salvataggio del grafico 
-    plt.savefig(r"./outputs/plots/plot_salvato2.png" , bbox_inches="tight")
+    plt.savefig(r"./outputs/plots/plot_M_u.png" , bbox_inches="tight")
 
     plt.figure(3)
-    plt.plot(  I1[:], label="I1", color="blue")
-    plt.title("I1")
-    plt.xlabel("times")
-    plt.ylabel("Asse Y")
+    plt.plot( times,  I1[:], label=f"c=10*{i}")
+    plt.title("QoI: total amount of chemoattractant produced by tumor")
+    plt.xlabel("time")
+    plt.ylabel("I_phi")
     plt.legend()
     plt.grid(True) 
     # Salvataggio del grafico 
-    plt.savefig(r"./outputs/plots/plot_salvato3.png" , bbox_inches="tight")
+    plt.savefig(r"./outputs/plots/plot_I_phi.png" , bbox_inches="tight")
 
     plt.figure(4)
-    plt.plot(  I2[:], label="I2", color="blue")
-    plt.title("I2")
-    plt.xlabel("times")
-    plt.ylabel("Asse Y")
+    plt.plot( times, I2[:], label=f"c=10*{i}")
+    plt.title("QoI: total amount of chemoattractant produced by immune cells")
+    plt.xlabel("time")
+    plt.ylabel("I_w")
     plt.legend()
     plt.grid(True) 
     # Salvataggio del grafico 
-    plt.savefig(r"./outputs/plots/plot_salvato4.png" , bbox_inches="tight")
+    plt.savefig(r"./outputs/plots/plot_I_w.png" , bbox_inches="tight")
+
+    plt.figure(5)
+    plt.plot( times,  np.abs(M1[:]-M2[:]), label=f"c=10*{i}")
+    plt.title("QoI: distance between center of masses")
+    plt.xlabel("time")
+    plt.ylabel("M_u - M_v")
+    plt.legend()
+    plt.grid(True) 
+    # Salvataggio del grafico 
+    plt.savefig(r"./outputs/plots/plot_M_u_M_v.png" , bbox_inches="tight")
     print(f"PlotS salvati in: /outputs/plots")
