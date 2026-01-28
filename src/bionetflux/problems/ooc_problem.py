@@ -37,7 +37,7 @@ def build_default_geometry():
     Returns:
         DomainGeometry: Default grid geometry instance
     """
-    return build_grid_geometry(N=6)
+    return build_grid_geometry()
 
 
 def setup_constraints_from_geometry(geometry: DomainGeometry, problems, neq: int) -> ConstraintManager:
