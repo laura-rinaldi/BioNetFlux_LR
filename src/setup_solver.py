@@ -14,6 +14,8 @@ from bionetflux.core.static_condensation_factory import StaticCondensationFactor
 from bionetflux.core.constraints import ConstraintManager
 from bionetflux.core.lean_global_assembly import GlobalAssembler
 from bionetflux.core.lean_bulk_data_manager import BulkDataManager
+from bionetflux.geometry.domain_geometry import DomainGeometry
+
 
 class SolverSetup:
     """
@@ -21,7 +23,7 @@ class SolverSetup:
     Maintains minimal data storage and provides efficient access to components.
     """
     
-    def __init__(self, problem_module: str = "bionetflux.problems.test_problem2"):
+    def __init__(self, problem_module: str = "bionetflux.problems.KS_traveling_wave"):
         """
         Initialize solver setup with specified problem module.
         
@@ -42,6 +44,9 @@ class SolverSetup:
         self._static_condensations = None
         self._global_assembler = None
         self._bulk_data_manager = None
+        
+        # Add geometry attribute
+        self.geometry: Optional[DomainGeometry] = None
         
     def initialize(self) -> None:
         """Initialize the core problem configuration."""
@@ -339,6 +344,82 @@ class SolverSetup:
                 import traceback
                 traceback.print_exc()
             return False
+    
+    def compute_geometry_from_problems(self, geometry_name: Optional[str] = None) -> DomainGeometry:
+        """
+        Compute DomainGeometry from the problems list using extrema information.
+        
+        Args:
+            geometry_name: Optional name for the geometry (defaults to problem_name)
+            
+        Returns:
+            DomainGeometry: Computed geometry instance
+        """
+        self._ensure_initialized()
+        
+        if not self.problems:
+            raise RuntimeError("No problems available to compute geometry from")
+        
+        # Create geometry with appropriate name
+        if geometry_name is None:
+            geometry_name = f"{self.problem_name}_geometry" if self.problem_name else "computed_geometry"
+        
+        geometry = DomainGeometry(geometry_name)
+        
+        # Add each problem as a domain
+        for i, problem in enumerate(self.problems):
+            # Check if problem has extrema information
+            if not hasattr(problem, 'extrema') or not problem.extrema:
+                # Fallback: create linear segment in parameter space
+                extrema_start = (problem.domain_start, 0.0)
+                extrema_end = (problem.domain_start + problem.domain_length, 0.0)
+                print(f"Warning: Problem {i} has no extrema, using parameter space mapping")
+            else:
+                extrema_start = problem.extrema[0]
+                extrema_end = problem.extrema[1]
+            
+            # Determine domain name
+            domain_name = getattr(problem, 'name', f'domain_{i}')
+            
+            # Determine display color based on problem type or index
+            if hasattr(problem, 'problem_type'):
+                # Color mapping based on problem type
+                type_colors = {
+                    'keller_segel': 'blue',
+                    'organ_on_chip': 'red', 
+                    'advection_diffusion': 'green',
+                    'transport': 'orange',
+                    'reaction_diffusion': 'purple'
+                }
+                display_color = type_colors.get(problem.problem_type.lower(), 'blue')
+            else:
+                # Default color cycling
+                default_colors = ['blue', 'red', 'green', 'orange', 'purple', 'brown', 'pink', 'gray']
+                display_color = default_colors[i % len(default_colors)]
+            
+            # Add domain to geometry
+            geometry.add_domain(
+                extrema_start=extrema_start,
+                extrema_end=extrema_end,
+                domain_start=problem.domain_start,
+                domain_length=problem.domain_length,
+                name=domain_name,
+                display_color=display_color,
+                problem_index=i,  # Store problem index in metadata
+                problem_type=getattr(problem, 'problem_type', 'unknown'),
+                n_equations=problem.neq
+            )
+        
+        # Store computed geometry
+        self.geometry = geometry
+        
+        print(f"✓ Computed geometry '{geometry_name}' with {geometry.num_domains()} domains")
+        
+        # Validate the computed geometry
+        if not geometry.validate_geometry(verbose=False):
+            print("⚠️  Warning: Computed geometry failed validation")
+        
+        return geometry
 
 
 def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2") -> SolverSetup:

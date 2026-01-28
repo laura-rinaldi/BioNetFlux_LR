@@ -45,6 +45,8 @@ def run_evolution_with_time_stepper():
         validate=True
     )
     
+    
+    
     # Get problem information
     info = setup.get_problem_info()
     print(f"✓ Problem loaded: {info['problem_name']}")
@@ -82,28 +84,38 @@ def run_evolution_with_time_stepper():
         figsize=(15, 10)
     )
     
+    
+    
     print(f"✓ Plotter initialized for {plotter.ndom} domains, {plotter.neq} equations")
     print(f"✓ Equation names: {plotter.equation_names}")
     
-    # Plot initial state
-    initial_traces, _ = setup.extract_domain_solutions(current_solution)
+    # Plot geometry
+    print("\nPlotting geometry...")
     
-    print("\nPlotting initial state...")
-    plotter.plot_2d_curves(
-        initial_traces,
-        title="Initial Solution State",
-        save_filename="initial_2d_curves.png"
-    )
+    setup.compute_geometry_from_problems()
+    plotter.plot_geometry_with_indices(geometry=setup.geometry,
+                                       save_filename="geometry_with_indices.png")
+    print("✓ Geometry plot created")
     
-    for eq_idx in range(plotter.neq):
-        plotter.plot_birdview(
-            initial_traces,
-            equation_idx=eq_idx,
-            time=0.0,
-            save_filename=f"initial_birdview_eq{eq_idx}.png"
-        )
+    # # Plot initial state
+    # initial_traces, _ = setup.extract_domain_solutions(current_solution)
     
-    print("✓ Initial state plots created")
+    # print("\nPlotting initial state...")
+    # plotter.plot_2d_curves(
+    #     initial_traces,
+    #     title="Initial Solution State",
+    #     save_filename="initial_2d_curves.png"
+    # )
+    
+    # for eq_idx in range(plotter.neq):
+    #     plotter.plot_birdview(
+    #         initial_traces,
+    #         equation_idx=eq_idx,
+    #         time=0.0,
+    #         save_filename=f"initial_birdview_eq{eq_idx}.png"
+    #     )
+    
+    # print("✓ Initial state plots created")
     
     # ============================================================================
     # STEP 4: TIME EVOLUTION (MASSIVELY SIMPLIFIED!)
@@ -288,7 +300,7 @@ if __name__ == "__main__":
         print("\n" + "🔬" * 40)
         
         # Multiple steps demonstration
-        multi_results = demonstrate_multiple_steps()
+        # multi_results = demonstrate_multiple_steps()
         
         print(f"\n🎉 All demonstrations completed successfully!")
         

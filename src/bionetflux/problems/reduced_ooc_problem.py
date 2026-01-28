@@ -38,126 +38,6 @@ except ImportError:
     PLOTTING_AVAILABLE = False
 
 
-def plot_geometry_with_indices(geometry, save_filename=None, show_plot=True):
-    """
-    Plot the geometry with domain indices labeled on each segment.
-    
-    Args:
-        geometry: DomainGeometry instance
-        save_filename: Optional filename to save the plot
-        show_plot: Whether to display the plot interactively
-    """
-    if not PLOTTING_AVAILABLE:
-        print("⚠️  Cannot plot geometry - matplotlib not available")
-        return
-    
-    print("Creating geometry plot with domain indices...")
-    
-    fig, ax = plt.subplots(1, 1, figsize=(12, 8))
-    
-    # Colors for different domain types
-    vertical_color = 'blue'
-    horizontal_lower_color = 'red'
-    horizontal_upper_color = 'green'
-    
-    # Plot each domain
-    for domain_id in range(geometry.num_domains()):
-        domain_info = geometry.get_domain(domain_id)
-        
-        # Extract coordinates
-        x_start, y_start = domain_info.extrema_start
-        x_end, y_end = domain_info.extrema_end
-        
-        # Determine domain type and color
-        if 'vertical' in domain_info.name:
-            color = vertical_color
-            linewidth = 3
-        elif 'lower' in domain_info.name:
-            color = horizontal_lower_color
-            linewidth = 2
-        elif 'upper' in domain_info.name:
-            color = horizontal_upper_color
-            linewidth = 2
-        else:
-            color = 'black'
-            linewidth = 1
-        
-        # Plot the segment
-        ax.plot([x_start, x_end], [y_start, y_end], 
-               color=color, linewidth=linewidth, alpha=0.7)
-        
-        # Add domain index label at the midpoint
-        mid_x = (x_start + x_end) / 2
-        mid_y = (y_start + y_end) / 2
-        
-        # Offset text slightly to avoid overlap with line
-        if abs(x_end - x_start) > abs(y_end - y_start):  # Horizontal segment
-            text_offset_x = 0.0
-            text_offset_y = 0.05
-        else:  # Vertical segment
-            text_offset_x = 0.05
-            text_offset_y = 0.0
-        
-        ax.text(mid_x + text_offset_x, mid_y + text_offset_y, 
-               str(domain_id), 
-               fontsize=10, fontweight='bold',
-               ha='center', va='center',
-               bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
-    
-    # Add grid points
-    all_points = set()
-    for domain_id in range(geometry.num_domains()):
-        domain_info = geometry.get_domain(domain_id)
-        all_points.add(domain_info.extrema_start)
-        all_points.add(domain_info.extrema_end)
-    
-    # Plot grid points
-    for point in all_points:
-        ax.plot(point[0], point[1], 'ko', markersize=6, alpha=0.6)
-    
-    # Formatting
-    ax.set_xlabel('X coordinate', fontsize=12)
-    ax.set_ylabel('Y coordinate', fontsize=12)
-    ax.set_title(f'Grid Geometry: {geometry.name}\n{geometry.num_domains()} domains', 
-                fontsize=14, fontweight='bold')
-    ax.grid(True, alpha=0.3)
-    ax.set_aspect('equal')
-    
-    # Legend
-    legend_elements = [
-        plt.Line2D([0], [0], color=vertical_color, linewidth=3, label='Vertical segments'),
-        plt.Line2D([0], [0], color=horizontal_lower_color, linewidth=2, label='Lower connectors'),
-        plt.Line2D([0], [0], color=horizontal_upper_color, linewidth=2, label='Upper connectors'),
-        plt.Line2D([0], [0], marker='o', color='black', linewidth=0, 
-                  markersize=6, label='Grid points')
-    ]
-    ax.legend(handles=legend_elements, loc='upper right')
-    
-    # Add geometry summary as text
-    bounding_box = geometry.get_bounding_box()
-    summary_text = (f"Domains: {geometry.num_domains()}\n"
-                   f"X range: [{bounding_box['x_min']:.1f}, {bounding_box['x_max']:.1f}]\n"
-                   f"Y range: [{bounding_box['y_min']:.1f}, {bounding_box['y_max']:.1f}]")
-    
-    ax.text(0.02, 0.98, summary_text, transform=ax.transAxes, 
-           fontsize=10, verticalalignment='top',
-           bbox=dict(boxstyle='round,pad=0.5', facecolor='lightblue', alpha=0.8))
-    
-    plt.tight_layout()
-    
-    # Save if requested
-    if save_filename:
-        plt.savefig(save_filename, dpi=150, bbox_inches='tight')
-        print(f"✓ Geometry plot saved as: {save_filename}")
-    
-    # Show if requested
-    if show_plot:
-        plt.show()
-    else:
-        plt.close()
-    
-    return fig, ax
-
 
 def create_global_framework():
     """
@@ -279,28 +159,32 @@ def create_global_framework():
     geometry.add_domain(
         extrema_start=(-1.0, -1.0),
         extrema_end=(-1.0, 1.0),
-        name="S1_left_vertical"
+        name="S1_left_vertical",
+        display_color="blue"
     )
     
     # S2: Lower middle vertical segment  
     geometry.add_domain(
         extrema_start=(0.0, -1.0),
         extrema_end=(0.0, -0.1),
-        name="S2_lower_middle_vertical"
+        name="S2_lower_middle_vertical",
+        display_color="green"
     )
     
     # S3: Upper middle vertical segment
     geometry.add_domain(
         extrema_start=(0.0, 0.1),
         extrema_end=(0.0, 1.0),
-        name="S3_upper_middle_vertical"
+        name="S3_upper_middle_vertical",
+        display_color="green"
     )
     
     # S4: Right vertical segment (assuming correction from S1 duplicate)
     geometry.add_domain(
         extrema_start=(1.0, -1.0),
         extrema_end=(1.0, 1.0),
-        name="S4_right_vertical"
+        name="S4_right_vertical",
+        display_color="blue"
     )
     
     # Horizontal connectors - Lower section (-0.9 < y < -0.2)
@@ -314,7 +198,8 @@ def create_global_framework():
         geometry.add_domain(
             extrema_start=(-1.0, y_pos),
             extrema_end=(0.0, y_pos),
-            name=f"lower_S1_S2_{i+1}"
+            name=f"lower_S1_S2_{i+1}",
+            display_color="red"
         )
     
     # Lower connectors: S4 to S2  
@@ -322,7 +207,8 @@ def create_global_framework():
         geometry.add_domain(
             extrema_start=(1.0, y_pos),
             extrema_end=(0.0, y_pos),
-            name=f"lower_S4_S2_{i+1}"
+            name=f"lower_S4_S2_{i+1}",
+            display_color="red"
         )
     
     # Horizontal connectors - Upper section (0.2 < y < 0.9)
@@ -335,7 +221,8 @@ def create_global_framework():
         geometry.add_domain(
             extrema_start=(-1.0, y_pos),
             extrema_end=(0.0, y_pos),
-            name=f"upper_S1_S3_{i+1}"
+            name=f"upper_S1_S3_{i+1}",
+            display_color="red"
         )
     
     # Upper connectors: S4 to S3
@@ -343,7 +230,8 @@ def create_global_framework():
         geometry.add_domain(
             extrema_start=(1.0, y_pos),
             extrema_end=(0.0, y_pos),
-            name=f"upper_S4_S3_{i+1}"
+            name=f"upper_S4_S3_{i+1}",
+            display_color="red"
         )
     
     print(f"✓ Custom grid geometry created:")

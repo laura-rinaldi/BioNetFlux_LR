@@ -31,9 +31,167 @@ The time stepper module provides:
 \begin{lstlisting}[language=Python, caption=Module Dependencies]
 import numpy as np
 import time
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 from .newton_solver import NewtonSolver, NewtonResult
 from .time_step_result import TimeStepResult
+\end{lstlisting}
+
+\subsection{TimeStepResult Class}
+\label{subsec:time_step_result_class}
+
+Main dataclass that encapsulates all information about a single time step computation, including convergence status, iteration details, and performance metrics.
+
+\subsubsection{Class Definition}
+
+\begin{lstlisting}[language=Python, caption=TimeStepResult Class Definition]
+	@dataclass
+	class TimeStepResult:
+	"""Container for time step results and convergence information."""
+	
+	# Core results
+	converged: bool
+	iterations: int
+	final_residual_norm: float
+	updated_solution: np.ndarray
+	updated_bulk_data: List
+	computation_time: float
+	
+	# Optional detailed info
+	residual_history: Optional[List[float]] = None
+	jacobian_condition: Optional[float] = None
+	newton_step_norms: Optional[List[float]] = None
+\end{lstlisting}
+
+\subsubsection{Core Attributes}
+
+\begin{longtable}{|p{4.5cm}|p{3.5cm}|p{6cm}|}
+	\hline
+	\textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
+	\hline
+	\endhead
+	
+	\texttt{converged} & \texttt{bool} & Convergence status of the time step computation \\
+	\hline
+	
+	\texttt{iterations} & \texttt{int} & Number of Newton iterations performed \\
+	\hline
+	
+	\texttt{final\_residual\_norm} & \texttt{float} & Final L2 norm of the residual vector \\
+	\hline
+	
+	\texttt{updated\_solution} & \texttt{np.ndarray} & Global solution vector at new time step \\
+	\hline
+	
+	\texttt{updated\_bulk\_data} & \texttt{List} & List of updated BulkData objects for all domains \\
+	\hline
+	
+	\texttt{computation\_time} & \texttt{float} & Total wall-clock time for time step computation (seconds) \\
+	\hline
+	
+\end{longtable}
+
+\subsubsection{Optional Detailed Attributes}
+
+\begin{longtable}{|p{4.5cm}|p{4.2cm}|p{6cm}|}
+	\hline
+	\textbf{Attribute} & \textbf{Type} & \textbf{Description} \\
+	\hline
+	\endhead
+	
+	\texttt{residual\_history} & \texttt{Optional[List[float]]} & Residual norm at each Newton iteration (None if not tracked) \\
+	\hline
+	
+	\texttt{jacobian\_condition} & \texttt{Optional[float]} & Condition number of final Jacobian matrix (None if not computed) \\
+	\hline
+	
+	\texttt{newton\_step\_norms} & \texttt{Optional[List[float]]} & L2 norm of Newton step at each iteration (None if not tracked) \\
+	\hline
+	
+\end{longtable}
+
+\subsubsection{String Representation Methods}
+
+\paragraph{\_\_str\_\_()}\leavevmode
+\begin{lstlisting}[language=Python, caption=String Representation Method]
+	def __str__(self) -> str:
+	status = "CONVERGED" if self.converged else "FAILED"
+	return (f"TimeStepResult({status}, {self.iterations} iterations, "
+	f"residual={self.final_residual_norm:.6e}, "
+	f"time={self.computation_time:.4f}s)")
+\end{lstlisting}
+
+\textbf{Returns:} \texttt{str} - Compact string representation with key metrics
+
+\textbf{Example Output:}
+\begin{lstlisting}[language=Python, caption=Example String Output]
+	TimeStepResult(CONVERGED, 5 iterations, residual=1.234567e-11, time=0.0234s)
+	TimeStepResult(FAILED, 20 iterations, residual=2.345678e-05, time=0.1456s)
+\end{lstlisting}
+
+\textbf{Usage:}
+\begin{lstlisting}[language=Python, caption=String Representation Usage]
+	result = time_stepper.advance_time_step(current_solution, current_bulk_data, 
+	current_time, dt)
+	print(result)  # Prints compact summary
+	print(f"Status: {result}")  # Same output in formatted string
+\end{lstlisting}
+
+\paragraph{summary()}\leavevmode
+\begin{lstlisting}[language=Python, caption=Summary Method]
+	def summary(self) -> str:
+	"""Generate a detailed summary string."""
+\end{lstlisting}
+
+\textbf{Returns:} \texttt{str} - Detailed multi-line summary with comprehensive information
+
+\textbf{Algorithm:}
+\begin{lstlisting}[language=Python, caption=Summary Method Implementation]
+	def summary(self) -> str:
+	"""Generate a detailed summary string."""
+	lines = [
+	f"Time Step Result Summary:",
+	f"  Status: {'CONVERGED' if self.converged else 'FAILED TO CONVERGE'}",
+	f"  Newton iterations: {self.iterations}",
+	f"  Final residual norm: {self.final_residual_norm:.6e}",
+	f"  Computation time: {self.computation_time:.4f} seconds",
+	f"  Solution vector size: {len(self.updated_solution)}",
+	f"  Bulk data domains: {len(self.updated_bulk_data)}"
+	]
+	
+	if self.jacobian_condition is not None:
+	lines.append(f"  Final Jacobian condition: {self.jacobian_condition:.2e}")
+	
+	if self.residual_history is not None:
+	lines.append(f"  Residual reduction: {self.residual_history[0]:.2e} → {self.residual_history[-1]:.2e}")
+	
+	return "\n".join(lines)
+\end{lstlisting}
+
+\textbf{Example Output:}
+\begin{lstlisting}[language=Python, caption=Example Summary Output]
+	Time Step Result Summary:
+	Status: CONVERGED
+	Newton iterations: 5
+	Final residual norm: 1.234567e-11
+	Computation time: 0.0234 seconds
+	Solution vector size: 168
+	Bulk data domains: 3
+	Final Jacobian condition: 2.34e+03
+	Residual reduction: 1.23e-02 → 1.23e-11
+\end{lstlisting}
+
+\textbf{Usage:}
+\begin{lstlisting}[language=Python, caption=Summary Usage]
+	result = time_stepper.advance_time_step(current_solution, current_bulk_data, 
+	current_time, dt)
+	print(result.summary())  # Prints detailed information
+	
+	# Write to file
+	with open("time_step_results.txt", "a") as f:
+	f.write(f"Time step {step_number}:\n")
+	f.write(result.summary())
+	f.write("\n" + "="*50 + "\n")
 \end{lstlisting}
 
 \subsection{TimeStepper Class}

@@ -14,6 +14,7 @@ class DomainInfo:
     domain_start: float = 0.0           # Parameter space start
     domain_length: float = 1.0          # Parameter space length
     name: Optional[str] = None
+    display_color: str = "blue"         # Color for matplotlib plotting
     metadata: Dict[str, Any] = None
     
     def __post_init__(self):
@@ -72,6 +73,7 @@ class DomainGeometry:
                    domain_start: Optional[float] = None,
                    domain_length: Optional[float] = None,
                    name: Optional[str] = None,
+                   display_color: str = "blue",
                    **metadata) -> int:
         """
         Add a domain (segment) to the geometry.
@@ -82,6 +84,7 @@ class DomainGeometry:
             domain_start: Parameter space start (default: 0.0)
             domain_length: Parameter space length (default: Euclidean distance)
             name: Optional domain name
+            display_color: Color for matplotlib plotting (default: "blue")
             **metadata: Additional domain-specific metadata
             
         Returns:
@@ -109,6 +112,7 @@ class DomainGeometry:
             domain_start=domain_start,
             domain_length=domain_length,
             name=name,
+            display_color=display_color,
             metadata=metadata
         )
         
@@ -533,53 +537,56 @@ class DomainGeometry:
         
         # 1. Simple linear chain
         linear = cls("linear_chain")
-        linear.add_domain((0.0, 0.0), (1.0, 0.0), name="segment1")
-        linear.add_domain((1.0, 0.0), (2.0, 0.0), name="segment2")
-        linear.add_domain((2.0, 0.0), (3.0, 0.0), name="segment3")
+        linear.add_domain((0.0, 0.0), (1.0, 0.0), name="segment1", display_color="red")
+        linear.add_domain((1.0, 0.0), (2.0, 0.0), name="segment2", display_color="green")
+        linear.add_domain((2.0, 0.0), (3.0, 0.0), name="segment3", display_color="blue")
         geometries["linear"] = linear
         
         # 2. T-junction
         t_junction = cls("t_junction")
-        t_junction.add_domain((0.0, -1.0), (0.0, 1.0), name="main_channel")
-        t_junction.add_domain((0.0, 0.0), (1.0, 0.0), name="side_branch")
+        t_junction.add_domain((0.0, -1.0), (0.0, 1.0), name="main_channel", display_color="darkblue")
+        t_junction.add_domain((0.0, 0.0), (1.0, 0.0), name="side_branch", display_color="orange")
         geometries["t_junction"] = t_junction
         
         # 3. Grid network
         grid = cls("grid_network")
         # Vertical segments
-        grid.add_domain((-0.5, 0.0), (-0.5, 1.0), name="left_vertical")
-        grid.add_domain((0.5, 0.0), (0.5, 1.0), name="right_vertical")
+        grid.add_domain((-0.5, 0.0), (-0.5, 1.0), name="left_vertical", display_color="purple")
+        grid.add_domain((0.5, 0.0), (0.5, 1.0), name="right_vertical", display_color="purple")
         # Horizontal connectors
+        colors = ["red", "orange", "yellow", "green"]
         for i, y in enumerate([0.2, 0.4, 0.6, 0.8]):
-            grid.add_domain((-0.5, y), (0.5, y), name=f"horizontal_{i+1}")
+            color = colors[i % len(colors)]
+            grid.add_domain((-0.5, y), (0.5, y), name=f"horizontal_{i+1}", display_color=color)
         geometries["grid"] = grid
         
         # 4. Star network
         star = cls("star_network")
         center = (0.0, 0.0)
         angles = np.linspace(0, 2*np.pi, 6, endpoint=False)
+        star_colors = ["red", "orange", "yellow", "green", "blue", "purple"]
         for i, angle in enumerate(angles):
             end_point = (np.cos(angle), np.sin(angle))
-            star.add_domain(center, end_point, name=f"branch_{i+1}")
+            star.add_domain(center, end_point, name=f"branch_{i+1}", display_color=star_colors[i])
         geometries["star"] = star
         
         # 5. Complex branching
         branching = cls("complex_branching")
         # Main trunk
-        branching.add_domain((0.0, 0.0), (0.0, 2.0), name="trunk")
+        branching.add_domain((0.0, 0.0), (0.0, 2.0), name="trunk", display_color="brown")
         # Primary branches
-        branching.add_domain((0.0, 1.0), (1.0, 1.5), name="branch_1a")
-        branching.add_domain((0.0, 1.0), (-1.0, 1.5), name="branch_1b")
+        branching.add_domain((0.0, 1.0), (1.0, 1.5), name="branch_1a", display_color="darkgreen")
+        branching.add_domain((0.0, 1.0), (-1.0, 1.5), name="branch_1b", display_color="darkgreen")
         # Secondary branches
-        branching.add_domain((1.0, 1.5), (1.5, 2.0), name="branch_2a")
-        branching.add_domain((1.0, 1.5), (1.5, 1.0), name="branch_2b")
+        branching.add_domain((1.0, 1.5), (1.5, 2.0), name="branch_2a", display_color="lightgreen")
+        branching.add_domain((1.0, 1.5), (1.5, 1.0), name="branch_2b", display_color="lightgreen")
         geometries["branching"] = branching
         
         # 6. Degenerate case (for testing validation)
         degenerate = cls("degenerate_test")
-        degenerate.add_domain((0.0, 0.0), (0.0, 0.0), name="zero_length")  # Zero length
-        degenerate.add_domain((1.0, 1.0), (2.0, 1.0), domain_start=0.5, domain_length=1.0, name="overlap1")
-        degenerate.add_domain((3.0, 1.0), (4.0, 1.0), domain_start=1.0, domain_length=1.0, name="overlap2")
+        degenerate.add_domain((0.0, 0.0), (0.0, 0.0), name="zero_length", display_color="red")  # Zero length
+        degenerate.add_domain((1.0, 1.0), (2.0, 1.0), domain_start=0.5, domain_length=1.0, name="overlap1", display_color="orange")
+        degenerate.add_domain((3.0, 1.0), (4.0, 1.0), domain_start=1.0, domain_length=1.0, name="overlap2", display_color="yellow")
         geometries["degenerate"] = degenerate
         
         return geometries
