@@ -28,14 +28,7 @@ except ImportError:
     from bionetflux.core.constraints import ConstraintManager
     from bionetflux.geometry.domain_geometry import DomainGeometry
 
-# Import matplotlib for plotting
-try:
-    import matplotlib.pyplot as plt
-    import matplotlib.patches as patches
-    PLOTTING_AVAILABLE = True
-except ImportError:
-    print("⚠️  Warning: Matplotlib not available, geometry plotting disabled")
-    PLOTTING_AVAILABLE = False
+
 
 
 
@@ -240,17 +233,7 @@ def create_global_framework():
     print(f"  - {2*N} upper horizontal connectors (0.2 < y < 0.9)")
     print(f"  - Total domains: {geometry.num_domains()}")
     
-    # Plot geometry with domain indices
-    try:
-        plot_geometry_with_indices(
-            geometry, 
-            save_filename="reduced_ooc_grid_geometry.png",
-            show_plot=True
-        )
-        print("✓ Geometry plot created with domain indices")
-    except Exception as e:
-        print(f"⚠️  Warning: Could not create geometry plot: {e}")
-    
+   
     # Validate geometry
     if not geometry.validate_geometry(verbose=True):
         print("⚠️  Warning: Geometry validation failed")
