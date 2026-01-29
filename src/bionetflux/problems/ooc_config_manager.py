@@ -58,15 +58,19 @@ class OoCConfigManager(BaseConfigManager):
                 'u': 'zeros',      # Default: zero
                 'omega': 'zeros',  # Default: zero
                 'v': 'zeros',      # Default: zero
-                'phi': 'zeros'     # Default: zero
+                'phi': 'zeros',    # Default: zero
             },
             
             'force_functions': {
                 'u': 'zeros',      # Default: zero force
                 'omega': 'zeros',  # Default: zero force
                 'v': 'zeros',      # Default: zero force
-                'phi': 'zeros'     # Default: zero force
-            }
+                'phi': 'zeros',    # Default: zero force
+            },
+            
+            # New sections for domain-specific overrides (as strings, not resolved)
+            'domain_initial_conditions': {},
+            'domain_force_functions': {}
         }
     
     def _setup_function_library(self):
@@ -147,3 +151,30 @@ class OoCConfigManager(BaseConfigManager):
                 )
         
         return config
+    
+    def _resolve_functions(self, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Resolve function specifications to callables in configuration."""
+        resolved_config = config.copy()
+        
+        # Resolve functions in standard sections
+        for section in ['initial_conditions', 'force_functions']:
+            if section in resolved_config:
+                section_dict = resolved_config[section].copy()
+                resolved_section = {}
+                
+                # Resolve top-level function specifications
+                for key, func_spec in section_dict.items():
+                    resolved_section[key] = self.function_resolver.resolve_function(func_spec)
+                
+                resolved_config[section] = resolved_section
+        
+        # NEW: Handle domain-specific sections (keep as strings for later resolution)
+        for section in ['domain_initial_conditions', 'domain_force_functions']:
+            if section in resolved_config:
+                # Keep domain-specific sections as strings - don't resolve them here
+                # They will be resolved later in the problem module when applied
+                print(f"Found {section} with {len(resolved_config[section])} entries")
+                for key, value in resolved_config[section].items():
+                    print(f"  {key} = {value}")
+        
+        return resolved_config

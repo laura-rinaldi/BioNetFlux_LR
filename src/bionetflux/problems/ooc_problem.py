@@ -172,6 +172,17 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     initial_conditions = config['initial_conditions']  # Already resolved to callables
     force_functions = config['force_functions']        # Already resolved to callables
     
+    # Extract domain-specific overrides (as strings, not resolved yet)
+    domain_initial_conditions = config.get('domain_initial_conditions', {})
+    domain_force_functions = config.get('domain_force_functions', {})
+    
+    print(f"Domain-specific initial conditions found: {len(domain_initial_conditions)}")
+    for key, value in domain_initial_conditions.items():
+        print(f"  {key} = {value}")
+    print(f"Domain-specific force functions found: {len(domain_force_functions)}")
+    for key, value in domain_force_functions.items():
+        print(f"  {key} = {value}")
+
     # Global problem configuration
     neq = problem_config['neq']
     problem_name = problem_config['name']
@@ -284,13 +295,13 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
             name=f"{problem_name}_{domain_info.name}"
         )
         
-        # Set initial conditions from config (already resolved to callables)
+        # Set DEFAULT initial conditions from config (already resolved to callables)
         problem.set_initial_condition(0, initial_conditions['u'])
         problem.set_initial_condition(1, initial_conditions['omega'])
         problem.set_initial_condition(2, initial_conditions['v'])
         problem.set_initial_condition(3, initial_conditions['phi'])
         
-        # Set force functions from config (already resolved to callables)
+        # Set DEFAULT force functions from config (already resolved to callables)
         problem.set_force(0, force_functions['u'])
         problem.set_force(1, force_functions['omega'])
         problem.set_force(2, force_functions['v'])
@@ -315,12 +326,57 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
         discretization.set_tau(tau_values)
         discretizations.append(discretization)
     
+    # Remove the old hardcoded lines (THESE SHOULD BE DELETED)
     # Set specific initial conditions for some domains (from original implementation)
-    if len(problems) > 0:
-        problems[0].set_initial_condition(2, lambda s, t=0: constant_function(s))
-    if len(problems) > 3:
-        problems[3].set_initial_condition(0, lambda s, t=0: constant_function(s))
+    # if len(problems) > 0:
+    #     problems[0].set_initial_condition(2, lambda s, t=0: constant_function(s))
+    # if len(problems) > 3:
+    #     problems[3].set_initial_condition(0, lambda s, t=0: constant_function(s))
+
+    # Apply domain-specific initial condition overrides (REPLACES lines 318-322)
+    equation_names = ['u', 'omega', 'v', 'phi']
     
+    print("Applying domain-specific initial conditions...")
+    for domain_eq_key, func_name in domain_initial_conditions.items():
+        try:
+            # Parse "domain_<id>_<equation_name>"
+            if domain_eq_key.startswith('domain_') and '_' in domain_eq_key[7:]:
+                parts = domain_eq_key[7:].split('_', 1)  # Remove "domain_" prefix and split once
+                domain_id = int(parts[0])
+                equation_name = parts[1]
+                
+                if domain_id < len(problems) and equation_name in equation_names:
+                    equation_id = equation_names.index(equation_name)
+                    # Resolve function name to callable
+                    resolved_func = config_manager.function_resolver.resolve_function(func_name)
+                    problems[domain_id].set_initial_condition(equation_id, resolved_func)
+                    print(f"  ✓ Set initial condition: domain {domain_id}, equation '{equation_name}' -> {func_name}")
+                else:
+                    print(f"  ⚠️  Warning: Invalid domain {domain_id} or equation '{equation_name}' for key {domain_eq_key}")
+        except (ValueError, IndexError) as e:
+            print(f"  ❌ Error: Could not parse domain-specific initial condition key '{domain_eq_key}': {e}")
+    
+    # Apply domain-specific force function overrides
+    print("Applying domain-specific force functions...")
+    for domain_eq_key, func_name in domain_force_functions.items():
+        try:
+            # Parse "domain_<id>_<equation_name>"
+            if domain_eq_key.startswith('domain_') and '_' in domain_eq_key[7:]:
+                parts = domain_eq_key[7:].split('_', 1)  # Remove "domain_" prefix and split once
+                domain_id = int(parts[0])
+                equation_name = parts[1]
+                
+                if domain_id < len(problems) and equation_name in equation_names:
+                    equation_id = equation_names.index(equation_name)
+                    # Resolve function name to callable
+                    resolved_func = config_manager.function_resolver.resolve_function(func_name)
+                    problems[domain_id].set_force(equation_id, resolved_func)
+                    print(f"  ✓ Set force function: domain {domain_id}, equation '{equation_name}' -> {func_name}")
+                else:
+                    print(f"  ⚠️  Warning: Invalid domain {domain_id} or equation '{equation_name}' for key {domain_eq_key}")
+        except (ValueError, IndexError) as e:
+            print(f"  ❌ Error: Could not parse domain-specific force function key '{domain_eq_key}': {e}")
+
     print(f"✓ Created {len(problems)} problem instances with config parameters")
     
     # ============================================================================

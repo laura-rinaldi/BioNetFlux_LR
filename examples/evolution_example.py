@@ -41,23 +41,41 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None):
     print()
     
     # ============================================================================
-    # STEP 1: SOLVER SETUP (Enhanced with config file support)
+    # STEP 1: SOLVER SETUP (Enhanced with config file support and error handling)
     # ============================================================================
     
     print("Step 1: Setting up solver...")
     
     geometry = build_grid_geometry(N=2)
     
-    # Use quick_setup with both geometry and config file support
-    setup = quick_setup(
-        problem_module="bionetflux.problems.ooc_problem",
-        validate=True,
-        config_file=config_file,  # Pass config file
-        geometry=geometry         # Pass geometry
-    )
-    
-    
-    
+    try:
+        # Use quick_setup with both geometry and config file support
+        setup = quick_setup(
+            problem_module="bionetflux.problems.ooc_problem",
+            validate=True,
+            config_file=config_file,  # Pass config file
+            geometry=geometry         # Pass geometry
+        )
+    except ValueError as e:
+        # Handle configuration compatibility errors gracefully
+        if "not compatible with" in str(e) or "problem type" in str(e):
+            print(f"\n❌ Configuration Error:")
+            print(f"   {e}")
+            print(f"\n💡 Suggestions:")
+            print(f"   - Check that problem_type in your config file matches the problem module")
+            print(f"   - For ooc_problem.py, use problem_type = \"ooc\"")
+            print(f"   - For ks_problem.py, use problem_type = \"ks\"")
+            print(f"   - Or run without a config file to use defaults")
+            return None, None, None, None
+        else:
+            # Re-raise other ValueError types
+            raise
+    except Exception as e:
+        # Handle other setup errors
+        print(f"\n❌ Setup Error: {e}")
+        print(f"💡 Try running with default parameters (no config file)")
+        return None, None, None, None
+
     # Get problem information
     info = setup.get_problem_info()
     print(f"✓ Problem loaded: {info['problem_name']}")
@@ -315,7 +333,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         config_file = sys.argv[1]
         if not os.path.exists(config_file):
-            print(f"Error: Configuration file '{config_file}' not found")
+            print(f"❌ Error: Configuration file '{config_file}' not found")
+            print(f"💡 Please check the file path and try again")
             sys.exit(1)
         print(f"Using configuration file: {config_file}")
     else:
@@ -329,7 +348,14 @@ if __name__ == "__main__":
     
     try:
         # Main evolution example with config file
-        setup, time_stepper, sol_history, time_hist = run_evolution_with_time_stepper(config_file)
+        result = run_evolution_with_time_stepper(config_file)
+        
+        # Check if setup failed due to configuration error
+        if result[0] is None:
+            print(f"\n🛑 Stopping execution due to configuration error")
+            sys.exit(1)
+        
+        setup, time_stepper, sol_history, time_hist = result
         
         # Additional demonstrations
         print("\n" + "🔬" * 40)
@@ -339,8 +365,13 @@ if __name__ == "__main__":
         
         print(f"\n🎉 All demonstrations completed successfully!")
         
+    except KeyboardInterrupt:
+        print(f"\n\n⏹️  Execution interrupted by user")
+        sys.exit(0)
     except Exception as e:
-        print(f"\n❌ Example failed with error: {e}")
+        print(f"\n❌ Example failed with unexpected error:")
+        print(f"   {type(e).__name__}: {e}")
+        print(f"\n🔧 Debug information:")
         import traceback
         traceback.print_exc()
         sys.exit(1)

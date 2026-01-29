@@ -6,6 +6,7 @@ Minimizes data redundancy and provides clean interfaces for different problem ty
 import numpy as np
 from typing import List, Tuple, Optional, Dict, Any
 import importlib
+import os
 
 # Core imports
 from bionetflux.core.discretization import Discretization, GlobalDiscretization
@@ -444,18 +445,73 @@ def create_solver_setup(problem_module: str = "bionetflux.problems.ooc_problem",
     return setup
 
 
-def quick_setup(problem_module: str = "bionetflux.problems.ooc_problem", 
+def _validate_config_compatibility(problem_module: str, config_file: Optional[str]):
+    """
+    Validate that the config file is compatible with the problem module.
+    
+    Args:
+        problem_module: Problem module name
+        config_file: Path to config file
+        
+    Raises:
+        ValueError: If config is incompatible with problem module
+    """
+    if not config_file or not os.path.exists(config_file):
+        return  # No validation needed if no config file
+    
+    # Extract expected problem type from module name
+    expected_type = None
+    if "ooc" in problem_module.lower():
+        expected_type = "ooc"
+    elif "keller_segel" in problem_module.lower() or "ks" in problem_module.lower():
+        expected_type = "ks" 
+    elif "test_problem" in problem_module.lower():
+        # test_problem modules can be flexible
+        return
+    
+    if not expected_type:
+        print(f"Warning: Could not determine expected problem type for module '{problem_module}'")
+        return
+    
+    # Load appropriate config manager and validate
+    try:
+        if expected_type == "ooc":
+            from bionetflux.problems.ooc_config_manager import OoCConfigManager
+            config_manager = OoCConfigManager()
+        elif expected_type == "ks":
+            from bionetflux.problems.ks_config_manager import KSConfigManager
+            config_manager = KSConfigManager()
+        else:
+            return  # Skip validation for unknown types
+        
+        # Try to load config - this should raise an error if incompatible
+        try:
+            config = config_manager.load_config(config_file)
+            print(f"✓ Config file '{config_file}' is compatible with {expected_type} problem type")
+        except ValueError as e:
+            # Create a cleaner error message without the nested exception details
+            error_msg = str(e)
+            if "problem type" in error_msg.lower():
+                raise ValueError(f"Config file problem type mismatch: {error_msg}")
+            else:
+                raise ValueError(f"Config file validation failed: {error_msg}")
+            
+    except ImportError as e:
+        print(f"Warning: Could not import config manager for {expected_type}: {e}")
+        return
+
+def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", 
                validate: bool = True,
                config_file: Optional[str] = None,
                geometry: Optional['DomainGeometry'] = None) -> SolverSetup:
     """
-    Quick setup with optional validation and configuration.
+    Factory function for quick solver setup with optional validation.
     
     Args:
-        problem_module: String path to problem module (default: "bionetflux.problems.ooc_problem")
+        problem_module: String path to problem module (default: "bionetflux.problems.test_problem2")
         validate: If True, run validation tests (default: True)
-        config_file: Optional path to TOML configuration file
-        geometry: Optional DomainGeometry instance to use for problem creation
+        config_file: Optional path to TOML configuration file (default: None)
+        geometry: Optional DomainGeometry instance to use for problem creation (default: None)
         
     Returns:
         SolverSetup: Validated SolverSetup instance
@@ -463,82 +519,20 @@ def quick_setup(problem_module: str = "bionetflux.problems.ooc_problem",
     Raises:
         RuntimeError: If validation fails
         ValueError: If config file problem type doesn't match problem module
+        ImportError: If config file cannot be loaded
     """
-    # Validate config file compatibility if provided
+    print(f"Quick setup: problem_module='{problem_module}', config_file='{config_file}'")
+    
+    # Validate config compatibility BEFORE creating setup
     if config_file:
+        print(f"Validating config file compatibility...")
         _validate_config_compatibility(problem_module, config_file)
     
-    # Create setup with config file and geometry
+    # Create and initialize setup
     setup = create_solver_setup(problem_module, config_file, geometry)
     
     if validate:
         if not setup.validate_setup(verbose=True):
             raise RuntimeError("Setup validation failed")
-    
+
     return setup
-
-
-def _validate_config_compatibility(problem_module: str, config_file: str) -> None:
-    """
-    Validate that config file problem type matches problem module.
-    
-    Args:
-        problem_module: String path to problem module
-        config_file: Path to TOML configuration file
-        
-    Raises:
-        ValueError: If problem types don't match
-        ImportError: If config manager can't be imported or file can't be loaded
-    """
-    import os
-    
-    # Check if config file exists
-    if not os.path.exists(config_file):
-        raise ValueError(f"Configuration file not found: {config_file}")
-    
-    # Extract problem type from module name
-    if "ooc" in problem_module.lower():
-        expected_problem_type = "ooc"
-    elif "keller" in problem_module.lower() or "ks" in problem_module.lower():
-        expected_problem_type = "keller_segel"
-    else:
-        # For unknown problem types, try to load config and check problem_type field
-        print(f"Warning: Unknown problem type in module '{problem_module}', checking config file...")
-        try:
-            from bionetflux.utils.config_manager import load_toml_config
-            config_data = load_toml_config(config_file)
-            config_problem_type = config_data.get('problem', {}).get('problem_type', None)
-            if config_problem_type:
-                print(f"Config file specifies problem_type='{config_problem_type}'")
-            else:
-                print("Config file does not specify problem_type, skipping validation")
-            return
-        except Exception as e:
-            print(f"Could not validate config file: {e}")
-            return
-    
-    try:
-        # Import appropriate config manager
-        if expected_problem_type == "ooc":
-            from bionetflux.problems.ooc_config_manager import OoCConfigManager
-            config_manager = OoCConfigManager()
-        elif expected_problem_type == "keller_segel":
-            from bionetflux.problems.keller_segel_config_manager import KellerSegelConfigManager
-            config_manager = KellerSegelConfigManager()
-        else:
-            return  # Skip validation for unknown types
-        
-        # Try to load config to validate format and type compatibility
-        try:
-            config = config_manager.load_config(config_file)
-            print(f"✓ Configuration file compatible with {expected_problem_type} problem type")
-        except ValueError as e:
-            # Enhanced error message with problem type information
-            if "problem type" in str(e).lower():
-                raise ValueError(f"Configuration file '{config_file}' problem type mismatch: {e}")
-            else:
-                raise ValueError(f"Configuration file '{config_file}' is not compatible with "
-                               f"{expected_problem_type} problem type: {e}")
-    
-    except ImportError as e:
-        raise ImportError(f"Could not import config manager for {expected_problem_type}: {e}")
