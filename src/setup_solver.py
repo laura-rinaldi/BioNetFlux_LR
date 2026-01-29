@@ -19,18 +19,20 @@ from bionetflux.geometry.domain_geometry import DomainGeometry
 
 class SolverSetup:
     """
-    Lean setup class that orchestrates the initialization of all solver components.
-    Maintains minimal data storage and provides efficient access to components.
+    Lean solver setup orchestration for problems on networks.
     """
     
-    def __init__(self, problem_module: str = "bionetflux.problems.KS_traveling_wave"):
+    def __init__(self, problem_module: str = "bionetflux.problems.KS_traveling_wave",
+                 geometry: Optional['DomainGeometry'] = None):
         """
-        Initialize solver setup with specified problem module.
+        Initialize solver setup with problem module path and optional geometry.
         
         Args:
             problem_module: String path to problem module containing create_global_framework
+            geometry: Optional pre-defined DomainGeometry to pass to create_global_framework
         """
         self.problem_module = problem_module
+        self.input_geometry = geometry  # Store input geometry to pass to problem module
         self._initialized = False
         
         # Core problem data (lean storage)
@@ -49,23 +51,38 @@ class SolverSetup:
         self.geometry: Optional[DomainGeometry] = None
         
     def initialize(self) -> None:
-        """Initialize the core problem configuration."""
+        """
+        Initialize solver setup by loading problem module and calling create_global_framework.
+        """
         if self._initialized:
             return
-            
-        # Import and call the problem-specific setup
+        
+        # Import problem module
         try:
-            problem_mod = importlib.import_module(self.problem_module)
-            create_global_framework = getattr(problem_mod, 'create_global_framework')
-        except (ImportError, AttributeError) as e:
-            raise ImportError(f"Cannot import create_global_framework from {self.problem_module}: {e}")
+            module = importlib.import_module(self.problem_module)
+        except ImportError as e:
+            raise ImportError(f"Could not import problem module '{self.problem_module}': {e}")
         
-        # Get core problem configuration
-        self.problems, self.global_discretization, self.constraint_manager, self.problem_name = create_global_framework()
-        self.constraints = self.constraint_manager  # For backward compatibility if needed  
-
+        # Get create_global_framework function
+        if not hasattr(module, 'create_global_framework'):
+            raise AttributeError(f"Module '{self.problem_module}' does not have 'create_global_framework' function")
+        
+        create_framework = getattr(module, 'create_global_framework')
+        
+        # Call framework creation with optional geometry
+        if self.input_geometry is not None:
+            print(f"Initializing solver with provided geometry: '{self.input_geometry.name}'")
+            self.problems, self.global_discretization, self.constraint_manager, self.problem_name = \
+                create_framework(geometry=self.input_geometry)
+        else:
+            self.problems, self.global_discretization, self.constraint_manager, self.problem_name = \
+                create_framework()
+        
+        # Set backward compatibility alias
+        self.constraints = self.constraint_manager
+        
         self._initialized = True
-        
+    
     @property
     def elementary_matrices(self) -> ElementaryMatrices:
         """Get elementary matrices (created once, cached)."""
@@ -422,38 +439,42 @@ class SolverSetup:
         return geometry
 
 
-def create_solver_setup(problem_module: str = "bionetflux.problems.test_problem2") -> SolverSetup:
+def quick_setup(problem_module: str = "bionetflux.problems.KS_traveling_wave", 
+               validate: bool = True,
+               geometry: Optional['DomainGeometry'] = None) -> SolverSetup:
     """
-    Factory function to create and initialize a solver setup.
+    Factory function for quick solver setup with optional validation and geometry.
     
     Args:
-        problem_module: String path to problem module
+        problem_module: String path to problem module (default: "bionetflux.problems.KS_traveling_wave")
+        validate: If True, run validation tests (default: True)
+        geometry: Optional pre-defined DomainGeometry to pass to create_global_framework
         
     Returns:
-        Initialized SolverSetup instance
-    """
-   
-    setup = SolverSetup(problem_module)
-    setup.initialize()
-    return setup
-
-
-# Convenience functions for common operations
-def quick_setup(problem_module: str = "bionetflux.problems.test_problem2", validate: bool = True) -> SolverSetup:
-    """
-    Quick setup with optional validation.
-    
-    Args:
-        problem_module: String path to problem module
-        validate: If True, run validation tests
+        SolverSetup: Validated SolverSetup instance
         
-    Returns:
-        Validated SolverSetup instance
+    Raises:
+        RuntimeError: If validation fails
     """
-    
-    setup = create_solver_setup(problem_module)
+    setup = create_solver_setup(problem_module, geometry=geometry)
     if validate:
         if not setup.validate_setup(verbose=True):
             raise RuntimeError("Setup validation failed")
+    return setup
+
+
+def create_solver_setup(problem_module: str = "bionetflux.problems.KS_traveling_wave",
+                       geometry: Optional['DomainGeometry'] = None) -> SolverSetup:
+    """
+    Factory function for creating and initializing a SolverSetup instance.
     
+    Args:
+        problem_module: String path to problem module (default: "bionetflux.problems.KS_traveling_wave")
+        geometry: Optional pre-defined DomainGeometry to pass to create_global_framework
+        
+    Returns:
+        SolverSetup: Initialized SolverSetup instance
+    """
+    setup = SolverSetup(problem_module, geometry=geometry)
+    setup.initialize()
     return setup
