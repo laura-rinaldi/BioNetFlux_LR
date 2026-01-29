@@ -19,7 +19,7 @@ class ooc_sol(umbridge.Model):
         return [9]
 
     def get_output_sizes(self, config):
-        return [5]
+        return [1]#[5]
 
     def __call__(self, parameters, config):
             filename = "bionetflux.problems.OoC_grid_new"#parameters[0][0]#
@@ -346,7 +346,8 @@ class ooc_sol(umbridge.Model):
             I_all_times_w = np.array(I_all_times_w).tolist() 
             M_all_times_u = np.array(M_all_times_u).tolist() 
             M_all_times_v = np.array(M_all_times_v).tolist() 
-            return [[sol_all_times, I_all_times_phi, I_all_times_w, M_all_times_u, M_all_times_v]]
+            return [[M_all_times_v[-1]]] #[[sol_all_times, I_all_times_phi, I_all_times_w, M_all_times_u, M_all_times_v]]
+            #restituire solo 1 numero
         
 
     def supports_evaluate(self):

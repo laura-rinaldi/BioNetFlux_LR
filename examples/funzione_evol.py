@@ -352,9 +352,11 @@ def function_evol_ooc( filename, y=None):
 #Generare un plot della soluzione al variare del parametro
 ##########################################################
 times= np.linspace(0,1,10)
+M1_i =[]
 # Creazione del grafico 
 for i in range(1,4):                                                                    #y= [nu, mu, epsilon, sigma, a, b, c, d, chi]
     sol, I1,I2, M1, M2 =function_evol_ooc(filename="bionetflux.problems.OoC_grid_new", y=np.array([100,1000, 1,1,10, 1, i*10, 1, 0.001]) )
+    M1_i.append(M1)
     plt.figure(1)
     plt.plot( times, M1[:], label=f"c=10*{i}")
     plt.title("QoI: center of mass of tumoral cells")
@@ -404,4 +406,44 @@ for i in range(1,4):                                                            
     plt.grid(True) 
     # Salvataggio del grafico 
     plt.savefig(r"./outputs/plots/plot_dM.png" , bbox_inches="tight")
-    print(f"PlotS salvati in: /outputs/plots")
+
+
+plt.figure(6)
+plt.plot(np.arange(1,4)*10,  M1_i)
+plt.title("QoI: center of mass of tumoral cells")
+plt.xlabel("c")
+plt.ylabel("M1_i")
+plt.legend([f"{t}" for t in range(10)])
+plt.grid(True) 
+# Salvataggio del grafico 
+plt.savefig(r"./outputs/plots/plot_M1_i.png" , bbox_inches="tight")
+
+plt.figure(7)
+fig, ax = plt.subplots(figsize=(7,5))
+
+c_values = np.arange(1,4) * 10
+tempi = np.arange(10) * 0.1
+
+colors = plt.cm.viridis(np.linspace(0, 1, len(tempi)))
+
+M1_plot = np.array(M1_i).T 
+
+for idx, t in enumerate(tempi):
+    ax.plot(c_values, M1_plot[idx], color=colors[idx])
+
+# mappable per la colorbar
+sm = plt.cm.ScalarMappable(
+    cmap='viridis',
+    norm=plt.Normalize(vmin=tempi.min(), vmax=tempi.max())
+)
+
+fig.colorbar(sm, ax=ax, label="times")   
+
+ax.set_title("QoI: center of mass of tumoral cells")
+ax.set_xlabel("c")
+ax.set_ylabel("M1")
+ax.grid(True)
+plt.show()
+
+plt.savefig(r"./outputs/plots/plot_M1_i2.png" , bbox_inches="tight")
+print(f"PlotS salvati in: /outputs/plots")
