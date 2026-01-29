@@ -18,6 +18,7 @@ try:
     from ..core.discretization import Discretization, GlobalDiscretization
     from ..core.constraints import ConstraintManager
     from ..geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_grid_geometry
+    from .ooc_config_manager import OoCConfigManager
 except ImportError:
     # If relative imports fail, add the src directory to path for direct execution
     current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +29,7 @@ except ImportError:
     from bionetflux.core.discretization import Discretization, GlobalDiscretization
     from bionetflux.core.constraints import ConstraintManager
     from bionetflux.geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_grid_geometry
+    from bionetflux.problems.ooc_config_manager import OoCConfigManager
 
 
 def build_default_geometry():
@@ -115,7 +117,8 @@ def setup_constraints_from_geometry(geometry: DomainGeometry, problems, neq: int
     return constraint_manager
 
 
-def create_global_framework(geometry: Optional[DomainGeometry] = None):
+def create_global_framework(geometry: Optional[DomainGeometry] = None,
+                          config_file: Optional[str] = None):
     """
     Custom problem with grid geometry following MATLAB TestProblem.m structure.
     
@@ -124,55 +127,91 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
     
     Args:
         geometry: Optional pre-defined DomainGeometry instance. If None, creates default geometry.
+        config_file: Optional TOML configuration file path. If None, uses hardcoded defaults.
     
     Returns:
         Tuple: (problems, global_discretization, constraint_manager, problem_name)
+        
+    Raises:
+        ValueError: If config file problem_type doesn't match 'ooc'
     """
     
+    # Define this module's config validation type (different from problem_type for StaticCondensation!)
+    CONFIG_VALIDATION_TYPE = "ooc"  # For config file validation
+    PROBLEM_TYPE = "organ_on_chip"  # For StaticCondensationFactory and other core systems
+    
     # ============================================================================
-    # SECTION 1: PHYSICAL PARAMETERS (From MATLAB TestProblem.m)
+    # SECTION 1: CONFIGURATION LOADING (NEW TOML-BASED APPROACH)
     # ============================================================================
     
-    print("Setting up physical parameters from MATLAB TestProblem.m...")
+    print("Loading configuration...")
+    
+    # Load configuration using OoC config manager (includes type validation)
+    config_manager = OoCConfigManager()
+    try:
+        config = config_manager.load_config(config_file)
+    except ValueError as e:
+        # Re-raise with module context
+        raise ValueError(f"OoC problem module: {e}")
+    
+    # Additional explicit check for extra safety (config uses 'ooc', not 'organ_on_chip')
+    if config_file:
+        config_problem_type = config.get('problem', {}).get('problem_type', None)
+        if config_problem_type and config_problem_type != CONFIG_VALIDATION_TYPE:
+            raise ValueError(
+                f"OoC problem module expects config problem_type='{CONFIG_VALIDATION_TYPE}', "
+                f"but config file specifies '{config_problem_type}'. "
+                f"Please use an OoC-compatible configuration file."
+            )
+    
+    # Extract configuration sections
+    problem_config = config['problem']
+    time_params = config['time_parameters']
+    phys_params = config['physical_parameters']
+    disc_params = config['discretization']
+    initial_conditions = config['initial_conditions']  # Already resolved to callables
+    force_functions = config['force_functions']        # Already resolved to callables
     
     # Global problem configuration
-    neq = 4  # 4-equation OrganOnChip system (u, omega, v, phi)
-    problem_name = "OoC_Grid_Problem"
+    neq = problem_config['neq']
+    problem_name = problem_config['name']
     
     # Time discretization parameters
-    T = 1.0     # Final time
-    dt = 0.1    # Time step
+    T = time_params['T']
+    dt = time_params['dt']
     
-    # Physical parameters following MATLAB TestProblem.m exactly:
-    # Viscosity parameters
-    nu = 1.0        # MATLAB: nu = 1.
-    mu = 2.0        # MATLAB: mu = 2.
-    epsilon = 1.0   # MATLAB: epsilon = 1.
-    sigma = 1.0     # MATLAB: sigma = 1.
+    # Physical parameters (extracted from TOML or defaults)
+    viscosity = phys_params['viscosity']
+    reaction = phys_params['reaction'] 
+    coupling = phys_params['coupling']
     
-    # Reaction parameters  
-    a = 0.0     # MATLAB: a = 0.
-    c = 0.0     # MATLAB: c = 0.
+    nu = viscosity['nu']
+    mu = viscosity['mu']
+    epsilon = viscosity['epsilon']
+    sigma = viscosity['sigma']
     
-    # Coupling parameters
-    b = 1.0     # MATLAB: b = 1.
-    d = 1.0     # MATLAB: d = 1.
-    chi = 1.0   # MATLAB: chi = 1.
+    a = reaction['a']
+    c = reaction['c']
     
+    b = coupling['b']
+    d = coupling['d']
+    chi = coupling['chi']
     
     # Combine into parameter array (matches MATLAB order)
     parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, chi])
     
-    print(f"✓ Physical parameters configured:")
+    print(f"✓ Configuration loaded:")
+    print(f"  Problem: {problem_name} ({neq} equations)")
+    print(f"  Time: T={T}, dt={dt}")
     print(f"  Viscosity: nu={nu}, mu={mu}, epsilon={epsilon}, sigma={sigma}")
     print(f"  Reactions: a={a}, c={c}")
     print(f"  Coupling: b={b}, d={d}, chi={chi}")
     
     # ============================================================================
-    # SECTION 2: MATHEMATICAL FUNCTIONS (From MATLAB TestProblem.m)
+    # SECTION 2: MATHEMATICAL FUNCTIONS (From configuration or defaults)
     # ============================================================================
     
-    print("Defining mathematical functions from MATLAB TestProblem.m...")
+    print("Setting up mathematical functions...")
 
     def constant_function(x):
         """Constant function returning ones, matching MATLAB constant_function"""
@@ -186,48 +225,14 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
     def dlambda_func(x):
         """Derivative of lambda function"""
         return np.zeros_like(x)  # Derivative of constant is zero
-    
-    # Initial conditions (MATLAB: problem.u0{i})
-    def initial_u(s, t=0.0):
-        """Initial condition for u (equation 1) - MATLAB: sin(2*pi*x)"""
-        return np.sin(2 * np.pi * s)
-    
-    def initial_omega(s, t=0.0):
-        """Initial condition for omega (equation 2) - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    def initial_v(s, t=0.0):
-        """Initial condition for v (equation 3) - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    def initial_phi(s, t=0.0):
-        """Initial condition for phi (equation 4) - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    # Source terms (MATLAB: force{i})
-    def source_u(s, t):
-        """Source term for u equation - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    def source_omega(s, t):
-        """Source term for omega equation - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    def source_v(s, t):
-        """Source term for v equation - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    def source_phi(s, t):
-        """Source term for phi equation - MATLAB: zeros(size(x))"""
-        return np.zeros_like(s)
-    
-    print("✓ Mathematical functions defined:")
+
+    print("✓ Mathematical functions configured:")
     print("  - Nonlinear coupling: lambda_func (constant), dlambda_func")
-    print("  - Initial: u=sin(2πs), ω=0, v=0, φ=0 matching MATLAB")
-    print("  - Sources: all zero functions matching MATLAB")
+    print("  - Initial conditions: loaded from config")
+    print("  - Force functions: loaded from config")
     
     # ============================================================================
-    # SECTION 3: GEOMETRY HANDLING (NEW GEOMETRY-FIRST APPROACH)
+    # SECTION 3: GEOMETRY HANDLING
     # ============================================================================
     
     if geometry is not None:
@@ -252,40 +257,44 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
             print("✓ Default geometry validation passed")
     
     # ============================================================================
-    # SECTION 4: PROBLEM CREATION (Geometry-based, uniform parameters)
+    # SECTION 4: PROBLEM CREATION (Geometry-based, with config parameters)
     # ============================================================================
     
-    print("Creating problem instances from geometry with uniform parameters...")
+    print("Creating problem instances from geometry with config parameters...")
     
     problems = []
     discretizations = []
     
-    # Apply uniform parameters to all domains based on geometry
+    # Extract discretization parameters
+    n_elements = disc_params['n_elements']
+    tau_values = disc_params['tau']
+    
+    # Apply config parameters to all domains based on geometry
     for domain_id in range(geometry.num_domains()):
         domain_info = geometry.get_domain(domain_id)
         print(f"  Creating problem for domain {domain_id}: {domain_info.name}")
         
-        # Create problem for this domain with uniform MATLAB-compatible parameters
+        # Create problem for this domain with config parameters
         problem = Problem(
             neq=neq,
             domain_start=domain_info.domain_start,
             domain_length=domain_info.domain_length,
-            parameters=parameters,  # Same parameters for all domains
-            problem_type="organ_on_chip",  # 4-equation OoC system
+            parameters=parameters,  # From config
+            problem_type=PROBLEM_TYPE,  # Use "organ_on_chip" for StaticCondensationFactory!
             name=f"{problem_name}_{domain_info.name}"
         )
         
-        # Set uniform initial conditions for all domains (matches MATLAB problem.u0{i})
-        problem.set_initial_condition(0, lambda s, t=0: 0.0 * constant_function(s))
-        problem.set_initial_condition(1, lambda s, t=0: 0.0 * constant_function(s))
-        problem.set_initial_condition(2, lambda s, t=0: 0.0 * constant_function(s))
-        problem.set_initial_condition(3, lambda s, t=0: 0.0 * constant_function(s))
+        # Set initial conditions from config (already resolved to callables)
+        problem.set_initial_condition(0, initial_conditions['u'])
+        problem.set_initial_condition(1, initial_conditions['omega'])
+        problem.set_initial_condition(2, initial_conditions['v'])
+        problem.set_initial_condition(3, initial_conditions['phi'])
         
-        # Set uniform source terms for all domains (matches MATLAB force{i})
-        problem.set_force(0, lambda s, t: 0.0 * constant_function(s))
-        problem.set_force(1, lambda s, t: 0.0 * constant_function(s))
-        problem.set_force(2, lambda s, t: 0.0 * constant_function(s))
-        problem.set_force(3, lambda s, t: 0.0 * constant_function(s))
+        # Set force functions from config (already resolved to callables)
+        problem.set_force(0, force_functions['u'])
+        problem.set_force(1, force_functions['omega'])
+        problem.set_force(2, force_functions['v'])
+        problem.set_force(3, force_functions['phi'])
         
         # Set uniform nonlinear coupling for all domains (matches MATLAB lambda)
         problem.set_chemotaxis(lambda_func, dlambda_func)
@@ -295,15 +304,15 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
         
         problems.append(problem)
         
-        # Create discretization for this domain with uniform mesh density
+        # Create discretization for this domain with config parameters
         discretization = Discretization(
             domain_start=domain_info.domain_start,
             domain_length=domain_info.domain_length,
-            n_elements=20  # Uniform mesh density for all domains
+            n_elements=n_elements  # From config
         )
 
-        # Set uniform stabilization parameters for all domains
-        discretization.set_tau([0.5, 0.5, 0.5, 0.5])
+        # Set stabilization parameters from config
+        discretization.set_tau(tau_values)
         discretizations.append(discretization)
     
     # Set specific initial conditions for some domains (from original implementation)
@@ -312,10 +321,10 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
     if len(problems) > 3:
         problems[3].set_initial_condition(0, lambda s, t=0: constant_function(s))
     
-    print(f"✓ Created {len(problems)} problem instances with uniform parameters")
+    print(f"✓ Created {len(problems)} problem instances with config parameters")
     
     # ============================================================================
-    # SECTION 5: CONSTRAINT SETUP (NEW GEOMETRY-DRIVEN APPROACH)
+    # SECTION 5: CONSTRAINT SETUP
     # ============================================================================
     
     constraint_manager = setup_constraints_from_geometry(geometry, problems, neq)
@@ -356,7 +365,7 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None):
     print(f"\n🎉 OoC problem '{problem_name}' ready!")
     print(f"📊 PROBLEM SUMMARY:")
     print(f"   - Geometry: {geometry.name} with {geometry.num_domains()} domains")
-    print(f"   - Physics: Uniform OrganOnChip parameters across all domains") 
+    print(f"   - Physics: OrganOnChip parameters from config") 
     print(f"   - {neq} equations per domain ({neq * len(problems)} total equations)")
     print(f"   - {constraint_manager.n_constraints} constraints")
     print(f"   - Total DOFs: {sum(p.neq * (d.n_elements + 1) for p, d in zip(problems, global_discretization.spatial_discretizations))}")

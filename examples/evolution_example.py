@@ -17,32 +17,43 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from setup_solver import quick_setup, SolverSetup
 from bionetflux.time_integration import TimeStepper
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
+from bionetflux.geometry.domain_geometry import build_grid_geometry
 import numpy as np
 import time
+from typing import Optional
 
 
-def run_evolution_with_time_stepper():
+def run_evolution_with_time_stepper(config_file: Optional[str] = None):
     """
     Main function demonstrating time evolution with the new TimeStepper module.
     
-    This replaces the complex while loop logic with clean, modular calls.
+    Args:
+        config_file: Optional TOML configuration file path
     """
     print("="*80)
     print("EVOLUTION + PLOTTING EXAMPLE WITH TIME STEPPER")
     print("="*80)
     print("Time evolution using the new TimeStepper module")
+    if config_file:
+        print(f"Using configuration file: {config_file}")
+    else:
+        print("Using default parameters")
     print()
     
     # ============================================================================
-    # STEP 1: SOLVER SETUP (Same as original)
+    # STEP 1: SOLVER SETUP (Enhanced with config file support)
     # ============================================================================
     
     print("Step 1: Setting up solver...")
     
-    # Use quick_setup for automatic initialization and validation
+    geometry = build_grid_geometry(N=2)
+    
+    # Use quick_setup with both geometry and config file support
     setup = quick_setup(
         problem_module="bionetflux.problems.ooc_problem",
-        validate=True
+        validate=True,
+        config_file=config_file,  # Pass config file
+        geometry=geometry         # Pass geometry
     )
     
     
@@ -243,16 +254,23 @@ def run_evolution_with_time_stepper():
     return setup, time_stepper, solution_history, time_history
 
 
-def demonstrate_multiple_steps():
+def demonstrate_multiple_steps(config_file: Optional[str] = None):
     """
     Demonstrate the advance_multiple_steps functionality.
+    
+    Args:
+        config_file: Optional TOML configuration file path
     """
     print("\n" + "="*80)
     print("DEMONSTRATING MULTIPLE STEPS ADVANCEMENT")
     print("="*80)
     
-    # Quick setup
-    setup = quick_setup("bionetflux.problems.reduced_ooc_problem", validate=True)
+    # Quick setup with config file support (geometry can be passed here too if needed)
+    setup = quick_setup(
+        problem_module="bionetflux.problems.ooc_problem", 
+        validate=True,
+        config_file=config_file  # Pass config file
+    )
     time_stepper = TimeStepper(setup, verbose=True)
     
     # Initialize
@@ -290,17 +308,34 @@ def demonstrate_multiple_steps():
 
 
 if __name__ == "__main__":
-    """Main execution with multiple demonstrations."""
+    """Main execution with multiple demonstrations and config file support."""
+    
+    # Check for config file argument
+    config_file = None
+    if len(sys.argv) > 1:
+        config_file = sys.argv[1]
+        if not os.path.exists(config_file):
+            print(f"Error: Configuration file '{config_file}' not found")
+            sys.exit(1)
+        print(f"Using configuration file: {config_file}")
+    else:
+        # Default to ooc_parameters.toml if no argument provided
+        config_file = "config/ooc_parameters.toml"
+        if os.path.exists(config_file):
+            print(f"Using default configuration file: {config_file}")
+        else:
+            print(f"Default config file '{config_file}' not found, using defaults")
+            config_file = None
     
     try:
-        # Main evolution example
-        setup, time_stepper, sol_history, time_hist = run_evolution_with_time_stepper()
+        # Main evolution example with config file
+        setup, time_stepper, sol_history, time_hist = run_evolution_with_time_stepper(config_file)
         
         # Additional demonstrations
         print("\n" + "🔬" * 40)
         
-        # Multiple steps demonstration
-        # multi_results = demonstrate_multiple_steps()
+        # Multiple steps demonstration with config file
+        # multi_results = demonstrate_multiple_steps(config_file)
         
         print(f"\n🎉 All demonstrations completed successfully!")
         
