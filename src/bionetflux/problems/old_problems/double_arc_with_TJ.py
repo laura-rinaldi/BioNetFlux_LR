@@ -1,7 +1,7 @@
 import numpy as np
-from ..core.problem import Problem
-from ..core.discretization import Discretization, GlobalDiscretization
-from ..core.constraints import ConstraintManager
+from ...core.problem import Problem
+from ...core.discretization import Discretization, GlobalDiscretization
+from ...core.constraints import ConstraintManager
 
 def create_global_framework():
     """
@@ -26,8 +26,6 @@ def create_global_framework():
     
     # Parameter vector [mu, nu, a, b]
     parameters = np.array([mu, nu, a, b])
-    
-    permeability = 0.1  # Permeability for KK conditions
     
     # Chemotaxis parameters
     k1 = 3.9e-9
@@ -124,7 +122,7 @@ def create_global_framework():
     # Domain definition
     
     domain_starts = [1.5, 2.5]
-    domain_lengths = [1.0, 1.0]
+    domain_lengths = [2.0, 1.0]
     
     problems = []
     discretizations = []
@@ -187,13 +185,14 @@ def create_global_framework():
     constraint_manager.add_neumann(1, 0, domain_starts[0], lambda t: - mu * phi_x(domain_starts[0], t))  # phi equation at start
     
     # Add continuity constraints between domains
-    interface_position = domain_starts[0] + domain_lengths[0]  # End of domain 0 = start of domain 1
-    
-    # KK conditions for both equations
-    constraint_manager.add_kedem_katchalsky(0, 0, 1, interface_position, interface_position, permeability=permeability)  # u equation KK condition
-    constraint_manager.add_kedem_katchalsky(1, 0, 1, interface_position, interface_position, permeability=permeability)  # phi equation KK condition
+    interface_position0 = domain_starts[0] + domain_lengths[0]/2  # End of domain 0 = start of domain 1
+    interface_position1 = domain_starts[1] # Start of domain 1
 
-    # Add zero flux Neumann conditions at domain end for both equations
+    # Solution continuity for both equations
+    constraint_manager.add_trace_continuity(0, 0, 1, interface_position0, interface_position1)  # u equation continuity
+    constraint_manager.add_trace_continuity(1, 0, 1, interface_position0, interface_position1)  # phi equation continuity
+
+    # Add zero flux Neumann conditions at domain end for both equations  
     constraint_manager.add_neumann(0, 1, domain_starts[1] + domain_lengths[1], lambda t: flux_u(domain_starts[1] + domain_lengths[1], t))  # u equation at end
     constraint_manager.add_neumann(1, 1, domain_starts[1] + domain_lengths[1], lambda t: mu * phi_x(domain_starts[1] + domain_lengths[1], t))  # phi equation at end
     

@@ -1,21 +1,22 @@
 import numpy as np
-from bionetflux.core.problem import Problem
-from bionetflux.core.discretization import Discretization, GlobalDiscretization
-from bionetflux.core.constraints import ConstraintManager
+from ...core.problem import Problem
+from ...core.discretization import Discretization, GlobalDiscretization
+from ...core.constraints import ConstraintManager
 
 def create_global_framework():
     """
     Single domain test problem equivalent to MATLAB TestGabriella1.m
     """
-    # Global parameters
-    ndom = 2  # Number of domains
-    neq = 2
-    T = 0.5
-    problem_name = "Keller-Segel traveling wave -- double arc"
+    
     
     # Mesh parameters
-    n_elements = [10, 10] # Number of spatial elements
+    n_elements = 40 # Number of spatial elements
     
+    # Global parameters
+    ndom = 2
+    neq = 2
+    T = 0.5
+    problem_name = "Keller-Segel traveling wave -- DoubleArc"
     
     # Physical parameters
     nu = 1.0
@@ -25,6 +26,8 @@ def create_global_framework():
     
     # Parameter vector [mu, nu, a, b]
     parameters = np.array([mu, nu, a, b])
+    
+    permeability = 0.1  # Permeability for KK conditions
     
     # Chemotaxis parameters
     k1 = 3.9e-9
@@ -109,9 +112,6 @@ def create_global_framework():
         
         return (5*s)/4 - (5*t)/8 - 2*np.log(exp_st2 - 1)
 
-    # Domain definition
-    domain_start = [1.5, 3.0]  # micrometers
-    domain_length = [1.5, 1.0]  # micrometers
     
     # Initial conditions
     def initial_u(s, t=0.0):
@@ -119,58 +119,50 @@ def create_global_framework():
     
     def initial_phi(s, t=0.0):
         return solution_phi(s, 0.0)  # No initial chemoattractant
+
     
+    # Domain definition
+    
+    domain_starts = [1.5, 2.5]
+    domain_lengths = [1.0, 1.0]
     
     problems = []
     discretizations = []
-    
-    # Create problem
-    for ipb in range(ndom):
-        if ipb == 0:
-            domain_start_ipb = domain_start[0]
-            domain_length_ipb = domain_length[0]
-            n_elements_ipb = n_elements[0]
-        else:
-            domain_start_ipb = domain_start[1]
-            domain_length_ipb = domain_length[1]
-            n_elements_ipb = n_elements[1]
-    
+    for idom in range(ndom):
+        if domain_lengths[idom] <= 0:
+            raise ValueError(f"Domain length must be positive. Got {domain_lengths[idom]} for domain {idom}.")
+        # Create problem
         problem = Problem(
             neq=neq,
-            domain_start=domain_start_ipb,
-            domain_length=domain_length_ipb,
+            domain_start=domain_starts[idom],
+            domain_length=domain_lengths[idom],
             parameters=parameters,
             problem_type="keller_segel",  # Ensure consistent type
             name="traveling_wave"
         )
-    
-    
-    
-        # Set chemotaxis
         problem.set_chemotaxis(chi, dchi)
-        L = domain_length_ipb  # Use domain length as L
-
-        problem.set_force(0, lambda s, t: 0.0 * s)  # No source for u (eq 1)
+        problems.append(problem)
+        
         problem.set_force(0, lambda s, t: 0.0 * s)  # No source for u (eq 1)
         problem.set_force(1, lambda s, t: 0.0 * s)  # Tumor (eq 2)
 
         problem.set_solution(0, solution_u)
         problem.set_solution(1, solution_phi)
-    
+
         problem.set_initial_condition(0, initial_u)
         problem.set_initial_condition(1, initial_phi)
-    
+        
+        L = domain_lengths[idom] # Use domain length as L
         # Discretization
         discretization = Discretization(
-            n_elements=n_elements_ipb,
-            domain_start=domain_start_ipb,
-            domain_length=domain_length_ipb,
+            n_elements=n_elements,
+            domain_start=domain_starts[idom],
+            domain_length=domain_lengths[idom],
             stab_constant=1.0
         )
 
         discretization.set_tau([1.0/discretization.element_length, 1.0])  # Set stabilization parameters for both equations
-        
-        problems.append(problem)
+
         discretizations.append(discretization)
 
     global_disc = GlobalDiscretization(discretizations)
@@ -191,22 +183,21 @@ def create_global_framework():
     # constraint_manager.add_neumann(1, 0, domain_start, lambda t: 0.0)  # phi equation at start
     
     # Add zero flux Neumann conditions at domain start for both equations
-    constraint_manager.add_neumann(0, 0, domain_start[0], lambda t: - flux_u(domain_start[0], t))  # u equation at start
-    constraint_manager.add_neumann(1, 0, domain_start[0], lambda t: - mu * phi_x(domain_start[0], t))  # phi equation at start
+    constraint_manager.add_neumann(0, 0, domain_starts[0], lambda t: - flux_u(domain_starts[0], t))  # u equation at start
+    constraint_manager.add_neumann(1, 0, domain_starts[0], lambda t: - mu * phi_x(domain_starts[0], t))  # phi equation at start
+    
+    # Add continuity constraints between domains
+    interface_position = domain_starts[0] + domain_lengths[0]  # End of domain 0 = start of domain 1
+    
+    # KK conditions for both equations
+    constraint_manager.add_kedem_katchalsky(0, 0, 1, interface_position, interface_position, permeability=permeability)  # u equation KK condition
+    constraint_manager.add_kedem_katchalsky(1, 0, 1, interface_position, interface_position, permeability=permeability)  # phi equation KK condition
 
     # Add zero flux Neumann conditions at domain end for both equations
-    constraint_manager.add_neumann(0, 1, domain_start[1] + domain_length[1], lambda t: flux_u(domain_start[1] + domain_length[1], t))  # u equation at end
-    constraint_manager.add_neumann(1, 1, domain_start[1] + domain_length[1], lambda t: mu * phi_x(domain_start[1] + domain_length[1], t))  # phi equation at end
-
-    # Add trace constraints at the interface between domains
-    # constraint_manager.add_trace_continuity(0, 0, 1, domain_start[0] + domain_length[0], domain_start[1])  # u equation
-    # constraint_manager.add_trace_continuity(1, 0, 1, domain_start[0] + domain_length[0], domain_start[1])  # phi equation
-
-    permeability = 1.0  # Default permeability
-    constraint_manager.add_kedem_katchalsky(0, 0, 1, domain_start[0] + domain_length[0], domain_start[1], permeability)  # u equation
-    constraint_manager.add_kedem_katchalsky(1, 0, 1, domain_start[0] + domain_length[0], domain_start[1], permeability)
+    constraint_manager.add_neumann(0, 1, domain_starts[1] + domain_lengths[1], lambda t: flux_u(domain_starts[1] + domain_lengths[1], t))  # u equation at end
+    constraint_manager.add_neumann(1, 1, domain_starts[1] + domain_lengths[1], lambda t: mu * phi_x(domain_starts[1] + domain_lengths[1], t))  # phi equation at end
     
     # Map constraints to discretizations
     constraint_manager.map_to_discretizations(discretizations)
 
-    return problems, global_disc, constraint_manager, problem_name  # Return both domains
+    return problems, global_disc, constraint_manager, problem_name  # Single domain, no interface params
