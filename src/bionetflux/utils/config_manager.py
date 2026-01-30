@@ -80,6 +80,18 @@ class FunctionResolver:
             # Step and ramp functions
             'step': lambda s, t=0: np.where(s > 0.5, 1.0, 0.0),
             'ramp': lambda s, t=0: np.maximum(0, s),
+            
+            # Traveling wave
+            'traveling_wave_u': lambda s, t=0: ((5 * np.exp(s - t/2)) - (4 * np.exp(2*s - t)) / (np.exp(s - t/2) - 1)
+            ) / (np.exp(s - t/2) - 1) - 5/8,
+            'traveling_wave_phi': lambda s, t=0: 5/4 - (2 * np.exp(s - t/2)) / (np.exp(s - t/2) - 1),
+            'traveling_wave_u_x': lambda s, t=0: (
+                3 * np.exp(2*s - t) + 5 * np.exp(s - t/2)
+            ) / (np.exp(s - t/2) - 1)**3,
+            'traveling_wave_phi_x': lambda s, t=0: (
+                2 * np.exp(s - t/2) * (np.exp(s - t/2) - 1) + 2 * np.exp(2*(s - t/2))
+            ) / (np.exp(s - t/2) - 1)**2,   
+            
         }
     
     def register_function(self, name: str, func: Callable):

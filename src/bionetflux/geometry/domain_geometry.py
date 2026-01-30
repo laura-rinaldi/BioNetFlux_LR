@@ -1285,3 +1285,90 @@ def build_grid_geometry(N: int = 4):
     print(f"    - Interior connections: {len(geometry.get_interior_connections())}")
     
     return geometry
+
+def build_triple_arc_geometry():
+    """
+    Build a triple arc geometry with three aligned segments of length 1 each.
+    
+    The geometry consists of:
+    - Three horizontal segments aligned on the x-axis
+    - Segment 1: x ∈ [2, 3], y = 0.5
+    - Segment 2: x ∈ [3, 4], y = 0.5  
+    - Segment 3: x ∈ [4, 5], y = 0.5
+    - Two boundary connections at the extremes
+    - Two interior connections between segments
+    
+    Returns:
+        DomainGeometry: Triple arc geometry instance with connections
+    """
+    print("Creating triple arc geometry with three aligned segments...")
+    
+    geometry = DomainGeometry("triple_arc_geometry")
+    
+    # Add three aligned horizontal segments of length 1 each
+    # Segment 1: x ∈ [2, 3]
+    geometry.add_domain(
+        extrema_start=(2.0, 0.5),
+        extrema_end=(3.0, 0.5),
+        domain_start=2.0,
+        domain_length=1.0,
+        name="segment_1",
+        display_color="red"
+    )
+    
+    # Segment 2: x ∈ [3, 4]
+    geometry.add_domain(
+        extrema_start=(3.0, 0.5),
+        extrema_end=(4.0, 0.5),
+        domain_start=3.0,
+        domain_length=1.0,
+        name="segment_2",
+        display_color="green"
+    )
+    
+    # Segment 3: x ∈ [4, 5]
+    geometry.add_domain(
+        extrema_start=(4.0, 0.5),
+        extrema_end=(5.0, 0.5),
+        domain_start=4.0,
+        domain_length=1.0,
+        name="segment_3",
+        display_color="blue"
+    )
+    
+    # Add boundary connections at the extremes
+    # Left boundary: beginning of segment 1 (at parameter 2.0)
+    geometry.add_exterior_boundary(domain_id=0, parameter=2.0)
+    
+    # Right boundary: end of segment 3 (at parameter 5.0)
+    geometry.add_exterior_boundary(domain_id=2, parameter=5.0)
+    
+    # Add interior connections between segments
+    # Connection 1: end of segment 1 (at parameter 3.0) ↔ beginning of segment 2 (at parameter 3.0)
+    geometry.add_connection(
+        domain1_id=0,      # segment_1
+        domain2_id=1,      # segment_2
+        parameter1=3.0,    # end of segment_1
+        parameter2=3.0     # beginning of segment_2
+    )
+    
+    # Connection 2: end of segment 2 (at parameter 4.0) ↔ beginning of segment 3 (at parameter 4.0)
+    geometry.add_connection(
+        domain1_id=1,      # segment_2
+        domain2_id=2,      # segment_3
+        parameter1=4.0,    # end of segment_2
+        parameter2=4.0     # beginning of segment_3
+    )
+    
+    print("✓ Triple arc geometry created:")
+    print(f"  - 3 aligned horizontal segments of length 1 each")
+    print(f"  - Segment 1: x ∈ [2, 3], y = 0.5")
+    print(f"  - Segment 2: x ∈ [3, 4], y = 0.5")
+    print(f"  - Segment 3: x ∈ [4, 5], y = 0.5")
+    print(f"  - Total domains: {geometry.num_domains()}")
+    print(f"  - Total connections: {geometry.num_connections()}")
+    print(f"    - Boundary connections: {len(geometry.get_boundary_connections())} (at x=2 and x=5)")
+    print(f"    - Interior connections: {len(geometry.get_interior_connections())} (at x=3 and x=4)")
+    
+    return geometry
+
