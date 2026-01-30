@@ -19,8 +19,8 @@ a = 0.0       # Reaction parameter a (from KS_traveling_wave parameters array)
 b = 1.0       # React"ion parameter b (from KS_traveling_wave parameters array)
 
 [physical_parameters.chemotaxis]
-chi = "ones"    # Chemotaxis sensitivity function (example value)
-dchi = "zeros"  # Derivative of chemotaxis sensitivity function (example value)
+chi = "constant"     # Function name, not numeric value
+dchi = "zeros"       # Function name for derivative of chi
 
 [discretization]
 n_elements = 10  # From KS_traveling_wave n_elements array

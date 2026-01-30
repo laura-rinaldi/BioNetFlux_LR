@@ -1286,89 +1286,91 @@ def build_grid_geometry(N: int = 4):
     
     return geometry
 
-def build_triple_arc_geometry():
+def build_arc_sequence_geometry(N: int = 2, start: float = 0.0, length: float = 1.0):
     """
-    Build a triple arc geometry with three aligned segments of length 1 each.
+    Build an arc sequence geometry with N aligned segments.
     
-    The geometry consists of:
-    - Three horizontal segments aligned on the x-axis
-    - Segment 1: x ∈ [2, 3], y = 0.5
-    - Segment 2: x ∈ [3, 4], y = 0.5  
-    - Segment 3: x ∈ [4, 5], y = 0.5
-    - Two boundary connections at the extremes
-    - Two interior connections between segments
+    Creates N consecutive segments of equal length:
+    - Segment 1: from (start, 0.5) to (start + length, 0.5) 
+    - Segment 2: from (start + length, 0.5) to (start + 2*length, 0.5)
+    - ...
+    - Segment N: from (start + (N-1)*length, 0.5) to (start + N*length, 0.5)
+    
+    Each segment has parameter space [0, 1] scaled to its physical length.
+    
+    Args:
+        N: Number of segments (default: 2)
+        start: Starting x-coordinate (default: 0.0)
+        length: Length of each segment (default: 1.0)
+    
+    With connections:
+    - Exterior boundary at start of first segment (parameter 0)
+    - N-1 interior connections between consecutive segments
+    - Exterior boundary at end of last segment (parameter 1)
     
     Returns:
-        DomainGeometry: Triple arc geometry instance with connections
+        DomainGeometry: Arc sequence geometry instance
     """
-    print("Creating triple arc geometry with three aligned segments...")
+    if N < 1:
+        raise ValueError(f"Number of segments N must be at least 1, got {N}")
+    if length <= 0:
+        raise ValueError(f"Segment length must be positive, got {length}")
     
-    geometry = DomainGeometry("triple_arc_geometry")
+    print(f"Creating arc sequence geometry with N={N} segments...")
+    print(f"  Start: x={start}, segment length: {length}")
+    print(f"  Total span: x ∈ [{start}, {start + N*length}]")
     
-    # Add three aligned horizontal segments of length 1 each
-    # Segment 1: x ∈ [2, 3]
-    geometry.add_domain(
-        extrema_start=(2.0, 0.5),
-        extrema_end=(3.0, 0.5),
-        domain_start=2.0,
-        domain_length=1.0,
-        name="segment_1",
-        display_color="red"
+    geometry = DomainGeometry("arc_sequence_geometry")
+    
+    # Add N aligned segments
+    colors = ["red", "green", "blue", "orange", "purple", "brown", "pink", "gray", "cyan", "magenta"]
+    
+    for i in range(N):
+        x_start = start + i * length
+        x_end = start + (i + 1) * length
+        
+        geometry.add_domain(
+            extrema_start=(x_start, 0.5),
+            extrema_end=(x_end, 0.5),
+            domain_start=x_start,
+            domain_length=length,  # Normalized parameter space [0, 1] for each segment
+            name=f"segment_{i+1}",
+            display_color=colors[i % len(colors)]
+        )
+    
+    # Add boundary connections
+    # Exterior boundary at start of first segment (domain 0, parameter 0)
+    geometry.add_exterior_boundary(
+        domain_id=0,
+        parameter=start,
+        boundary_condition="neumann"  # Example metadata
     )
     
-    # Segment 2: x ∈ [3, 4]
-    geometry.add_domain(
-        extrema_start=(3.0, 0.5),
-        extrema_end=(4.0, 0.5),
-        domain_start=3.0,
-        domain_length=1.0,
-        name="segment_2",
-        display_color="green"
+    # Exterior boundary at end of last segment (domain N-1, parameter 1)
+    geometry.add_exterior_boundary(
+        domain_id=N-1,
+        parameter=start + length * N,
+        boundary_condition="neumann"  # Example metadata
     )
     
-    # Segment 3: x ∈ [4, 5]
-    geometry.add_domain(
-        extrema_start=(4.0, 0.5),
-        extrema_end=(5.0, 0.5),
-        domain_start=4.0,
-        domain_length=1.0,
-        name="segment_3",
-        display_color="blue"
-    )
+    # Add N-1 interior connections between consecutive segments
+    for i in range(N-1):
+        geometry.add_connection(
+            domain1_id=i,        # Current segment
+            domain2_id=i+1,      # Next segment
+            parameter1 = start + length * (i+1),      # End of current segment
+            parameter2 = start + length * (i+1),      # Start of next segment
+            connection_type="trace_continuity"
+        )
     
-    # Add boundary connections at the extremes
-    # Left boundary: beginning of segment 1 (at parameter 2.0)
-    geometry.add_exterior_boundary(domain_id=0, parameter=2.0)
-    
-    # Right boundary: end of segment 3 (at parameter 5.0)
-    geometry.add_exterior_boundary(domain_id=2, parameter=5.0)
-    
-    # Add interior connections between segments
-    # Connection 1: end of segment 1 (at parameter 3.0) ↔ beginning of segment 2 (at parameter 3.0)
-    geometry.add_connection(
-        domain1_id=0,      # segment_1
-        domain2_id=1,      # segment_2
-        parameter1=3.0,    # end of segment_1
-        parameter2=3.0     # beginning of segment_2
-    )
-    
-    # Connection 2: end of segment 2 (at parameter 4.0) ↔ beginning of segment 3 (at parameter 4.0)
-    geometry.add_connection(
-        domain1_id=1,      # segment_2
-        domain2_id=2,      # segment_3
-        parameter1=4.0,    # end of segment_2
-        parameter2=4.0     # beginning of segment_3
-    )
-    
-    print("✓ Triple arc geometry created:")
-    print(f"  - 3 aligned horizontal segments of length 1 each")
-    print(f"  - Segment 1: x ∈ [2, 3], y = 0.5")
-    print(f"  - Segment 2: x ∈ [3, 4], y = 0.5")
-    print(f"  - Segment 3: x ∈ [4, 5], y = 0.5")
+    print(f"✓ Arc sequence geometry created:")
+    print(f"  - {N} aligned segments along y=0.5")
+    print(f"  - Each segment: length={length}, parameter space [0, 1]")
+    print(f"  - Total physical length: {N*length}")
     print(f"  - Total domains: {geometry.num_domains()}")
     print(f"  - Total connections: {geometry.num_connections()}")
-    print(f"    - Boundary connections: {len(geometry.get_boundary_connections())} (at x=2 and x=5)")
-    print(f"    - Interior connections: {len(geometry.get_interior_connections())} (at x=3 and x=4)")
+    print(f"    - Boundary connections: {len(geometry.get_boundary_connections())}")
+    print(f"    - Interior connections: {len(geometry.get_interior_connections())}")
     
     return geometry
 

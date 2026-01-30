@@ -14,12 +14,14 @@ import sys
 import os
 from typing import Optional
 
+from bionetflux.geometry.domain_geometry import build_arc_sequence_geometry
+
 # Handle both relative imports (when used as module) and direct execution
 try:
     from ..core.problem import Problem
     from ..core.discretization import Discretization, GlobalDiscretization
     from ..core.constraints import ConstraintManager
-    from ..geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_double_arc_geometry
+    from ..geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_arc_sequence_geometry
     from .ks_config_manager import KSConfigManager
 except ImportError:
     # If relative imports fail, add the src directory to path for direct execution
@@ -30,7 +32,7 @@ except ImportError:
     from bionetflux.core.problem import Problem
     from bionetflux.core.discretization import Discretization, GlobalDiscretization
     from bionetflux.core.constraints import ConstraintManager
-    from bionetflux.geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_triple_arc_geometry
+    from bionetflux.geometry.domain_geometry import DomainGeometry, EXTERIOR_BOUNDARY, build_arc_sequence_geometry
     from bionetflux.problems.ks_config_manager import KSConfigManager
 
 
@@ -41,7 +43,7 @@ def build_default_ks_geometry():
     Returns:
         DomainGeometry: Default KS double arc geometry instance
     """
-    return build_triple_arc_geometry()
+    return build_arc_sequence_geometry(N=1, start=2.0, length=1.0)
 
 
 def setup_constraints_from_geometry(geometry: DomainGeometry, problems, neq: int) -> ConstraintManager:
@@ -157,6 +159,7 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     initial_conditions = config['initial_conditions']  # Already resolved to callables
     force_functions = config['force_functions']        # Already resolved to callables
     exact_solutions = config['exact_solutions']  # Optional exact solutions, already resolved
+    exact_solution_derivatives = config['exact_solution_derivatives']  # Optional derivatives    
     
     # Extract domain-specific overrides (as strings, not resolved yet)
     domain_initial_conditions = config.get('domain_initial_conditions', {})
@@ -186,10 +189,28 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     reaction = phys_params['reaction']
     chemotaxis = phys_params['chemotaxis']
     
+    # These should be function names (strings), not the resolved functions yet
+    chi_func_name = chemotaxis['chi']    # Should be "constant" 
+    dchi_func_name = chemotaxis['dchi']  # Should be "zeros"
+    
+    # Resolve the function names to actual callables
+    chi_func = config_manager.function_resolver.resolve_function(chi_func_name)
+    dchi_func = config_manager.function_resolver.resolve_function(dchi_func_name)
+    
+    u = exact_solutions['u']
+
+    u_x = exact_solution_derivatives['u']
+    phi_x = exact_solution_derivatives['phi']
+    
+    
+    
     mu = diffusion['mu']
     nu = diffusion['nu']
     a = reaction['a']
     b = reaction['b']
+    
+    flux_u = lambda s, t: nu * u_x(s, t) + chi(s) * u(s, t) * phi_x(s, t)
+    flux_phi = lambda s, t: - mu * phi_x(s, t)  
     
     # Combine into parameter array (matches KS_traveling_wave order: [mu, nu, a, b])
     parameters = np.array([mu, nu, a, b])
@@ -255,6 +276,32 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
         domain_info = geometry.get_domain(domain_id)
         print(f"  Creating KS problem for domain {domain_id}: {domain_info.name}")
         
+        # Validate that required functions are callable before using them
+        print("  Validating function callability...")
+        function_checks = [
+            ('initial_conditions["u"]', initial_conditions.get('u')),
+            ('initial_conditions["phi"]', initial_conditions.get('phi')),
+            ('force_functions["u"]', force_functions.get('u')),
+            ('force_functions["phi"]', force_functions.get('phi')),
+            ('chi_func', chi_func),      # Use resolved functions
+            ('dchi_func', dchi_func)     # Use resolved functions
+        ]
+        
+        validation_errors = []
+        for func_name, func in function_checks:
+            if func is None:
+                validation_errors.append(f"{func_name} is None")
+            elif not callable(func):
+                validation_errors.append(f"{func_name} is not callable (type: {type(func).__name__})")
+            else:
+                print(f"    ✓ {func_name} is callable")
+        
+        if validation_errors:
+            error_msg = "Function validation failed:\n" + "\n".join(f"    - {err}" for err in validation_errors)
+            raise ValueError(error_msg)
+        
+        print("  ✓ All required functions are callable")
+        
         # Create problem for this domain with config parameters
         problem = Problem(
             neq=neq,
@@ -266,20 +313,28 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
         )
         
         # Set DEFAULT initial conditions from config (already resolved to callables)
-        problem.set_initial_condition(0, initial_conditions['u'])  # Cell density
-        problem.set_initial_condition(1, initial_conditions['v'])  # Chemical concentration
+        # problem.set_initial_condition(0, initial_conditions['u'])  # Cell density
+        # problem.set_initial_condition(1, initial_conditions['phi'])  # Chemical concentration
+        problem.set_initial_condition(0, initial_conditions.get('u'))  # Cell density
+        problem.set_initial_condition(1, initial_conditions.get('phi'))  # Chemical concentration
         
         # Set DEFAULT force functions from config (already resolved to callables)
         problem.set_force(0, force_functions['u'])
-        problem.set_force(1, force_functions['v'])
+        problem.set_force(1, force_functions['phi'])
         
         # Set chemotaxis for Keller-Segel
-        problem.set_chemotaxis(chemotaxis['chi'], chemotaxis['dchi'])
+        problem.set_chemotaxis(chi_func, dchi_func)  # Use resolved functions
+        # problem.set_boundary_flux(0, left_flux=u_x, right_flux=u_x)  
+        # problem.set_boundary_flux(1, left_flux=phi_x, right_flux=phi_x)
         
         # Set 2D coordinates for visualization from geometry
         problem.set_extrema(domain_info.extrema_start, domain_info.extrema_end)
+       
+        
         
         problems.append(problem)
+        
+        
         
         # Create discretization for this domain with config parameters
         discretization = Discretization(

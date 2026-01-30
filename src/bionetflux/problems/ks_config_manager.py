@@ -41,8 +41,8 @@ class KSConfigManager(BaseConfigManager):
                     'b': 1.0       # Reaction parameter b (from KS_traveling_wave)
                 },
                 'chemotaxis': {
-                    'chi': 'ones',    # Chemotaxis sensitivity function (example value)
-                    'dchi': 'zeros'   # Derivative of chemotaxis sensitivity function (example value)
+                    'chi': 'constant',      # Should be function name, not number
+                    'dchi': 'zeros'         # Should be function name for derivative
                 }  
             },
             
@@ -53,22 +53,22 @@ class KSConfigManager(BaseConfigManager):
             
             'initial_conditions': {
                 'u': 'zeros',      # Default: zero cell density
-                'v': 'zeros'       # Default: zero chemical concentration
+                'phi': 'zeros'       # Default: zero chemical concentration
             },
             
             'force_functions': {
                 'u': 'zeros',      # Default: zero force
-                'v': 'zeros'       # Default: zero force
+                'phi': 'zeros'       # Default: zero force
             },
             
             'exact_solutions': {
                 'u': 'zeros',      # Default: zero exact solution
-                'v': 'zeros'       # Default: zero exact solution
+                'phi': 'zeros'       # Default: zero exact solution
             },
             
             'exact_solution_derivatives': {
                 'u': 'zeros',      # Default: zero derivative
-                'v': 'zeros'       # Default: zero derivative
+                'phi': 'zeros'       # Default: zero derivative
             },
             
             # Domain-specific overrides (as strings, not resolved)
@@ -112,6 +112,12 @@ class KSConfigManager(BaseConfigManager):
         # Discretization validation
         self.validator.add_rule('discretization.n_elements', 
                               {'type': int, 'min': 1})
+        
+        # Physical parameter validation - chi and dchi should be function names
+        self.validator.add_rule('physical_parameters.chemotaxis.chi', 
+                              {'type': str, 'required': True})  # Function name
+        self.validator.add_rule('physical_parameters.chemotaxis.dchi', 
+                              {'type': str, 'required': True})  # Function name
     
     def load_config(self, config_file: Optional[str] = None) -> Dict[str, Any]:
         """

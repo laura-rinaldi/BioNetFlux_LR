@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from setup_solver import quick_setup, SolverSetup
 from bionetflux.time_integration import TimeStepper
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
-from bionetflux.geometry.domain_geometry import build_grid_geometry
+from bionetflux.geometry.domain_geometry import build_arc_sequence_geometry, build_grid_geometry
 import numpy as np
 import time
 from typing import Optional
@@ -46,8 +46,9 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None):
     
     print("Step 1: Setting up solver...")
     
-    geometry = build_grid_geometry(N=2)
-    
+    geometry = build_arc_sequence_geometry(N=4, start=2.0, length=1.0)
+
+    # Try to call quick_setup with error handling for config compatibility    
     try:
         # Use quick_setup with both geometry and config file support
         setup = quick_setup(
@@ -165,6 +166,15 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None):
     print(f"Time evolution: t ∈ [0, {T}], dt = {dt}")
     print(f"Maximum time steps: {max_time_steps}")
     print()
+    
+    initial_traces, initial_multipliers = setup.extract_domain_solutions(current_solution)
+    for eq_idx in range(plotter.neq):
+        plotter.plot_birdview(
+            initial_traces,
+            equation_idx=eq_idx,
+            time=current_time,
+            save_filename=f"final_birdview_eq{eq_idx}.png"
+        )
     
     # TIME EVOLUTION LOOP - SIMPLIFIED TO ONE LINE PER TIME STEP!
     time_step = 0

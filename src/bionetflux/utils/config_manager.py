@@ -364,3 +364,103 @@ class BaseConfigManager(ABC):
     def get_default_config_path(self) -> str:
         """Get default configuration file path for this problem type."""
         return f"config/{self.problem_type}_parameters.toml"
+    
+    def _traveling_wave_u(self, s, t=0):
+        """
+        Keller-Segel traveling wave analytical solution for u (cell density).
+        From KS_traveling_wave_double_arc.py solution_u function.
+        
+        Args:
+            s: Spatial coordinate(s) - can be scalar or array
+            t: Time coordinate - scalar
+            
+        Returns:
+            Solution value at (s,t)
+        """
+        s = np.asarray(s)
+        exp_st2 = np.exp(s - t/2)
+        exp_2st = np.exp(2*s - t)
+        
+        # Avoid division by zero when exp_st2 = 1 (i.e., when s = t/2)
+        denominator = exp_st2 - 1
+        
+        # Add small epsilon to avoid exact zero
+        epsilon = 1e-15
+        safe_denominator = np.where(np.abs(denominator) < epsilon, 
+                                  np.sign(denominator) * epsilon, 
+                                  denominator)
+        
+        return (5 * exp_st2) / safe_denominator - (4 * exp_2st) / (safe_denominator**2) - 5/8
+
+    def _traveling_wave_phi(self, s, t=0):
+        """
+        Keller-Segel traveling wave analytical solution for phi (chemical concentration).
+        From KS_traveling_wave_double_arc.py solution_phi function.
+        
+        Args:
+            s: Spatial coordinate(s) - can be scalar or array
+            t: Time coordinate - scalar
+            
+        Returns:
+            Phi solution value at (s,t)
+        """
+        s = np.asarray(s)
+        exp_st2 = np.exp(s - t/2)
+        
+        # Avoid division by zero when exp_st2 = 1 (i.e., when s = t/2)
+        denominator = exp_st2 - 1
+        epsilon = 1e-15
+        safe_denominator = np.where(np.abs(denominator) < epsilon, 
+                                  np.sign(denominator) * epsilon, 
+                                  denominator)
+        
+        return (5*s)/4 - (5*t)/8 - 2*np.log(np.abs(safe_denominator))
+
+    def _traveling_wave_u_x(self, s, t=0):
+        """
+        Spatial derivative of traveling wave u solution for chemotaxis term.
+        From KS_traveling_wave_double_arc.py u_x function.
+        
+        Args:
+            s: Spatial coordinate(s) - can be scalar or array
+            t: Time coordinate - scalar
+        Returns:
+            Derivative value at (s,t)
+        """
+        s = np.asarray(s)
+        exp_st2 = np.exp(s - t/2)
+        exp_2st = np.exp(2*s - t)
+        
+        numerator = 3 * exp_2st + 5 * exp_st2
+        
+        # Avoid division by zero
+        denominator = exp_st2 - 1
+        epsilon = 1e-15
+        safe_denominator = np.where(np.abs(denominator) < epsilon, 
+                                  np.sign(denominator) * epsilon, 
+                                  denominator)
+        
+        return numerator / (safe_denominator**3)
+
+    def _traveling_wave_phi_x(self, s, t=0):
+        """
+        Spatial derivative of traveling wave phi solution for chemotaxis term.
+        From KS_traveling_wave_double_arc.py phi_x function.
+        
+        Args:
+            s: Spatial coordinate(s) - can be scalar or array
+            t: Time coordinate - scalar
+        Returns:
+            Derivative value at (s,t)
+        """
+        s = np.asarray(s)
+        exp_st2 = np.exp(s - t/2)
+        
+        # Avoid division by zero
+        denominator = exp_st2 - 1
+        epsilon = 1e-15
+        safe_denominator = np.where(np.abs(denominator) < epsilon, 
+                                  np.sign(denominator) * epsilon, 
+                                  denominator)
+        
+        return 5/4 - (2 * exp_st2) / safe_denominator
