@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..', 'src'))
 
 from setup_solver import quick_setup, SolverSetup
 import numpy as np

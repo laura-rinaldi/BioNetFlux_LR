@@ -4,7 +4,7 @@ import numpy as np
 from typing import Callable, List, Optional, Union
 
 # Add the path to folder B
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..', 'src'))
 
 from bionetflux.core.lean_bulk_data_manager import BulkDataManager
 from bionetflux.core.problem import Problem
