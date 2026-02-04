@@ -372,7 +372,7 @@ if __name__ == "__main__":
             physical_vec = [ 1.0,  2.0,   1.0,    1.0,  0.0,  i*10,   1.0,  1.0,  1.0 ]                                                                 
             sol, I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
             M1_i.append(M1)
-            plt.figure(1)
+            plt.figure(1) 
             plt.plot( times, M1[:], label=f"c=10*{i}")
             plt.title("QoI: center of mass of tumoral cells")
             plt.xlabel("time")
