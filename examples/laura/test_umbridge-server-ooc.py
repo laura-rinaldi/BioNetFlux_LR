@@ -23,7 +23,7 @@ print(output)
 
 
 #test model output
-param = [[ 250.,  600.,   650.,   250.,  1.0*10**(-6),  1.0*10**(-6),   1.0*10**(-7),   1.0*10**(-4),  50.0 ]]
+param = [[2.0, 2.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0]]
 output = model(param)
 print(output)
 
