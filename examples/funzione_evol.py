@@ -18,6 +18,7 @@ from setup_solver import quick_setup, SolverSetup
 from bionetflux.time_integration import TimeStepper
 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
 from bionetflux.geometry.domain_geometry import build_grid_geometry
+from bionetflux.utils.mesh_mapping import create_physical_mesh_dict, parametric_to_physical_mesh
 import numpy as np
 import matplotlib.pyplot as plt
 import time
@@ -205,8 +206,14 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         # ['u', 'ω', 'v', 'φ']
         all_nodes=[]
         for domain_idx in range(info['num_domains']):
-            all_nodes.append(setup.global_discretization.spatial_discretizations[domain_idx].nodes)
-
+            setup.compute_geometry_from_problems()
+    
+            domain_info = setup.geometry.domains[domain_idx]
+            dicretization = setup.global_discretization.spatial_discretizations[domain_idx]
+            #all_nodes.append(setup.global_discretization.spatial_discretizations[domain_idx]) #parametric coord.
+            all_nodes.append(parametric_to_physical_mesh(domain_info, dicretization)[1]) #physical coord.
+            
+        
         p_number= len(np.hstack(all_nodes))
         tr_u = tr[ 0:p_number]
         tr_w=  tr[p_number: 2*p_number]
