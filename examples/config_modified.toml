@@ -37,7 +37,7 @@ sigma = 1.0
 
 [physical_parameters.reaction]
 a = 0.0
-c = 0.0
+c = 30
 
 [physical_parameters.coupling]
 b = 1.0
