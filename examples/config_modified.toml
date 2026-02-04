@@ -1,0 +1,45 @@
+[problem]
+name = "OoC_Grid_Problem"
+neq = 4
+problem_type = "ooc"
+
+[time_parameters]
+T = 1.0
+dt = 0.1
+
+[discretization]
+n_elements = 10
+tau = [ 0.5, 0.5, 0.5, 0.5,]
+
+[initial_conditions]
+u = "zeros"
+omega = "zeros"
+v = "zeros"
+phi = "zeros"
+
+[force_functions]
+u = "zeros"
+omega = "zeros"
+v = "zeros"
+phi = "zeros"
+
+[domain_initial_conditions]
+domain_0_v = "constant"
+domain_3_u = "constant"
+
+[domain_force_functions]
+
+[physical_parameters.viscosity]
+nu = 1.0
+mu = 2.0
+epsilon = 1.0
+sigma = 1.0
+
+[physical_parameters.reaction]
+a = 0.0
+c = 0.0
+
+[physical_parameters.coupling]
+b = 1.0
+d = 1.0
+chi = 1.0
