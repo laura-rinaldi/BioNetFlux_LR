@@ -25,7 +25,7 @@ class ooc_sol(umbridge.Model):
                 config_file = "../../config/ooc_parameters.toml"
 
                 
-                physical_vec = [parameters[0][0], parameters[0][1],parameters[0][2],parameters[0][3],parameters[0][4],parameters[0][5],parameters[0][6],parameters[0][7],parameters[0][8]]
+                physical_vec = [float(parameters[0][0]), float(parameters[0][1]),float(parameters[0][2]),float(parameters[0][3]),float(parameters[0][4]),float(parameters[0][5]),float(parameters[0][6]),float(parameters[0][7]),float(parameters[0][8])]
                 
 
                 # Add the python_port directory to path for absolute imports
@@ -274,7 +274,6 @@ class ooc_sol(umbridge.Model):
                 M_all_times_v = np.array(M_all_times_v).tolist() 
                 
 
-                
                 # ============================================================================
                 # STEP 5: FINAL RESULTS AND VISUALIZATION
                 # ============================================================================
@@ -290,9 +289,8 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-                
-                
-                return [[M_all_times_v[-1]]] #[[sol_all_times, I_all_times_phi, I_all_times_w, M_all_times_u, M_all_times_v]]
+                qoi = np.concatenate([I_all_times_phi[1:-1], I_all_times_w[1:-1], M_all_times_u[1:-1], M_all_times_v[1:-1],  [abs(x - y) for x, y in zip(M_all_times_u[1:-1], M_all_times_v[1:-1])]]).tolist()
+                return [[[abs(x - y) for x, y in zip(M_all_times_u[1:-1], M_all_times_v[1:-1])]]] 
             
         
 

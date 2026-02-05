@@ -30,16 +30,16 @@ domain_3_u = "constant"
 [domain_force_functions]
 
 [physical_parameters.viscosity]
-nu = 2.0
-mu = 2.0
-epsilon = 2.0
-sigma = 1.0
+nu = 200.0
+mu = 850.0
+epsilon = 600.0
+sigma = 200.0
 
 [physical_parameters.reaction]
-a = 1.0
-c = 1.0
+a = 9.999999999999999e-6
+c = 0.0001
 
 [physical_parameters.coupling]
-b = 1.0
-d = 1.0
-chi = 1.0
+b = 9.999999999999999e-6
+d = 0.0001
+chi = 50.0
