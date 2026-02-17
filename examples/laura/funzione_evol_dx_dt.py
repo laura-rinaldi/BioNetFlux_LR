@@ -28,7 +28,9 @@ import toml
 
 
 def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
-    physical_vec: Optional[list[float]] = None):
+    physical_vec: Optional[list[float]] = None,
+    disc_dt: Optional[list[float]] = None,
+    disc_dx: Optional[list[float]] = None):
     """
     Main function demonstrating time evolution with the new TimeStepper module.
     
@@ -53,6 +55,28 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
                 # Applica override 
             for (section, key), value in zip(mapping, physical_vec): 
                 config["physical_parameters"][section][key] = value
+
+        if disc_dt is not None: 
+            print("Override discretization parameters") 
+            # Ordine dei parametri nel vettore 
+            mapping = [ ("dt"), ] 
+            if len(disc_dt) != len(mapping): 
+                raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(disc_dt)}." ) 
+                # Applica override 
+            for value in (disc_dt): 
+                config["time_parameters"]["dt"]= value
+        if disc_dx is not None: 
+            print("Override discretization parameters") 
+            # Ordine dei parametri nel vettore 
+            mapping = [ ("n_elements"),] 
+            if len(disc_dx) != len(mapping): 
+                raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(disc_dx)}." ) 
+                # Applica override 
+            for value in (disc_dx): 
+                config["discretization"]["n_elements"] = value
+                
+
+
         # --- Debug: stampa parametri finali --- 
         print("\nFinal parameters:") 
         for section, params in config["physical_parameters"].items(): 
@@ -375,11 +399,11 @@ if __name__ == "__main__":
     
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
-        times= np.linspace(0,2,19)
-
+        
+        
         import random 
         ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0), (1.e-7,1.e-5), (1.e-7,1.e-5), (1.e-5,1.e-3), (1.e-5,1.e-3) ]
-        def genera_combinazioni(n=200): 
+        def genera_combinazioni(n=10): 
             combinazioni = [] 
             for _ in range(n): 
                 combo = [ random.uniform(r[0], r[1]) for r in ranges ] 
@@ -389,87 +413,79 @@ if __name__ == "__main__":
         combinazioni = genera_combinazioni() 
         
 
-        M1_i =[]
-        for i in range(200):
-            physical_vec = combinazioni[i]
-            print(physical_vec)                                                           
+        
+        possible_dt=[0.1, 1.]
+        possible_dx=[10, 20]
+        
+        # #Scelta del dt
+        # for i in range(5):
+        #         physical_vec = combinazioni[i]
+        #         print(physical_vec)                                                           
+        #         sol_true, I1_true, I2_true, M1_true, M2_true =run_evolution_with_time_stepper(config_file, physical_vec, [0.1], [20])
+        #         err_M1_i=[]
+        #         err_M2_i =[]
+        #         for j  in possible_dt:
+        #             sol, I1, I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec, [j], [20])
+                    
+        #             err_M1_i.append(max(abs(M1_true[1::int(j/0.1)] -M1[1:])/M1_true[1::int(j/0.1)]))
+        #             err_M2_i.append(max(abs(M2_true[1::int(j/0.1)]-M2[1:])/M2_true[1::int(j/0.1)]))
+                   
 
-            sol, I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
-            M1_i.append(M1)
-            plt.figure(1) 
-            plt.plot( times, M1[:] )#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: center of mass of tumoral cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("M_v")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots/plot_M_v_2s.png" , bbox_inches="tight")
+                # plt.figure(1) 
+                # plt.plot( [1, 10], err_M1_i[::-1] ,'o-')
+                # plt.xlabel("time steps (#)")
+                # plt.ylabel("relative error (%)")
+                # plt.legend()
+                # plt.grid(True) 
+                # # Salvataggio del grafico 
+                # plt.savefig(r"./outputs/plots/plot_err_M1_dt.png" , bbox_inches="tight")
+                
+                # plt.figure(2)
+                # plt.plot([1, 10], err_M2_i[::-1], 'o-')
+                # plt.xlabel("time steps (#)")
+                # plt.ylabel("relative error (%)")
+                # plt.legend()
+                # plt.grid(True) 
+                # # Salvataggio del grafico 
+                # plt.savefig(r"./outputs/plots/plot_err_M2_dt.png" , bbox_inches="tight")
 
-            plt.figure(2)
-            plt.plot( times,  M2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: center of mass of immune cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("M_u")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots/plot_M_u_2s.png" , bbox_inches="tight")
+        #Scelta del dx
+        for i in range(5):
+                physical_vec = combinazioni[i]
+                print(physical_vec)                                                           
+                sol_true, I1_true, I2_true, M1_true, M2_true =run_evolution_with_time_stepper(config_file, physical_vec, [0.1], [20])
+                err_M1_i=[]
+                err_M2_i =[]
+                for j  in possible_dx:
+                    sol, I1, I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec, [0.1], [j])
+                    
+                    err_M1_i.append(max(abs(M1_true[1:] -M1[1:])/M1_true[1:]))
+                    err_M2_i.append(max(abs(M2_true[1:]-M2[1:])/M2_true[1:]))
+                   
 
-            plt.figure(3)
-            plt.plot( times,  I1[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of chemoattractant produced by tumor")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_phi")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots/plot_I_phi_2s.png" , bbox_inches="tight")
-
-            plt.figure(4)
-            plt.plot( times, I2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of chemoattractant produced by immune cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_w")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots/plot_I_w_2s.png" , bbox_inches="tight")
-
-            plt.figure(5)
-            plt.plot( times,  np.abs(M1[:]-M2[:]))#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: distance between the centers of the masses")
-            plt.xlabel("time (s)")
-            plt.ylabel("dM")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots/plot_dM_2s.png" , bbox_inches="tight")
+                plt.figure(3) 
+                plt.plot( possible_dx, err_M1_i[:] ,'o-')
+                plt.xlabel("space elements (#)")
+                plt.ylabel("relative error (%)")
+                plt.legend()
+                plt.grid(True) 
+                # Salvataggio del grafico 
+                plt.savefig(r"./outputs/plots/plot_err_M1_dx.png" , bbox_inches="tight")
+                
+                plt.figure(4)
+                plt.plot(possible_dx, err_M2_i[:], 'o-')
+                plt.xlabel("space elements (#)")
+                plt.ylabel("relative error (%)")
+                plt.legend()
+                plt.grid(True) 
+                # Salvataggio del grafico 
+                plt.savefig(r"./outputs/plots/plot_err_M2_dx.png" , bbox_inches="tight")
 
 
-        plt.figure(6)
-        plt.plot(np.arange(1,4)*10,  M1_i)
-        plt.title("QoI: center of mass of tumoral cells")
-        plt.xlabel("c")
-        plt.ylabel("M1_i")
-        plt.legend([f"{t}" for t in range(10)])
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(r"./outputs/plots/plot_M1_i.png" , bbox_inches="tight")
+      
+        
 
-        plt.figure(7)
-        fig, ax = plt.subplots(figsize=(7,5))
-
-        c_values = np.arange(1,4) * 10
-        tempi = np.arange(5) * 0.1
-
-        colors = plt.cm.viridis(np.linspace(0, 1, len(tempi)))
-
-        M1_plot = np.array(M1_i).T 
-
-        for idx, t in enumerate(tempi):
-            ax.plot(c_values, M1_plot[idx], color=colors[idx])
-
+            
         # mappable per la colorbar
         sm = plt.cm.ScalarMappable(
             cmap='viridis',
