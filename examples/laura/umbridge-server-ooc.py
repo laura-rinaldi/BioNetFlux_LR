@@ -16,7 +16,7 @@ class ooc_sol(umbridge.Model):
         super().__init__("forward")
 
     def get_input_sizes(self, config):
-        return [9]
+        return [12]
 
     def get_output_sizes(self, config):
         return [1]#[5]
@@ -54,7 +54,7 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("coupling", "chi"), ] 
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
