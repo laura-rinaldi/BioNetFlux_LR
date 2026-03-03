@@ -8,7 +8,7 @@ problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensati
 
 [time_parameters]
 T = 2.0   # Final time
-dt = 0.01  # Time step
+dt = 0.1  # Time step
 
 [physical_parameters.viscosity]
 nu = 1.0      # MATLAB: nu = 1.
@@ -26,7 +26,7 @@ d = 1.0       # MATLAB: d = 1.
 chi = 1.0     # MATLAB: chi = 1.
 
 [discretization]
-n_elements = 100 #n elementi spaziali
+n_elements = 50 #n elementi spaziali
 tau = [0.5, 0.5, 0.5, 0.5] #x stabilizzazione hdg
 
 [initial_conditions]

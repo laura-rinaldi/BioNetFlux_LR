@@ -4,11 +4,11 @@ neq = 4
 problem_type = "ooc"
 
 [time_parameters]
-T = 1.0
+T = 2.0
 dt = 0.1
 
 [discretization]
-n_elements = 10
+n_elements = 50
 tau = [ 0.5, 0.5, 0.5, 0.5,]
 
 [initial_conditions]
@@ -32,14 +32,14 @@ domain_3_u = "constant"
 [physical_parameters.viscosity]
 nu = 200.0
 mu = 850.0
-epsilon = 600.0
+epsilon = 850.0
 sigma = 200.0
 
 [physical_parameters.reaction]
 a = 9.999999999999999e-6
-c = 0.0001
+c = 0.001
 
 [physical_parameters.coupling]
 b = 9.999999999999999e-6
-d = 0.0001
+d = 0.001
 chi = 50.0

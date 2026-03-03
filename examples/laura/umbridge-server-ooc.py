@@ -40,8 +40,8 @@ class ooc_sol(umbridge.Model):
                 import numpy as np
                 import matplotlib.pyplot as plt
                 import time
-                from typing import Optional
-                import tomllib
+                from typing import Optional, List
+                import tomli as tomllib
                 import toml
 
                 
