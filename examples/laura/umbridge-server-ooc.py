@@ -16,7 +16,11 @@ class ooc_sol(umbridge.Model):
         super().__init__("forward")
 
     def get_input_sizes(self, config):
+<<<<<<< HEAD
         return [9]
+=======
+        return [12]
+>>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
 
     def get_output_sizes(self, config):
         return [1]#[5]
@@ -40,8 +44,13 @@ class ooc_sol(umbridge.Model):
                 import numpy as np
                 import matplotlib.pyplot as plt
                 import time
+<<<<<<< HEAD
                 from typing import Optional, List
                 import tomli as tomllib
+=======
+                from typing import Optional
+                import tomllib
+>>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
                 import toml
 
                 
@@ -54,7 +63,11 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
+<<<<<<< HEAD
                         mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("coupling", "chi"), ] 
+=======
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
+>>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
