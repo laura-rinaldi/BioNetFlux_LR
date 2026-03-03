@@ -7,13 +7,8 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-<<<<<<< HEAD
 T = 2.0   # Final time
-dt = 0.1  # Time step
-=======
-T = 1600.0   # Final time
-dt = 8.0  # Time step
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
+dt =0.05 # Time step
 
 [physical_parameters.viscosity]
 nu = 900.0      # D_M: diffusivity of immune cells
