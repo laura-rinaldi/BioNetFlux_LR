@@ -1,3 +1,4 @@
+# exec: pytho3 ./funzione_evol.py ../../config/ooc_parameters.py
 """
 Evolution Example using new Time Stepper Module
 
@@ -22,17 +23,14 @@ from bionetflux.utils.mesh_mapping import create_physical_mesh_dict, parametric_
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-from typing import Optional
-<<<<<<< HEAD
-import tomli as tomllib
-=======
-import tomllib
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
+from typing import Optional, List
+import tomli as tomllib 
 import toml
 
 
+
 def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
-    physical_vec: Optional[list[float]] = None):
+    physical_vec: Optional[List[float]] = None):
     """
     Main function demonstrating time evolution with the new TimeStepper module.
     
@@ -51,7 +49,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         if physical_vec is not None: 
             print("Override parameters") 
             # Ordine dei parametri nel vettore 
-            mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("coupling", "chi"), ] 
+            mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
             if len(physical_vec) != len(mapping): 
                 raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                 # Applica override 
@@ -78,9 +76,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     # ============================================================================
     # STEP 1: SOLVER SETUP (Enhanced with config file support and error handling)
     # ============================================================================
-    
-    print("Step 1: Setting up solver...")
-    
+                    
     geometry = build_grid_geometry(N=2)
     
     try:
@@ -95,12 +91,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         # Handle configuration compatibility errors gracefully
         if "not compatible with" in str(e) or "problem type" in str(e):
             print(f"\n❌ Configuration Error:")
-            print(f"   {e}")
-            print(f"\n💡 Suggestions:")
-            print(f"   - Check that problem_type in your config file matches the problem module")
-            print(f"   - For ooc_problem.py, use problem_type = \"ooc\"")
-            print(f"   - For ks_problem.py, use problem_type = \"ks\"")
-            print(f"   - Or run without a config file to use defaults")
+            
             return None, None, None, None
         else:
             # Re-raise other ValueError types
@@ -108,7 +99,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     except Exception as e:
         # Handle other setup errors
         print(f"\n❌ Setup Error: {e}")
-        print(f"💡 Try running with default parameters (no config file)")
+        
         return None, None, None, None
 
     # Get problem information
@@ -134,42 +125,18 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     print(f"✓ Initial solution: shape {current_solution.shape}")
     print(f"✓ Initial bulk data: {len(current_bulk_data)} domains")
     
-    # ============================================================================
-    # STEP 3: VISUALIZATION SETUP (Same as original)
-    # ============================================================================
-    
-    print("\nStep 3: Setting up visualization...")
-    
-    # Initialize plotter
-    plotter = LeanMatplotlibPlotter(
-        problems=setup.problems,
-        discretizations=setup.global_discretization.spatial_discretizations,
-        equation_names=None,  # Auto-detect
-        figsize=(15, 10)
-    )
-    
-    
-    
-    print(f"✓ Plotter initialized for {plotter.ndom} domains, {plotter.neq} equations")
-    print(f"✓ Equation names: {plotter.equation_names}")
-
-    
     setup.compute_geometry_from_problems()
     
-    
-
-    
+                    
     # ============================================================================
     # STEP 4: TIME EVOLUTION
     # ============================================================================
     
-    print("\nStep 4: Starting time evolution...")
     
     # Time evolution parameters
     current_time = 0.0
     dt = setup.global_discretization.dt
-    T = setup.global_discretization.T # min(0.5, setup.global_discretization.T)  # Limit runtime for demo
-  
+    T = min(0.5, setup.global_discretization.T)  # Limit runtime for demo
     max_time_steps = int(T / dt) + 1
     
     # Solution history for analysis
@@ -192,7 +159,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     while current_time + dt <= T and time_step < max_time_steps:
         time_step += 1
         print(f"\n--- Time Step {time_step}: t = {current_time:.6f} → {current_time + dt:.6f} ---")
-        time.sleep(6)
+        
         # SINGLE CALL REPLACES ~50 LINES OF COMPLEX NEWTON ITERATION CODE!
         result = time_stepper.advance_time_step(
             current_solution=current_solution,
@@ -206,7 +173,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         ################################################
         extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(current_solution)
         tr =  np.hstack(extracted_traces_n)
-  
+
         #singole soluzioni
         # ['u', 'ω', 'v', 'φ']
         all_nodes=[]
@@ -221,15 +188,16 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             
         
         p_number= len(np.hstack( all_nodes_param))
+        
         tr_u = tr[ 0:p_number]
         tr_w=  tr[p_number: 2*p_number]
         tr_v= tr[2*p_number : 3*p_number]
         tr_phi= tr[3*p_number:]
         sol_all_times.append(tr) 
 
-        print(f"  Compute QoI")
         # Compute mesh size (vector of spacings)
 
+        time.sleep(5)
         h =  np.diff(np.hstack( all_nodes_param))
         
         # Composite trapezoidal rule:
@@ -272,10 +240,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         
         # Handle result
         if result.converged:
-            print(f"  ✓ Time step successful!")
-            print(f"    Newton iterations: {result.iterations}")
-            print(f"    Final residual norm: {result.final_residual_norm:.6e}")
-            print(f"    Computation time: {result.computation_time:.4f}s")
+
             
             # Update state for next iteration
             current_time += dt
@@ -287,11 +252,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             time_history.append(current_time)
             
         else:
-            print(f"    ✗ Time step failed!")
-            print(f"    Newton iterations: {result.iterations}")
-            print(f"    Final residual norm: {result.final_residual_norm:.6e}")
-            print(f"    Computation time: {result.computation_time:.4f}s")
-            print(f"    Stopping time evolution due to convergence failure")
+            print(f"  ✗ Time step failed!")
             break
     sol_all_times = np.array(sol_all_times) # diventa array NumPy 
 
@@ -302,12 +263,12 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     sol_v= sol_all_times[:, 2*p_number : 3*p_number]
     sol_phi= sol_all_times[:, 3*p_number:]
 
-    I_all_times_phi = np.array(I_all_times_phi)
+    sol_all_times = np.array(sol_all_times) 
+    I_all_times_phi = np.array(I_all_times_phi) 
     I_all_times_w = np.array(I_all_times_w)
+    M_all_times_u = np.array(M_all_times_u) 
     M_all_times_v = np.array(M_all_times_v)
-    M_all_times_u = np.array(M_all_times_u)
-    print("  Time evolution completed.")
-
+    
     
     # ============================================================================
     # STEP 5: FINAL RESULTS AND VISUALIZATION
@@ -379,15 +340,15 @@ if __name__ == "__main__":
     
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
-        times= np.linspace(0,2,19)
+        times= np.linspace(0,2,10)
 
         import random 
-        ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0), (1.e-7,1.e-5), (1.e-7,1.e-5), (1.e-5,1.e-3), (1.e-5,1.e-3) ]
+        ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0)]
         def genera_combinazioni(n=200): 
             combinazioni = [] 
             for _ in range(n): 
                 combo = [ random.uniform(r[0], r[1]) for r in ranges ] 
-                combo.append(50.)
+                combo.extend([1.e-4,1.e-1,1.e-4,1.e-1,3.9e-9,5.e-6,1.0,1.0])
                 combinazioni.append(combo) 
             return combinazioni 
         combinazioni = genera_combinazioni() 
