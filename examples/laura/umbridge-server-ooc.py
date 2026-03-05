@@ -16,11 +16,7 @@ class ooc_sol(umbridge.Model):
         super().__init__("forward")
 
     def get_input_sizes(self, config):
-<<<<<<< HEAD
-        return [9]
-=======
         return [12]
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
 
     def get_output_sizes(self, config):
         return [1]#[5]
@@ -29,7 +25,8 @@ class ooc_sol(umbridge.Model):
                 config_file = "../../config/ooc_parameters.toml"
 
                 
-                physical_vec = [float(parameters[0][0]), float(parameters[0][1]),float(parameters[0][2]),float(parameters[0][3]),float(parameters[0][4]),float(parameters[0][5]),float(parameters[0][6]),float(parameters[0][7]),float(parameters[0][8])]
+                physical_vec = [float(parameters[0][0]), float(parameters[0][1]),float(parameters[0][2]),float(parameters[0][3]),float(parameters[0][4]),float(parameters[0][5]),float(parameters[0][6]),
+                                float(parameters[0][7]),float(parameters[0][8]), float(parameters[0][9]),float(parameters[0][10]),float(parameters[0][11])]
                 
 
                 # Add the python_port directory to path for absolute imports
@@ -44,13 +41,8 @@ class ooc_sol(umbridge.Model):
                 import numpy as np
                 import matplotlib.pyplot as plt
                 import time
-<<<<<<< HEAD
                 from typing import Optional, List
-                import tomli as tomllib
-=======
-                from typing import Optional
-                import tomllib
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
+                import tomli as tomllib 
                 import toml
 
                 
@@ -63,11 +55,7 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
-<<<<<<< HEAD
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("coupling", "chi"), ] 
-=======
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
@@ -206,6 +194,7 @@ class ooc_sol(umbridge.Model):
                         
                     
                     p_number= len(np.hstack( all_nodes_param))
+                    
                     tr_u = tr[ 0:p_number]
                     tr_w=  tr[p_number: 2*p_number]
                     tr_v= tr[2*p_number : 3*p_number]
@@ -303,7 +292,7 @@ class ooc_sol(umbridge.Model):
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
                 qoi = np.concatenate([I_all_times_phi[1:-1], I_all_times_w[1:-1], M_all_times_u[1:-1], M_all_times_v[1:-1],  [abs(x - y) for x, y in zip(M_all_times_u[1:-1], M_all_times_v[1:-1])]]).tolist()
-                return [[[abs(x - y) for x, y in zip(M_all_times_u[1:-1], M_all_times_v[1:-1])]]] 
+                return [[[M_all_times_u[1:-1]] [M_all_times_v[1:-1]]]] 
             
         
 
