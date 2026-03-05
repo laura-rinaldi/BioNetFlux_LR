@@ -292,7 +292,7 @@ class ooc_sol(umbridge.Model):
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
                 qoi = np.concatenate([I_all_times_phi[1:-1], I_all_times_w[1:-1], M_all_times_u[1:-1], M_all_times_v[1:-1],  [abs(x - y) for x, y in zip(M_all_times_u[1:-1], M_all_times_v[1:-1])]]).tolist()
-                return [[M_all_times_u[1:-1], M_all_times_v[1:-1]]] 
+                return [[M_all_times_u[1:-1]]],[[ M_all_times_v[1:-1]]] 
             
         
 
