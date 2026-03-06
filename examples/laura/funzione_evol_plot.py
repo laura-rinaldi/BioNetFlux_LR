@@ -127,6 +127,31 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     
     setup.compute_geometry_from_problems()
     
+    # ============================================================================
+    # STEP 3: VISUALIZATION SETUP (Same as original)
+    # ============================================================================
+    print("\nStep 3: Setting up visualization...")
+    
+    # Initialize plotter
+    plotter = LeanMatplotlibPlotter(
+        problems=setup.problems,
+        discretizations=setup.global_discretization.spatial_discretizations,
+        equation_names=None,  # Auto-detect
+        figsize=(15, 10)
+    )
+    
+    
+    
+    print(f"✓ Plotter initialized for {plotter.ndom} domains, {plotter.neq} equations")
+    print(f"✓ Equation names: {plotter.equation_names}")
+    
+    # Plot geometry
+    print("\nPlotting geometry...")
+    
+    setup.compute_geometry_from_problems()
+    plotter.plot_geometry_with_indices(geometry=setup.geometry,
+                                       save_filename="geometry_with_indices.png")
+    print("✓ Geometry plot created")
                     
     # ============================================================================
     # STEP 4: TIME EVOLUTION
@@ -189,6 +214,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             all_nodes.append(parametric_to_physical_mesh(domain_info, dicretization)[1]) #physical coord.
             
         
+        
         p_number= len(np.hstack( all_nodes_param))
         print('p_number=', p_number, len(tr))
         time.sleep(5)
@@ -243,7 +269,21 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         M_v = numerator_v/I_v
         M_all_times_v.append(M_v)
 
-    
+
+        # calcolo centro di massa 
+
+        # plots over time steps
+        if time_step % 2==0:  
+            for eq_idx in range(plotter.neq):
+                plotter.plot_birdview(
+                    extracted_traces_n,
+                    equation_idx=eq_idx,
+                    time=current_time,
+                    xcoord = 0.1,
+                    ycoord = 0.2,
+                    sizepoint = 80,
+                    save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                )  
         
         # Handle result
         if result.converged:
@@ -305,6 +345,24 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         multiplier_norm = np.linalg.norm(final_multipliers)
         print(f"  Multipliers: ||λ|| = {multiplier_norm:.6e}")
     
+    # ============================================================================
+    # STEP 6: FINAL VISUALIZATION
+    # ============================================================================
+    
+    print(f"\nStep 6: Creating final visualization...")
+    
+    for eq_idx in range(plotter.neq):
+        plotter.plot_birdview(
+            final_traces,
+            equation_idx=eq_idx,
+            time=current_time,
+            save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+        )
+    
+    # Evolution comparison
+ 
+    print("✓ Final visualization completed")
+    
     
     return sol_all_times, I_all_times_phi , I_all_times_w , I_all_times_v,  I_all_times_u #M_all_times_v,  M_all_times_u
     #return setup, time_stepper, solution_history, time_history
@@ -364,103 +422,11 @@ if __name__ == "__main__":
         combinazioni = genera_combinazioni() 
         
 
-        M1_i =[]
-        for i in range(200):
-            physical_vec = combinazioni[i]
-            print(physical_vec)                                                           
+        i = 150;
+        physical_vec = combinazioni[i]                                                       
 
-            sol, I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
-            M1_i.append(M1)
-            plt.figure(1) 
-            plt.plot( times, M1[:] )#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of tumoral cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_v")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots1/plot_I_v_2s.png" , bbox_inches="tight")
-
-            plt.figure(2)
-            plt.plot( times,  M2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of  immune cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_u")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots1/plot_I_u_2s.png" , bbox_inches="tight")
-
-            plt.figure(3)
-            plt.plot( times,  I1[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of chemoattractant produced by tumor")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_phi")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots1/plot_I_phi_2s.png" , bbox_inches="tight")
-
-            plt.figure(4)
-            plt.plot( times, I2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: total amount of chemoattractant produced by immune cells")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_w")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(r"./outputs/plots1/plot_I_w_2s.png" , bbox_inches="tight")
-
-            #plt.figure(5)
-            #plt.plot( times,  np.abs(M1[:]-M2[:]))#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            #plt.title("QoI: distance between the centers of the masses")
-            #plt.xlabel("time (s)")
-            #plt.ylabel("dM")
-            #plt.legend()
-            #plt.grid(True) 
-            # Salvataggio del grafico 
-            #plt.savefig(r"./outputs/plots1/plot_dM_2s.png" , bbox_inches="tight")
-
-
-        plt.figure(6)
-        plt.plot(np.arange(1,4)*10,  M1_i)
-        plt.title("QoI: center of mass of tumoral cells")
-        plt.xlabel("c")
-        plt.ylabel("M1_i")
-        plt.legend([f"{t}" for t in range(10)])
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(r"./outputs/plots/plot_M1_i.png" , bbox_inches="tight")
-
-        plt.figure(7)
-        fig, ax = plt.subplots(figsize=(7,5))
-
-        c_values = np.arange(1,4) * 10
-        tempi = np.arange(5) * 0.1
-
-        colors = plt.cm.viridis(np.linspace(0, 1, len(tempi)))
-
-        M1_plot = np.array(M1_i).T 
-
-        for idx, t in enumerate(tempi):
-            ax.plot(c_values, M1_plot[idx], color=colors[idx])
-
-        # mappable per la colorbar
-        sm = plt.cm.ScalarMappable(
-            cmap='viridis',
-            norm=plt.Normalize(vmin=tempi.min(), vmax=tempi.max())
-        )
-
-        fig.colorbar(sm, ax=ax, label="times")   
-
-        ax.set_title("QoI: center of mass of tumoral cells")
-        ax.set_xlabel("c")
-        ax.set_ylabel("M1")
-        ax.grid(True)
-        plt.show()
-
-        plt.savefig(r"./outputs/plots/plot_M1_i2.png" , bbox_inches="tight")
-        print(f"PlotS salvati in: /outputs/plots")
+        sol, I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
+            
         
         # # Check if setup failed due to configuration error
         # if result[0] is None:

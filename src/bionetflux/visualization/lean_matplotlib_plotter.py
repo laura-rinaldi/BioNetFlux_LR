@@ -262,6 +262,7 @@ class LeanMatplotlibPlotter:
                         fontsize=12, fontweight='bold')
             ax.grid(True, alpha=0.3)
             ax.legend()
+
             
             # Set nice limits for this domain
             coord_range = domain_info['end'] - domain_info['start']
@@ -408,7 +409,10 @@ class LeanMatplotlibPlotter:
                      save_filename: Optional[str] = None,
                      show_colorbar: bool = True,
                      show_bounding_box: bool = True,
-                     time: float = 0.0) -> plt.Figure:
+                     time: float = 0.0, 
+                     xcoord: Optional[float]= None,
+                     ycoord: Optional[float]= None,
+                     sizepoint: Optional[float]= 80) -> plt.Figure:
         """
         Plot solution as thick color-coded segments in 2D xy plane (bird's eye view).
         
@@ -430,6 +434,9 @@ class LeanMatplotlibPlotter:
         eq_solution = solutions[equation_idx]
         eq_name = self.equation_names[equation_idx]
         colormap = self.equation_colormaps[equation_idx % len(self.equation_colormaps)]
+        xcoord = xcoord 
+        ycoord = ycoord
+        sizepoint = sizepoint
         
         # Create 2D plot
         fig, ax = plt.subplots(1, 1, figsize=self.figsize)
@@ -454,6 +461,8 @@ class LeanMatplotlibPlotter:
             domain_solution = eq_solution[coord_start:coord_end]
             coord_start = coord_end
             
+
+
             # Map parameter coordinates to 2D extrema coordinates
             x_coords, y_coords = self._map_param_to_extrema(domain_idx, param_coords)
             
@@ -499,6 +508,7 @@ class LeanMatplotlibPlotter:
             )
             ax.add_patch(rect)
         
+        ax.scatter([xcoord], [ycoord], s=sizepoint, zorder=10, color='red')
         # Formatting
         ax.set_xlabel('x', fontsize=12)
         ax.set_ylabel('y', fontsize=12)
@@ -682,6 +692,7 @@ class LeanMatplotlibPlotter:
         # Plot grid points
         for point in all_points:
             ax.plot(point[0], point[1], 'ko', markersize=6, alpha=0.6)
+
         
         # Formatting
         ax.set_xlabel('X coordinate', fontsize=12)
