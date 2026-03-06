@@ -19,7 +19,7 @@ class ooc_sol(umbridge.Model):
         return [12]
 
     def get_output_sizes(self, config):
-        return [2]#[5]
+        return [1]#[5]
 
     def __call__(self, parameters, config):
                 config_file = "../../config/ooc_parameters.toml"
@@ -142,7 +142,7 @@ class ooc_sol(umbridge.Model):
                 # Time evolution parameters
                 current_time = 0.0
                 dt = setup.global_discretization.dt
-                T = min(0.5, setup.global_discretization.T)  # Limit runtime for demo
+                T = setup.global_discretization.T# min(0.5, setup.global_discretization.T)  # Limit runtime for demo
                 max_time_steps = int(T / dt) + 1
                 
                 # Solution history for analysis

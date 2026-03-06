@@ -136,7 +136,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     # Time evolution parameters
     current_time = 0.0
     dt = setup.global_discretization.dt
-    T = min(0.5, setup.global_discretization.T)  # Limit runtime for demo
+    T = setup.global_discretization.T# min(0.5, setup.global_discretization.T)# Limit runtime for demo
     max_time_steps = int(T / dt) + 1
     
     # Solution history for analysis
@@ -188,6 +188,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             
         
         p_number= len(np.hstack( all_nodes_param))
+        print('p_number=', p_number, len(tr))
+        time.sleep(5)
         
         tr_u = tr[ 0:p_number]
         tr_w=  tr[p_number: 2*p_number]
@@ -197,7 +199,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
         # Compute mesh size (vector of spacings)
 
-        time.sleep(5)
+        
         h =  np.diff(np.hstack( all_nodes_param))
         
         # Composite trapezoidal rule:
@@ -215,6 +217,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
 
         x_tile = np.hstack( all_nodes_param)
+        #print(x_tile)
+        #time.sleep(10)
 
         #np.tile(np.hstack(setup.global_discretization.spatial_discretizations), 4)
 
@@ -340,7 +344,7 @@ if __name__ == "__main__":
     
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
-        times= np.linspace(0,2,10)
+        times= np.linspace(0,2,19)
 
         import random 
         ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0)]

@@ -22,7 +22,6 @@ from bionetflux.utils.mesh_mapping import create_physical_mesh_dict, parametric_
 import numpy as np
 import matplotlib.pyplot as plt
 import time
-<<<<<<< HEAD
 from typing import Optional, List
 import tomli as tomllib
 import toml
@@ -34,17 +33,6 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     physical_vec: Optional[List[float]] = None,
     disc_dt: Optional[List[float]] = None,
     disc_dx: Optional[List[float]] = None):
-=======
-from typing import Optional
-import tomllib
-import toml
-
-
-def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
-    physical_vec: Optional[list[float]] = None,
-    disc_dt: Optional[list[float]] = None,
-    disc_dx: Optional[list[float]] = None):
->>>>>>> 72f9e314134a26d56b8fc7c4c70f30585a41e347
     """
     Main function demonstrating time evolution with the new TimeStepper module.
     
