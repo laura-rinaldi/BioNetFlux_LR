@@ -410,8 +410,8 @@ class LeanMatplotlibPlotter:
                      show_colorbar: bool = True,
                      show_bounding_box: bool = True,
                      time: float = 0.0, 
-                     xcoord: Optional[float]= None,
-                     ycoord: Optional[float]= None,
+                     coord: Optional[List[np.ndarray]]= None,
+                     id_domain: Optional[List[np.ndarray]]= None,
                      sizepoint: Optional[float]= 80) -> plt.Figure:
         """
         Plot solution as thick color-coded segments in 2D xy plane (bird's eye view).
@@ -434,8 +434,8 @@ class LeanMatplotlibPlotter:
         eq_solution = solutions[equation_idx]
         eq_name = self.equation_names[equation_idx]
         colormap = self.equation_colormaps[equation_idx % len(self.equation_colormaps)]
-        xcoord = xcoord 
-        ycoord = ycoord
+        coord = coord 
+        id_domain = id_domain
         sizepoint = sizepoint
         
         # Create 2D plot
@@ -508,7 +508,35 @@ class LeanMatplotlibPlotter:
             )
             ax.add_patch(rect)
         
-        ax.scatter([xcoord], [ycoord], s=sizepoint, zorder=10, color='red')
+
+        #scatter
+        
+        for i in range(int(len(coord))):
+            if id_domain[i]==0:
+                xcoord =-1.0
+                ycoord = coord[i]
+            if id_domain[i] in (1,2):
+                xcoord = 0
+                ycoord = coord[i]
+            if id_domain[i] ==3:
+                xcoord = 1.0
+                ycoord = coord[i]
+
+            if id_domain[i] in (4,6):
+                ycoord =-0.8
+                xcoord = coord[i]
+            if id_domain[i] in (5,7):
+                ycoord = -0.2
+                xcoord = coord[i]
+            if id_domain[i] in (8,10):
+                ycoord = 0.2
+                xcoord = coord[i]
+            if id_domain[i] in (9,11):
+                ycoord = 0.8
+                xcoord = coord[i]
+
+            ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
+        
         # Formatting
         ax.set_xlabel('x', fontsize=12)
         ax.set_ylabel('y', fontsize=12)

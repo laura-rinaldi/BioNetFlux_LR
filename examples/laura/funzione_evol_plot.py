@@ -271,6 +271,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
 
         # calcolo centro di massa 
+        vettore_massa = np.zeros(12)
+        vettore_pesi = 50*np.ones(12)
 
         # plots over time steps
         if time_step % 2==0:  
@@ -279,9 +281,9 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
                     extracted_traces_n,
                     equation_idx=eq_idx,
                     time=current_time,
-                    xcoord = 0.1,
-                    ycoord = 0.2,
-                    sizepoint = 80,
+                    coord = vettore_massa,
+                    id_domain = np.arange(int(len(vettore_massa))),
+                    sizepoint = vettore_pesi,
                     save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                 )  
         
