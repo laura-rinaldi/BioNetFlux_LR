@@ -214,61 +214,73 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             all_nodes.append(parametric_to_physical_mesh(domain_info, dicretization)[1]) #physical coord.
             
         
+
+        x_tile_tot= np.hstack( all_nodes_param)
+        #print('nodes', len(x_tile),x_tile[0:51] ,x_tile[52:103], x_tile[104:156])
         
         p_number= len(np.hstack( all_nodes_param))
-        print('p_number=', p_number, len(tr))
+        #print('p_number=', p_number, len(tr))
         time.sleep(5)
-        
-        tr_u = tr[ 0:p_number]
-        tr_w=  tr[p_number: 2*p_number]
-        tr_v= tr[2*p_number : 3*p_number]
-        tr_phi= tr[3*p_number:]
-        sol_all_times.append(tr) 
+        nh = int(p_number/12)
 
-        # Compute mesh size (vector of spacings)
+        M_u =[]
+        M_v =[]
+        I_phi=[]
+        I_w =[]
+        for i in range(12):
+
+            # Compute mesh size (vector of spacings)
+            h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
+            x_tile = x_tile_tot[nh*i:nh*(i+1)]
+            #print(h)
+            tr_u = tr[ 0:p_number][nh*i:nh*(i+1)]
+            #print('tru=', tr[ 0:p_number], 'tru seg=',tr[ 0:p_number][nh*i:nh*(i+1)])
+            time.sleep(10)
+            tr_w=  tr[p_number: 2*p_number][nh*i:nh*(i+1)]
+            tr_v= tr[2*p_number : 3*p_number][nh*i:nh*(i+1)]
+            tr_phi= tr[3*p_number:][nh*i:nh*(i+1)]
+            sol_all_times.append(tr) 
 
         
-        h =  np.diff(np.hstack( all_nodes_param))
-        
-        # Composite trapezoidal rule:
-        # sum over h[i] * (sol[i] + sol[i+1]) / 2
-        
-        I_phi = np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2)
-        I_all_times_phi.append(I_phi)
+            
+            # Composite trapezoidal rule:
+            # sum over h[i] * (sol[i] + sol[i+1]) / 2
+            
+            I_phi.append(np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2))
+            I_w.append(np.sum(h * (tr_w[:-1] + tr_w[1:]) / 2))
 
-        I_w = np.sum(h * (tr_w[:-1] + tr_w[1:]) / 2)
-        I_all_times_w.append(I_w)
+        
+            
 
-        I_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
-        I_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+            I_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
+            I_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+            
+
+
+            # Barycenter numerator (Simpson-like rule)
+            fa_u = x_tile[:-1] * tr_u[:-1]
+            fb_u = x_tile[1:]  * tr_u[1:]
+            fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
+
+            numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
+            M_u.append(numerator_u/I_u)
+            print('M_u', M_u)
+            time.sleep(10)
+            
+
+            fa_v = x_tile[:-1] * tr_v[:-1]
+            fb_v = x_tile[1:]  * tr_v[1:]
+            fc_v = (x_tile[:-1] + x_tile[1:]) * (tr_v[:-1] + tr_v[1:]) / 4
+
+            numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
+            M_v.append(numerator_v/I_v)
+            
+        I_all_times_phi.append(sum(I_phi))
+        I_all_times_w.append(sum(I_w))
         I_all_times_u.append(I_u)
         I_all_times_v.append(I_v)
-
-
-        x_tile = np.hstack( all_nodes_param)
-        #print(x_tile)
-        #time.sleep(10)
-
-        #np.tile(np.hstack(setup.global_discretization.spatial_discretizations), 4)
-
-
-        # Barycenter numerator (Simpson-like rule)
-        fa_u = x_tile[:-1] * tr_u[:-1]
-        fb_u = x_tile[1:]  * tr_u[1:]
-        fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
-
-        numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
-        M_u = numerator_u/I_u
         M_all_times_u.append(M_u)
-
-        fa_v = x_tile[:-1] * tr_v[:-1]
-        fb_v = x_tile[1:]  * tr_v[1:]
-        fc_v = (x_tile[:-1] + x_tile[1:]) * (tr_v[:-1] + tr_v[1:]) / 4
-
-        numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
-        M_v = numerator_v/I_v
         M_all_times_v.append(M_v)
-
 
         # calcolo centro di massa 
         vettore_massa = np.zeros(12)
@@ -281,8 +293,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
                     extracted_traces_n,
                     equation_idx=eq_idx,
                     time=current_time,
-                    coord = vettore_massa,
-                    id_domain = np.arange(int(len(vettore_massa))),
+                    coord = M_u,
+                    id_domain = np.arange(int(len(M_u))),
                     sizepoint = vettore_pesi,
                     save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                 )  
