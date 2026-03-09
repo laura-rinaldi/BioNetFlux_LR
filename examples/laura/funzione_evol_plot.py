@@ -227,6 +227,10 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         M_v =[]
         I_phi=[]
         I_w =[]
+        I_u=[]
+        I_v =[] 
+        u_weights =[] 
+        v_weights =[] 
         for i in range(12):
 
             # Compute mesh size (vector of spacings)
@@ -252,9 +256,10 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         
             
 
-            I_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
-            I_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
-            
+            i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
+            I_u.append(i_u)
+            i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+            I_v.append(i_v)
 
 
             # Barycenter numerator (Simpson-like rule)
@@ -263,7 +268,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
 
             numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
-            M_u.append(numerator_u/I_u)
+            M_u.append(numerator_u/i_u)
             print('M_u', M_u)
             time.sleep(10)
             
@@ -273,8 +278,15 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             fc_v = (x_tile[:-1] + x_tile[1:]) * (tr_v[:-1] + tr_v[1:]) / 4
 
             numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
-            M_v.append(numerator_v/I_v)
-            
+            M_v.append(numerator_v/i_v)
+
+        #phi_weights =  I_phi/sum(I_phi) 
+        #w_weights =  I_w/sum(I_w) 
+        print('Iu', I_u, sum(I_u))
+        u_weights =  I_u/sum(I_u) 
+        v_weights =  I_v/sum(I_v)  
+
+        #print('p%=',phi_weights)
         I_all_times_phi.append(sum(I_phi))
         I_all_times_w.append(sum(I_w))
         I_all_times_u.append(I_u)
@@ -283,8 +295,20 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         M_all_times_v.append(M_v)
 
         # calcolo centro di massa 
-        vettore_massa = np.zeros(12)
-        vettore_pesi = 50*np.ones(12)
+        vettore_massa = np.zeros((plotter.neq,12))
+        vettore_pesi = np.zeros((plotter.neq,12))
+
+        # ['u', 'ω', 'v', 'φ']
+        vettore_massa[0,:]= M_u
+        vettore_massa[1,:] = np.nan
+        vettore_massa[2,:]= M_v
+        vettore_massa[3,:] = np.nan
+
+
+        vettore_pesi[0,:]= 80*100*u_weights
+       # vettore_pesi[1,:] = np.nan
+        vettore_pesi[2,:]= 80*100*v_weights
+       # vettore_pesi[3,:] = np.nan
 
         # plots over time steps
         if time_step % 2==0:  
@@ -293,9 +317,9 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
                     extracted_traces_n,
                     equation_idx=eq_idx,
                     time=current_time,
-                    coord = M_u,
+                    coord = vettore_massa[eq_idx,:],
                     id_domain = np.arange(int(len(M_u))),
-                    sizepoint = vettore_pesi,
+                    sizepoint = vettore_pesi[eq_idx,:],
                     save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                 )  
         

@@ -514,25 +514,40 @@ class LeanMatplotlibPlotter:
         for i in range(int(len(coord))):
             if id_domain[i]==0:
                 xcoord =-1.0
-                ycoord = coord[i]
-            if id_domain[i] in (1,2):
+                ycoord = coord[i]-1
+            if id_domain[i]==1:
+                xcoord = 0
+                ycoord = -coord[i]
+            if id_domain[i]==2:
                 xcoord = 0
                 ycoord = coord[i]
             if id_domain[i] ==3:
                 xcoord = 1.0
-                ycoord = coord[i]
+                ycoord = coord[i]-1
 
-            if id_domain[i] in (4,6):
-                ycoord =-0.8
-                xcoord = coord[i]
-            if id_domain[i] in (5,7):
+            if id_domain[i]==4:
+                ycoord =-0.9
+                xcoord = -coord[i]
+            if id_domain[i]==5:
                 ycoord = -0.2
-                xcoord = coord[i]
-            if id_domain[i] in (8,10):
+                xcoord = -coord[i]-1
+            if id_domain[i] ==8:
                 ycoord = 0.2
                 xcoord = coord[i]
-            if id_domain[i] in (9,11):
-                ycoord = 0.8
+            if id_domain[i] ==9:
+                ycoord = 0.9
+                xcoord = -coord[i]
+            if id_domain[i] ==6:
+                ycoord =-0.9
+                xcoord = coord[i]
+            if id_domain[i] ==7:
+                ycoord = -0.2
+                xcoord = coord[i]
+            if id_domain[i] ==10:
+                ycoord = 0.2
+                xcoord = coord[i]
+            if id_domain[i] ==11:
+                ycoord = 0.9
                 xcoord = coord[i]
 
             ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
