@@ -411,7 +411,6 @@ class LeanMatplotlibPlotter:
                      show_bounding_box: bool = True,
                      time: float = 0.0, 
                      coord: Optional[List[np.ndarray]]= None,
-                     id_domain: Optional[List[np.ndarray]]= None,
                      sizepoint: Optional[float]= 80) -> plt.Figure:
         """
         Plot solution as thick color-coded segments in 2D xy plane (bird's eye view).
@@ -435,7 +434,6 @@ class LeanMatplotlibPlotter:
         eq_name = self.equation_names[equation_idx]
         colormap = self.equation_colormaps[equation_idx % len(self.equation_colormaps)]
         coord = coord 
-        id_domain = id_domain
         sizepoint = sizepoint
         
         # Create 2D plot
@@ -512,44 +510,44 @@ class LeanMatplotlibPlotter:
         #scatter
         
         for i in range(int(len(coord))):
-            if id_domain[i]==0:
+            if i==0:
                 xcoord =-1.0
                 ycoord = coord[i]-1
-            if id_domain[i]==1:
+            if i==1:
                 xcoord = 0
                 ycoord = -coord[i]
-            if id_domain[i]==2:
+            if i==2:
                 xcoord = 0
                 ycoord = coord[i]
-            if id_domain[i] ==3:
+            if i ==3:
                 xcoord = 1.0
                 ycoord = coord[i]-1
 
-            if id_domain[i]==4:
+            if i==4:
                 ycoord =-0.9
                 xcoord = -coord[i]
-            if id_domain[i]==5:
+            if i==5:
                 ycoord = -0.2
-                xcoord = -coord[i]-1
-            if id_domain[i] ==8:
+                xcoord = -coord[i]
+            if i ==8:
                 ycoord = 0.2
-                xcoord = coord[i]
-            if id_domain[i] ==9:
+                xcoord = -coord[i]
+            if i ==9:
                 ycoord = 0.9
                 xcoord = -coord[i]
-            if id_domain[i] ==6:
+            if i ==6:
                 ycoord =-0.9
                 xcoord = coord[i]
-            if id_domain[i] ==7:
+            if i ==7:
                 ycoord = -0.2
                 xcoord = coord[i]
-            if id_domain[i] ==10:
+            if i ==10:
                 ycoord = 0.2
                 xcoord = coord[i]
-            if id_domain[i] ==11:
+            if i ==11:
                 ycoord = 0.9
                 xcoord = coord[i]
-
+            
             ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
         
         # Formatting

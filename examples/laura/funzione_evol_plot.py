@@ -213,15 +213,15 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             all_nodes_param.append(setup.global_discretization.spatial_discretizations[domain_idx].nodes) #parametric coord.
             all_nodes.append(parametric_to_physical_mesh(domain_info, dicretization)[1]) #physical coord.
             
-        
+       # print('l',extracted_traces_n, np.shape(extracted_traces_n))
 
         x_tile_tot= np.hstack( all_nodes_param)
         #print('nodes', len(x_tile),x_tile[0:51] ,x_tile[52:103], x_tile[104:156])
         
         p_number= len(np.hstack( all_nodes_param))
         #print('p_number=', p_number, len(tr))
-        time.sleep(5)
-        nh = int(p_number/12)
+        
+        nh = int(p_number/int(info['num_domains']))
 
         M_u =[]
         M_v =[]
@@ -237,14 +237,26 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
             x_tile = x_tile_tot[nh*i:nh*(i+1)]
             #print(h)
-            tr_u = tr[ 0:p_number][nh*i:nh*(i+1)]
-            #print('tru=', tr[ 0:p_number], 'tru seg=',tr[ 0:p_number][nh*i:nh*(i+1)])
             
-            tr_w=  tr[p_number: 2*p_number][nh*i:nh*(i+1)]
-            tr_v= tr[2*p_number : 3*p_number][nh*i:nh*(i+1)]
-            tr_phi= tr[3*p_number:][nh*i:nh*(i+1)]
-            print('tr', tr_u, tr_w, tr_phi, tr_v)
-            time.sleep(10)
+           # tr_u = tr[ 0:p_number][nh*i:nh*(i+1)]
+           # tr_w=  tr[p_number: 2*p_number][nh*i:nh*(i+1)]
+           # tr_v= tr[2*p_number : 3*p_number][nh*i:nh*(i+1)]
+           # tr_phi= tr[3*p_number:][nh*i:nh*(i+1)]
+
+           # tr_w=  tr[nh*i*4:nh*4*(i+1)][nh:2* nh]
+           # tr_v= tr[nh*i*4:nh*4*(i+1)][2*nh: 3*nh]
+           # tr_phi= tr[nh*i*4:nh*4*(i+1)][3*nh : 4*nh]
+
+
+
+            tr_u = extracted_traces_n[i][0:nh]
+            tr_w = extracted_traces_n[i][nh:2*nh]
+            tr_phi = extracted_traces_n[i][2*nh:3*nh]
+            tr_v = extracted_traces_n[i][3*nh:4*nh]
+            
+
+           # print('tr', tr_u, tr_w, tr_phi, tr_v)
+           # time.sleep(10)
 
         
             
@@ -269,9 +281,9 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             fc_u = (x_tile[:-1] + x_tile[1:]) * (tr_u[:-1] + tr_u[1:]) / 4
 
             numerator_u = np.sum(h * (fa_u + fb_u + 4 * fc_u) / 6)
+            
             M_u.append(numerator_u/i_u)
-            print('M_u', M_u)
-            time.sleep(10)
+
             
 
             fa_v = x_tile[:-1] * tr_v[:-1]
@@ -289,8 +301,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         #print('p%=',phi_weights)
         I_all_times_phi.append(sum(I_phi))
         I_all_times_w.append(sum(I_w))
-        I_all_times_u.append(I_u)
-        I_all_times_v.append(I_v)
+        I_all_times_u.append(sum(I_u))
+        I_all_times_v.append(sum(I_v))
         M_all_times_u.append(M_u)
         M_all_times_v.append(M_v)
 
@@ -305,23 +317,23 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         vettore_massa[3,:] = np.nan
 
 
-        vettore_pesi[0,:]= 80*100*u_weights
+        vettore_pesi[0,:]= 100*u_weights
        # vettore_pesi[1,:] = np.nan
-        vettore_pesi[2,:]= 80*100*v_weights
+       # vettore_pesi[2,:]= 100*v_weights
        # vettore_pesi[3,:] = np.nan
 
         # plots over time steps
-        if time_step % 20==0:  
+        if time_step % 10==0:  
             for eq_idx in range(plotter.neq):
                 plotter.plot_birdview(
                     extracted_traces_n,
                     equation_idx=eq_idx,
                     time=current_time,
                     coord = vettore_massa[eq_idx,:],
-                    id_domain = np.arange(int(len(M_u))),
-                    sizepoint = vettore_pesi[eq_idx,:],
+                    sizepoint = 10*vettore_pesi[eq_idx,:],
                     save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-                )  
+                ) 
+                print(eq_idx, 'coord=', vettore_massa[eq_idx,:], 'size=' , vettore_pesi[eq_idx,:]) 
         
         # Handle result
         if result.converged:
@@ -446,7 +458,7 @@ if __name__ == "__main__":
     
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
-        times= np.linspace(0,2,19)
+        
 
         import random 
         ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0)]
@@ -464,6 +476,7 @@ if __name__ == "__main__":
         physical_vec = combinazioni[i]                                                       
 
         I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
+        times= np.linspace(0,2,len(M1))
         plt.figure(100) 
         plt.plot( times, M1[:] )#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
         plt.title("QoI: total amount of tumoral cells")
