@@ -231,7 +231,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         I_v =[] 
         u_weights =[] 
         v_weights =[] 
-        for i in range(12):
+        for i in range(info['num_domains']):
 
             # Compute mesh size (vector of spacings)
             h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
@@ -239,11 +239,12 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             #print(h)
             tr_u = tr[ 0:p_number][nh*i:nh*(i+1)]
             #print('tru=', tr[ 0:p_number], 'tru seg=',tr[ 0:p_number][nh*i:nh*(i+1)])
-            time.sleep(10)
+            
             tr_w=  tr[p_number: 2*p_number][nh*i:nh*(i+1)]
             tr_v= tr[2*p_number : 3*p_number][nh*i:nh*(i+1)]
             tr_phi= tr[3*p_number:][nh*i:nh*(i+1)]
-            sol_all_times.append(tr) 
+            print('tr', tr_u, tr_w, tr_phi, tr_v)
+            time.sleep(10)
 
         
             
@@ -279,10 +280,9 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
             numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
             M_v.append(numerator_v/i_v)
-
+        sol_all_times.append(tr) 
         #phi_weights =  I_phi/sum(I_phi) 
         #w_weights =  I_w/sum(I_w) 
-        print('Iu', I_u, sum(I_u))
         u_weights =  I_u/sum(I_u) 
         v_weights =  I_v/sum(I_v)  
 
@@ -295,8 +295,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         M_all_times_v.append(M_v)
 
         # calcolo centro di massa 
-        vettore_massa = np.zeros((plotter.neq,12))
-        vettore_pesi = np.zeros((plotter.neq,12))
+        vettore_massa = np.zeros((plotter.neq,int(info['num_domains'])))
+        vettore_pesi = np.zeros((plotter.neq,int(info['num_domains'])))
 
         # ['u', 'ω', 'v', 'φ']
         vettore_massa[0,:]= M_u
@@ -311,7 +311,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
        # vettore_pesi[3,:] = np.nan
 
         # plots over time steps
-        if time_step % 2==0:  
+        if time_step % 20==0:  
             for eq_idx in range(plotter.neq):
                 plotter.plot_birdview(
                     extracted_traces_n,
@@ -387,22 +387,22 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     # STEP 6: FINAL VISUALIZATION
     # ============================================================================
     
-    print(f"\nStep 6: Creating final visualization...")
+   # print(f"\nStep 6: Creating final visualization...")
     
-    for eq_idx in range(plotter.neq):
-        plotter.plot_birdview(
-            final_traces,
-            equation_idx=eq_idx,
-            time=current_time,
-            save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-        )
+   # for eq_idx in range(plotter.neq):
+   #     plotter.plot_birdview(
+   #         final_traces,
+   #         equation_idx=eq_idx,
+   #         time=current_time,
+   #         save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+   #     )
     
     # Evolution comparison
  
-    print("✓ Final visualization completed")
+   # print("✓ Final visualization completed")
     
     
-    return sol_all_times, I_all_times_phi , I_all_times_w , I_all_times_v,  I_all_times_u #M_all_times_v,  M_all_times_u
+    return I_all_times_phi , I_all_times_w , I_all_times_v,  I_all_times_u #M_all_times_v,  M_all_times_u
     #return setup, time_stepper, solution_history, time_history
 
 
@@ -463,8 +463,47 @@ if __name__ == "__main__":
         i = 150;
         physical_vec = combinazioni[i]                                                       
 
-        sol, I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
-            
+        I1,I2, M1, M2 =run_evolution_with_time_stepper(config_file, physical_vec)
+        plt.figure(100) 
+        plt.plot( times, M1[:] )#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
+        plt.title("QoI: total amount of tumoral cells")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_v")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(r"./outputs/plots1/plot_I_v_2s.png" , bbox_inches="tight")
+
+        plt.figure(200)
+        plt.plot( times,  M2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
+        plt.title("QoI: total amount of  immune cells")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(r"./outputs/plots1/plot_I_u_2s.png" , bbox_inches="tight")
+
+        plt.figure(300)
+        plt.plot( times,  I1[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
+        plt.title("QoI: total amount of chemoattractant produced by immune cells")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_phi")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(r"./outputs/plots1/plot_I_phi_2s.png" , bbox_inches="tight")
+
+        plt.figure(400)
+        plt.plot( times, I2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
+        plt.title("QoI: total amount of chemoattractant produced by tumor cells")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_w")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(r"./outputs/plots1/plot_I_w_2s.png" , bbox_inches="tight")
+
         
         # # Check if setup failed due to configuration error
         # if result[0] is None:
