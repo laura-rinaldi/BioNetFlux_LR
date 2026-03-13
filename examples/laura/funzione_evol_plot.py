@@ -156,8 +156,67 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     # ============================================================================
     # STEP 4: TIME EVOLUTION
     # ============================================================================
-    
-    
+    def plot_bulk_solution(bulk_solutions, problems, discretizations, current_time, equation_idx):
+        """
+        Plot bulk solution (discontinuous piecewise linear per element) with analytical solution overlay.
+        
+        Args:
+            bulk_solutions: List of BulkData objects per domain
+            problems: Problem instances  
+            discretizations: Spatial discretifications
+            current_time: Current time value
+            equation_idx: Equation index to plot
+        """
+        plt.figure(figsize=(10, 6))
+        
+        for domain_idx, (bulk_data, problem, disc) in enumerate(zip(bulk_solutions, problems, discretizations)):
+            # Get elements and nodes
+            elements = disc.elements
+            nodes = disc.nodes
+            n_equations = problem.neq
+            n_elements = len(elements)
+            
+            # Get bulk solution data from BulkData object
+            bulk_sol = bulk_data.get_data()
+            
+            # Plot each element segment independently (discontinuous)
+            for elem_idx, element in enumerate(elements):
+                
+                # Get element nodes
+                node_indices = element
+                elem_nodes = [nodes[node_indices[0]], nodes[node_indices[1]]]
+                
+                # Extract bulk values for this element and equation
+                # Bulk solution format: shape (2*n_equations, n_elements)
+                # For each element, we have 2*n_equations values (left and right node for each equation)
+                bulk_values = []
+                for node_in_elem in range(2):  # 2 nodes per element
+                    # For bulk solution: row = equation*2 + node_in_element, col = element_index
+                    bulk_idx = equation_idx * 2 + node_in_elem
+                    
+                    if bulk_idx < bulk_sol.shape[0] and elem_idx < bulk_sol.shape[1]:
+                        bulk_values.append(bulk_sol[bulk_idx, elem_idx])
+                    else:
+                        print(f"Warning: Bulk solution index out of bounds for domain {domain_idx}, element {elem_idx}")
+                        bulk_values.append(0.0)
+                
+                # Plot element segment
+                if elem_idx == 0 :  # Only add label once
+                    plt.plot(elem_nodes, bulk_values, 'b-', linewidth=2, 
+                            label='Numerical (discontinuous)')
+                    plt.savefig(f'./outputs/bulk/final_birdview_eq{equation_idx}_{domain_idx}.png' , bbox_inches="tight")
+                else:
+                    plt.plot(elem_nodes, bulk_values, 'b-', linewidth=2)
+            
+            
+        
+        plt.xlabel('x')
+        plt.ylabel(f'Bulk Solution - Equation {equation_idx}')
+        plt.title(f'Bulk Solution Comparison - Equation {equation_idx} at t = {current_time:.6f}')
+        plt.legend()
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
     # Time evolution parameters
     current_time = 0.0
     dt = setup.global_discretization.dt
@@ -177,13 +236,15 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     
     
     sol_all_times = []
+    I_all_times_psi = []
     I_all_times_phi = []
-    I_all_times_w = []
     I_all_times_u = []
     I_all_times_v = []
     M_all_times_u = []
     M_all_times_v = []
     while current_time + dt <= T and time_step < max_time_steps:
+        
+        
         time_step += 1
         print(f"\n--- Time Step {time_step}: t = {current_time:.6f} → {current_time + dt:.6f} ---")
         
@@ -200,7 +261,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         ################################################
         extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(current_solution)
         tr =  np.hstack(extracted_traces_n)
-
+        
         #singole soluzioni
         # ['u', 'ω', 'v', 'φ']
         all_nodes=[]
@@ -225,8 +286,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
         M_u =[]
         M_v =[]
-        I_phi=[]
-        I_w =[]
+        I_psi=[]
+        I_phi =[]
         I_u=[]
         I_v =[] 
         u_weights =[] 
@@ -236,26 +297,18 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             # Compute mesh size (vector of spacings)
             h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
             x_tile = x_tile_tot[nh*i:nh*(i+1)]
-            #print(h)
+            #print(h) 
             
-           # tr_u = tr[ 0:p_number][nh*i:nh*(i+1)]
-           # tr_w=  tr[p_number: 2*p_number][nh*i:nh*(i+1)]
-           # tr_v= tr[2*p_number : 3*p_number][nh*i:nh*(i+1)]
-           # tr_phi= tr[3*p_number:][nh*i:nh*(i+1)]
-
-           # tr_w=  tr[nh*i*4:nh*4*(i+1)][nh:2* nh]
-           # tr_v= tr[nh*i*4:nh*4*(i+1)][2*nh: 3*nh]
-           # tr_phi= tr[nh*i*4:nh*4*(i+1)][3*nh : 4*nh]
-
-
-
             tr_u = extracted_traces_n[i][0:nh]
-            tr_w = extracted_traces_n[i][nh:2*nh]
-            tr_phi = extracted_traces_n[i][2*nh:3*nh]
-            tr_v = extracted_traces_n[i][3*nh:4*nh]
+            tr_phi = extracted_traces_n[i][nh:2*nh]
+            tr_v = extracted_traces_n[i][2*nh:3*nh]
+            tr_psi = extracted_traces_n[i][3*nh:4*nh]
+
             
 
-           # print('tr', tr_u, tr_w, tr_phi, tr_v)
+           
+            
+           # print(i , 'tr', tr_u, tr_phi, tr_psi, tr_v)
            # time.sleep(10)
 
         
@@ -263,8 +316,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             # Composite trapezoidal rule:
             # sum over h[i] * (sol[i] + sol[i+1]) / 2
             
+            I_psi.append(np.sum(h * (tr_psi[:-1] + tr_psi[1:]) / 2))
             I_phi.append(np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2))
-            I_w.append(np.sum(h * (tr_w[:-1] + tr_w[1:]) / 2))
 
         
             
@@ -293,14 +346,16 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             numerator_v = np.sum(h * (fa_v + fb_v + 4 * fc_v) / 6)
             M_v.append(numerator_v/i_v)
         sol_all_times.append(tr) 
-        #phi_weights =  I_phi/sum(I_phi) 
-        #w_weights =  I_w/sum(I_w) 
+        #psi_weights =  I_psi/sum(I_psi) 
+        #w_weights =  I_phi/sum(I_phi) 
+       # print('w',  I_u, sum(I_u))
+
         u_weights =  I_u/sum(I_u) 
         v_weights =  I_v/sum(I_v)  
 
-        #print('p%=',phi_weights)
+        #print('p%=',psi_weights)
+        I_all_times_psi.append(sum(I_psi))
         I_all_times_phi.append(sum(I_phi))
-        I_all_times_w.append(sum(I_w))
         I_all_times_u.append(sum(I_u))
         I_all_times_v.append(sum(I_v))
         M_all_times_u.append(M_u)
@@ -319,21 +374,32 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
 
         vettore_pesi[0,:]= 100*u_weights
        # vettore_pesi[1,:] = np.nan
-       # vettore_pesi[2,:]= 100*v_weights
+        vettore_pesi[2,:]= 100*v_weights
        # vettore_pesi[3,:] = np.nan
-
+      #  print('t',current_time ,extracted_traces_n[i] , tr_u)
+  
         # plots over time steps
-        if time_step % 10==0:  
+        if time_step < 10:  
             for eq_idx in range(plotter.neq):
                 plotter.plot_birdview(
                     extracted_traces_n,
                     equation_idx=eq_idx,
                     time=current_time,
                     coord = vettore_massa[eq_idx,:],
-                    sizepoint = 10*vettore_pesi[eq_idx,:],
+                    sizepoint = 20*vettore_pesi[eq_idx,:],
                     save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                 ) 
-                print(eq_idx, 'coord=', vettore_massa[eq_idx,:], 'size=' , vettore_pesi[eq_idx,:]) 
+
+
+                # Plot bulk solution  
+                plot_bulk_solution(
+                    bulk_solutions=current_bulk_data,
+                    problems=setup.problems,
+                    discretizations=setup.global_discretization.spatial_discretizations,
+                    current_time=current_time,
+                    equation_idx=eq_idx
+                )    
+               # print(eq_idx, 'coord=', vettore_massa[eq_idx,:], 'size=' , vettore_pesi[eq_idx,:]) 
         
         # Handle result
         if result.converged:
@@ -356,13 +422,13 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     #singole soluzioni
     # ['u', 'ω', 'v', 'φ']
     sol_u = sol_all_times[:, 0:p_number]
-    sol_w=  sol_all_times[:,p_number: 2*p_number]
+    sol_phi=  sol_all_times[:,p_number: 2*p_number]
     sol_v= sol_all_times[:, 2*p_number : 3*p_number]
-    sol_phi= sol_all_times[:, 3*p_number:]
+    sol_psi= sol_all_times[:, 3*p_number:]
 
     sol_all_times = np.array(sol_all_times) 
-    I_all_times_phi = np.array(I_all_times_phi) 
-    I_all_times_w = np.array(I_all_times_w)
+    I_all_times_psi = np.array(I_all_times_psi) 
+    I_all_times_phi = np.array(I_all_times_phi)
     M_all_times_u = np.array(M_all_times_u) 
     M_all_times_v = np.array(M_all_times_v)
     
@@ -414,7 +480,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
    # print("✓ Final visualization completed")
     
     
-    return I_all_times_phi , I_all_times_w , I_all_times_v,  I_all_times_u #M_all_times_v,  M_all_times_u
+    return I_all_times_psi , I_all_times_phi , I_all_times_v,  I_all_times_u #M_all_times_v,  M_all_times_u
     #return setup, time_stepper, solution_history, time_history
 
 
@@ -499,23 +565,23 @@ if __name__ == "__main__":
 
         plt.figure(300)
         plt.plot( times,  I1[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-        plt.title("QoI: total amount of chemoattractant produced by immune cells")
+        plt.title("QoI: total amount of chemical signal produced by tumor cells")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_psi")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(r"./outputs/plots1/plot_I_psi_2s.png" , bbox_inches="tight")
+
+        plt.figure(400)
+        plt.plot( times, I2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
+        plt.title("QoI: total amount of chemical signal produced by immune cells")
         plt.xlabel("time (s)")
         plt.ylabel("I_phi")
         plt.legend()
         plt.grid(True) 
         # Salvataggio del grafico 
         plt.savefig(r"./outputs/plots1/plot_I_phi_2s.png" , bbox_inches="tight")
-
-        plt.figure(400)
-        plt.plot( times, I2[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-        plt.title("QoI: total amount of chemoattractant produced by tumor cells")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_w")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(r"./outputs/plots1/plot_I_w_2s.png" , bbox_inches="tight")
 
         
         # # Check if setup failed due to configuration error

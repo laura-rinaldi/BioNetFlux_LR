@@ -508,47 +508,47 @@ class LeanMatplotlibPlotter:
         
 
         #scatter
-        
-        for i in range(int(len(coord))):
-            if i==0:
-                xcoord =-1.0
-                ycoord = coord[i]-1
-            if i==1:
-                xcoord = 0
-                ycoord = -coord[i]
-            if i==2:
-                xcoord = 0
-                ycoord = coord[i]
-            if i ==3:
-                xcoord = 1.0
-                ycoord = coord[i]-1
+        if any(coord):
+            for i in range(int(len(coord))):
+                if i==0:
+                    xcoord =-1.0
+                    ycoord = coord[i]-1
+                if i==1:
+                    xcoord = 0
+                    ycoord = -coord[i]
+                if i==2:
+                    xcoord = 0
+                    ycoord = coord[i]
+                if i ==3:
+                    xcoord = 1.0
+                    ycoord = coord[i]-1
 
-            if i==4:
-                ycoord =-0.9
-                xcoord = -coord[i]
-            if i==5:
-                ycoord = -0.2
-                xcoord = -coord[i]
-            if i ==8:
-                ycoord = 0.2
-                xcoord = -coord[i]
-            if i ==9:
-                ycoord = 0.9
-                xcoord = -coord[i]
-            if i ==6:
-                ycoord =-0.9
-                xcoord = coord[i]
-            if i ==7:
-                ycoord = -0.2
-                xcoord = coord[i]
-            if i ==10:
-                ycoord = 0.2
-                xcoord = coord[i]
-            if i ==11:
-                ycoord = 0.9
-                xcoord = coord[i]
-            
-            ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
+                if i==4:
+                    ycoord =-0.9
+                    xcoord = -coord[i]
+                if i==5:
+                    ycoord = -0.2
+                    xcoord = -coord[i]
+                if i ==8:
+                    ycoord = 0.2
+                    xcoord = -coord[i]
+                if i ==9:
+                    ycoord = 0.9
+                    xcoord = -coord[i]
+                if i ==6:
+                    ycoord =-0.9
+                    xcoord = coord[i]
+                if i ==7:
+                    ycoord = -0.2
+                    xcoord = coord[i]
+                if i ==10:
+                    ycoord = 0.2
+                    xcoord = coord[i]
+                if i ==11:
+                    ycoord = 0.9
+                    xcoord = coord[i]
+                
+                ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
         
         # Formatting
         ax.set_xlabel('x', fontsize=12)

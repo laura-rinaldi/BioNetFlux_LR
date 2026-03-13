@@ -8,7 +8,7 @@ problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensati
 
 [time_parameters]
 T = 2.0   # Final time
-dt =0.1   # Time step
+dt =0.005   # Time step
 
 [physical_parameters.viscosity]
 nu = 900.0      # D_M: diffusivity of immune cells
@@ -36,7 +36,7 @@ m1 = 1.0  # k_omega1: killing efficiency of omega on tumor cells
 m2 = 1.0  # k_omega2: dissociation constant
 
 [discretization]
-n_elements = 50 #n elementi spaziali
+n_elements = 80 #n elementi spaziali
 tau = [0.5, 0.5, 0.5, 0.5] #x stabilizzazione hdg
 
 [initial_conditions]
@@ -54,8 +54,8 @@ phi = "zeros"    # Default: zero force
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
-domain_12_v = "constant"     # Domain 0, equation v -> constant function  
-domain_10_u = "constant"     # Domain 5, equation u -> constant function
+domain_0_v = "constant"     # Domain 0, equation v -> constant function  
+domain_5_u = "constant"     # Domain 5, equation u -> constant function
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  
