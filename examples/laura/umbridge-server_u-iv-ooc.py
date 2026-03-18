@@ -156,8 +156,8 @@ class ooc_sol(umbridge.Model):
                 print("\nPlotting geometry...")
                 
                 setup.compute_geometry_from_problems()
-                plotter.plot_geometry_with_indices(geometry=setup.geometry,
-                                                save_filename="geometry_with_indices.png")
+                #plotter.plot_geometry_with_indices(geometry=setup.geometry,
+                 #                               save_filename="geometry_with_indices.png")
                 print("✓ Geometry plot created")
                                 
                 # ============================================================================
@@ -182,7 +182,7 @@ class ooc_sol(umbridge.Model):
                 # TIME EVOLUTION LOOP - SIMPLIFIED TO ONE LINE PER TIME STEP!
                 time_step = 0
                 
-                
+                sol_u = []
                 sol_all_times = []
                 I_all_times_psi = []
                 I_all_times_phi = []
@@ -206,7 +206,7 @@ class ooc_sol(umbridge.Model):
                     #QOI
                     ################################################
                     extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(current_solution)
-                    tr =  np.hstack(extracted_traces_n)
+                    #tr =  np.hstack(extracted_traces_n)
                     
                     #singole soluzioni
                     # ['u', 'ω', 'v', 'φ']
@@ -240,15 +240,17 @@ class ooc_sol(umbridge.Model):
                         # Compute mesh size (vector of spacings)
                         h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
                         x_tile = x_tile_tot[nh*i:nh*(i+1)]
+                        
                         #print(h) 
                         
                         tr_u = extracted_traces_n[i][0:nh]
                         tr_phi = extracted_traces_n[i][nh:2*nh]
                         tr_v = extracted_traces_n[i][2*nh:3*nh]
                         tr_psi = extracted_traces_n[i][3*nh:4*nh]
-
+       
+       
                         
-
+                        sol_u.append(tr_u[int(len(x_tile)/2)] )
 
                     
                         
@@ -267,7 +269,7 @@ class ooc_sol(umbridge.Model):
                         I_v.append(i_v)
 
 
-                    sol_all_times.append(tr) 
+                    #sol_all_times.append(tr) 
                     #psi_weights =  I_psi/sum(I_psi) 
                     #w_weights =  I_phi/sum(I_phi) 
                 # print('w',  I_u, sum(I_u))
@@ -334,10 +336,10 @@ class ooc_sol(umbridge.Model):
 
                 #singole soluzioni
                 # ['u', 'ω', 'v', 'φ']
-                sol_u = sol_all_times[:, 0:p_number]
-                sol_phi=  sol_all_times[:,p_number: 2*p_number]
-                sol_v= sol_all_times[:, 2*p_number : 3*p_number]
-                sol_psi= sol_all_times[:, 3*p_number:]
+                #sol_u = sol_all_times[:, 0:p_number]
+                #sol_phi=  sol_all_times[:,p_number: 2*p_number]
+                #sol_v= sol_all_times[:, 2*p_number : 3*p_number]
+                #sol_psi= sol_all_times[:, 3*p_number:]
 
                 sol_all_times = np.array(sol_all_times) 
                 I_all_times_psi = np.array(I_all_times_psi) 
@@ -346,7 +348,8 @@ class ooc_sol(umbridge.Model):
                 I_all_times_u = np.array(I_all_times_u) 
                 I_all_times_v = np.array(I_all_times_v)
                 
-                
+                #print("dim", np.shape(sol_u))
+                #print("dim", np.shape(I_all_times_v ))
                 # ============================================================================
                 # STEP 5: FINAL RESULTS AND VISUALIZATION
                 # ============================================================================
@@ -387,7 +390,8 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-                qoi = np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], I_all_times_u[1:-1], I_all_times_v[1:-1]]).tolist()
+                print("dim", np.shape(sol_u))
+                qoi = np.concatenate([I_all_times_phi[1:], I_all_times_psi[1:], sol_u[12:], I_all_times_v[1:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
                 return [[qoi]] 
             
         

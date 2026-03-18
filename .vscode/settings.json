@@ -21,5 +21,6 @@
     "python.testing.runAllTestsOnStartup": true,
     "testing.automaticallyOpenTestResults": "openOnTestStart",
     "pythonTestExplorer.testFramework": "pytest",
-    "testExplorer.useNativeTesting": true
+    "testExplorer.useNativeTesting": true,
+    "editor.fontSize": 20
 }

@@ -8,7 +8,7 @@ problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensati
 
 [time_parameters]
 T = 2.0   # Final time
-dt =0.05   # Time step
+dt =0.5   # Time step
 
 [physical_parameters.viscosity]
 nu = 900.0      # D_M: diffusivity of immune cells
@@ -36,7 +36,7 @@ m1 = 1.0  # k_omega1: killing efficiency of omega on tumor cells
 m2 = 1.0  # k_omega2: dissociation constant
 
 [discretization]
-n_elements = 80 #n elementi spaziali
+n_elements = 50 #n elementi spaziali
 tau = [0.5, 0.5, 0.5, 0.5] #x stabilizzazione hdg
 
 [initial_conditions]
