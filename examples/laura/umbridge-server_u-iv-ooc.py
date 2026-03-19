@@ -300,21 +300,6 @@ class ooc_sol(umbridge.Model):
                 # vettore_pesi[3,:] = np.nan
                 #  print('t',current_time ,extracted_traces_n[i] , tr_u)
             
-                    # plots over time steps
-                    if time_step < 10:  
-                        for eq_idx in range(plotter.neq):
-                            plotter.plot_birdview(
-                                extracted_traces_n,
-                                equation_idx=eq_idx,
-                                time=current_time,
-                                coord = vettore_massa[eq_idx,:],
-                                sizepoint = 20*vettore_pesi[eq_idx,:],
-                                save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-                            ) 
-
-
-                            
-                        # print(eq_idx, 'coord=', vettore_massa[eq_idx,:], 'size=' , vettore_pesi[eq_idx,:]) 
                     
                     # Handle result
                     if result.converged:

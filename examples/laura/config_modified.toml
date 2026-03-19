@@ -5,7 +5,7 @@ problem_type = "ooc"
 
 [time_parameters]
 T = 2.0
-dt = 0.5
+dt = 0.1
 
 [discretization]
 n_elements = 50
@@ -30,8 +30,8 @@ domain_5_u = "constant"
 [domain_force_functions]
 
 [physical_parameters.viscosity]
-nu = 200.0
-mu = 700.0
+nu = 300.0
+mu = 1000.0
 epsilon = 850.0
 sigma = 200.0
 
