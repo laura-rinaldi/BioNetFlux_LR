@@ -375,9 +375,11 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-                print("dim", np.shape(sol_u))
-                qoi = np.concatenate([I_all_times_phi[1:], I_all_times_psi[1:], sol_u[12:], I_all_times_v[1:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-                return [[qoi]] 
+                print("dim",(I_all_times_phi[1] ), (I_all_times_psi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
+                print("dim",(I_all_times_v[1] ))
+                qoi = np.concatenate([I_all_times_phi[:], I_all_times_psi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
+                print("dim", qoi)
+                return [[qoi]]
             
         
 

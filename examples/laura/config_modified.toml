@@ -24,15 +24,15 @@ v = "zeros"
 phi = "zeros"
 
 [domain_initial_conditions]
-domain_0_v = "constant"
-domain_5_u = "constant"
+domain_0_v = "gaussian"
+domain_5_u = "gaussian"
 
 [domain_force_functions]
 
 [physical_parameters.viscosity]
-nu = 300.0
-mu = 1000.0
-epsilon = 850.0
+nu = 100.0
+mu = 850.0
+epsilon = 200.0
 sigma = 200.0
 
 [physical_parameters.reaction]
