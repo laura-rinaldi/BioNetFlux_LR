@@ -11,18 +11,18 @@ T = 2.0   # Final time
 dt =0.1   # Time step
 
 [physical_parameters.viscosity]
-nu = 900.0      # D_M: diffusivity of immune cells
-mu = 200.0      # D_phi: diffusivity of chemoattractant phi
-epsilon = 200.0 # D_omega: diffusivity of chemoactractant omega
-sigma = 56.0     # D_T: diffusivity of tumor cells
-
-[physical_parameters.reaction]
-a = 1.0e-4       # beta_phi: consumption rate of phi
-c = 1.0e-4       # beta_omega: consumption rate of omega
+nu = 900.0      # D_u: diffusivity of immune cells
+mu = 200.0      # D_psi: diffusivity of chemoattractant psi
+epsilon = 200.0 # D_phi: diffusivity of chemoactractant phi
+sigma = 56.0     # D_v: diffusivity of tumor cells
 
 [physical_parameters.coupling]
-b = 0.1       # alpha_phi: production rate of phi
-d = 0.1       # alpha_omega: production rate of omega
+a = 0.1       #  production rate of phi
+c = 0.1      #  production rate of omega
+
+[physical_parameters.reaction]
+b = 1.0e-4       #  consumption rate of phi
+d =        #  consumption rate of omega
 
 # Chemotaxis: chi(x) = k1 / (k2 + x)^2
 [physical_parameters.chemotaxis]
@@ -54,8 +54,8 @@ phi = "zeros"    # Default: zero force
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
-domain_0_v = "constant"     # Domain 0, equation v -> constant function  
-domain_5_u = "constant"     # Domain 5, equation u -> constant function
+domain_4_v = "gaussian"     # Domain 0, equation v -> constant function  
+domain_11_u = "gaussian"     # Domain 5, equation u -> constant function
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  
