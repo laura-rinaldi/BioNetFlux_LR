@@ -55,7 +55,7 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("coupling", "a"), ("reaction", "b"),("coupling", "c"),  ("reaction", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
@@ -209,7 +209,7 @@ class ooc_sol(umbridge.Model):
                     #tr =  np.hstack(extracted_traces_n)
                     
                     #singole soluzioni
-                    # ['u', 'ω', 'v', 'φ']
+                    # ['u', 'v', 'φ','ω',]
                     all_nodes=[]
                     all_nodes_param=[]
                     for domain_idx in range(info['num_domains']):
@@ -248,7 +248,7 @@ class ooc_sol(umbridge.Model):
                         tr_v = extracted_traces_n[i][2*nh:3*nh]
                         tr_psi = extracted_traces_n[i][3*nh:4*nh]
        
-       
+                       # print(i, tr_u, tr_v, tr_phi, tr_psi)
                         
                         sol_u.append(tr_u[int(len(x_tile)/2)] )
 
@@ -375,11 +375,11 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-                print("dim",(I_all_times_phi[1] ), (I_all_times_psi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
-                print("dim",(I_all_times_v[1] ))
+               # print("dim",(I_all_times_phi[1] ), (I_all_times_psi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
+               # print("dim",(I_all_times_v[1] ))
                 qoi = np.concatenate([I_all_times_phi[:], I_all_times_psi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-                print("dim", qoi)
-                return [[qoi]]
+                print(sol_u[:])
+                return [[(I_all_times_v[:]).tolist()] ]
             
         
 

@@ -22,7 +22,7 @@ c = 0.1      #  production rate of omega
 
 [physical_parameters.reaction]
 b = 1.0e-4       #  consumption rate of phi
-d =        #  consumption rate of omega
+d = 1.0e-4       #  consumption rate of omega
 
 # Chemotaxis: chi(x) = k1 / (k2 + x)^2
 [physical_parameters.chemotaxis]
@@ -55,7 +55,7 @@ phi = "zeros"    # Default: zero force
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
 domain_4_v = "gaussian"     # Domain 0, equation v -> constant function  
-domain_11_u = "gaussian"     # Domain 5, equation u -> constant function
+domain_11_u = "constant"     # Domain 5, equation u -> constant function
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  

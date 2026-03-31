@@ -49,7 +49,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         if physical_vec is not None: 
             print("Override parameters") 
             # Ordine dei parametri nel vettore 
-            mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("reaction", "c"), ("coupling", "b"), ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
+            mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("coupling", "a"), ("reaction", "b"), ("coupling", "c"), ("reaction", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2"), ] 
             if len(physical_vec) != len(mapping): 
                 raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                 # Applica override 
