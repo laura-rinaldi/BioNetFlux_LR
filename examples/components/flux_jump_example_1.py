@@ -11,7 +11,7 @@ from typing import Callable, List, Optional, Union
 from bionetflux.core.static_condensation_factory import StaticCondensationFactory
 from bionetflux.core.flux_jump import domain_flux_jump
 from bionetflux.core.static_condensation_factory import StaticCondensationFactory
-from bionetflux.core.static_condensation_ooc import StaticCondensationOOC
+from bionetflux.core.static_condensation_ooc_old import StaticCondensationOOC
 from bionetflux.core.problem import Problem
 from bionetflux.core.discretization import Discretization, GlobalDiscretization
 from bionetflux.utils.elementary_matrices import ElementaryMatrices

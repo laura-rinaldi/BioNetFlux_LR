@@ -17,7 +17,7 @@ from bionetflux.core.discretization import Discretization, GlobalDiscretization
 from bionetflux.utils.elementary_matrices import ElementaryMatrices
 from bionetflux.core.static_condensation_factory import StaticCondensationFactory
 from bionetflux.core.static_condensation_keller_segel import KellerSegelStaticCondensation
-from bionetflux.core.static_condensation_ooc import StaticCondensationOOC
+from bionetflux.core.static_condensation_ooc_old import StaticCondensationOOC
 
 
 # ---------------------------------------------------------------------------

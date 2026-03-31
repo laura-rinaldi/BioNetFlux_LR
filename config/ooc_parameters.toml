@@ -7,8 +7,8 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-T = 2.0   # Final time
-dt =0.1   # Time step
+T = 200.0   # Final time
+dt =10.0   # Time step
 
 [physical_parameters.viscosity]
 nu = 900.0      # D_u: diffusivity of immune cells
@@ -55,7 +55,8 @@ phi = "zeros"    # Default: zero force
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
 domain_4_v = "gaussian"     # Domain 0, equation v -> constant function  
-domain_11_u = "constant"     # Domain 5, equation u -> constant function
+domain_11_u = "gaussian"     # Domain 5, equation u -> constant function
+domain_1_phi = 'constant'
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  

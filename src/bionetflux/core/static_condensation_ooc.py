@@ -46,10 +46,10 @@ class StaticCondensationOOC(StaticCondensationBase):
         mu = self.problem.parameters[1]      # viscosity 
         epsilon = self.problem.parameters[2] # viscosity
         sigma = self.problem.parameters[3]   # viscosity
-        a = self.problem.parameters[4]       # reaction parameter
-        b = self.problem.parameters[5]       # coupling parameter
-        c = self.problem.parameters[6]       # reaction parameter
-        d = self.problem.parameters[7]       # coupling parameter
+        a = self.problem.parameters[4]       # coupling parameter
+        b = self.problem.parameters[5]       # reaction parameter
+        c = self.problem.parameters[6]       # coupling parameter
+        d = self.problem.parameters[7]       # reaction  parameter
         
         alpha = 1/nu
         beta = 1/mu

@@ -1,7 +1,7 @@
 from typing import Type
 from .static_condensation_base import StaticCondensationBase
 from .static_condensation_keller_segel import KellerSegelStaticCondensation
-from .static_condensation_ooc import StaticCondensationOOC
+from .static_condensation_ooc_old import StaticCondensationOOC
 from .problem import Problem
 
 class StaticCondensationFactory:

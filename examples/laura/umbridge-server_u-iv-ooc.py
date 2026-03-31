@@ -184,8 +184,8 @@ class ooc_sol(umbridge.Model):
                 
                 sol_u = []
                 sol_all_times = []
-                I_all_times_psi = []
                 I_all_times_phi = []
+                I_all_times_omega = []
                 I_all_times_u = []
                 I_all_times_v = []
                 while current_time + dt <= T and time_step < max_time_steps:
@@ -229,8 +229,8 @@ class ooc_sol(umbridge.Model):
                     
                     nh = int(p_number/int(info['num_domains']))
 
-                    I_psi=[]
-                    I_phi =[]
+                    I_phi=[]
+                    I_omega =[]
                     I_u=[]
                     I_v =[] 
                     u_weights =[] 
@@ -244,11 +244,11 @@ class ooc_sol(umbridge.Model):
                         #print(h) 
                         
                         tr_u = extracted_traces_n[i][0:nh]
-                        tr_phi = extracted_traces_n[i][nh:2*nh]
+                        tr_omega = extracted_traces_n[i][nh:2*nh]
                         tr_v = extracted_traces_n[i][2*nh:3*nh]
-                        tr_psi = extracted_traces_n[i][3*nh:4*nh]
+                        tr_phi = extracted_traces_n[i][3*nh:4*nh]
        
-                       # print(i, tr_u, tr_v, tr_phi, tr_psi)
+                       # print(i, tr_u, tr_v, tr_omega, tr_phi)
                         
                         sol_u.append(tr_u[int(len(x_tile)/2)] )
 
@@ -257,8 +257,8 @@ class ooc_sol(umbridge.Model):
                         # Composite trapezoidal rule:
                         # sum over h[i] * (sol[i] + sol[i+1]) / 2
                         
-                        I_psi.append(np.sum(h * (tr_psi[:-1] + tr_psi[1:]) / 2))
                         I_phi.append(np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2))
+                        I_omega.append(np.sum(h * (tr_omega[:-1] + tr_omega[1:]) / 2))
 
                     
                         
@@ -270,16 +270,16 @@ class ooc_sol(umbridge.Model):
 
 
                     #sol_all_times.append(tr) 
-                    #psi_weights =  I_psi/sum(I_psi) 
-                    #w_weights =  I_phi/sum(I_phi) 
+                    #phi_weights =  I_phi/sum(I_phi) 
+                    #w_weights =  I_omega/sum(I_omega) 
                 # print('w',  I_u, sum(I_u))
 
                     u_weights =  I_u/sum(I_u) 
                     v_weights =  I_v/sum(I_v)  
 
-                    #print('p%=',psi_weights)
-                    I_all_times_psi.append(sum(I_psi))
+                    #print('p%=',phi_weights)
                     I_all_times_phi.append(sum(I_phi))
+                    I_all_times_omega.append(sum(I_omega))
                     I_all_times_u.append(sum(I_u))
                     I_all_times_v.append(sum(I_v))
 
@@ -322,13 +322,13 @@ class ooc_sol(umbridge.Model):
                 #singole soluzioni
                 # ['u', 'ω', 'v', 'φ']
                 #sol_u = sol_all_times[:, 0:p_number]
-                #sol_phi=  sol_all_times[:,p_number: 2*p_number]
+                #sol_omega=  sol_all_times[:,p_number: 2*p_number]
                 #sol_v= sol_all_times[:, 2*p_number : 3*p_number]
-                #sol_psi= sol_all_times[:, 3*p_number:]
+                #sol_phi= sol_all_times[:, 3*p_number:]
 
                 sol_all_times = np.array(sol_all_times) 
-                I_all_times_psi = np.array(I_all_times_psi) 
-                I_all_times_phi = np.array(I_all_times_phi)
+                I_all_times_phi = np.array(I_all_times_phi) 
+                I_all_times_omega = np.array(I_all_times_omega)
                 
                 I_all_times_u = np.array(I_all_times_u) 
                 I_all_times_v = np.array(I_all_times_v)
@@ -375,11 +375,11 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-               # print("dim",(I_all_times_phi[1] ), (I_all_times_psi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
+               # print("dim",(I_all_times_omega[1] ), (I_all_times_phi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
                # print("dim",(I_all_times_v[1] ))
-                qoi = np.concatenate([I_all_times_phi[:], I_all_times_psi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_phi[1:-1], I_all_times_psi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-                print(sol_u[:])
-                return [[(I_all_times_v[:]).tolist()] ]
+                qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_omega[1:-1], I_all_times_phi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
+                print(qoi)
+                return [[qoi] ]
             
         
 
