@@ -260,11 +260,12 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     epsilon = viscosity['epsilon']
     sigma = viscosity['sigma']
     
-    a = coupling['a']
-    c = coupling['c']
+    a = reaction['a']
+    c = reaction['c']
+
+    b = coupling['b']
+    d = coupling['d']
     
-    b = reaction['b']
-    d = reaction['d']
     
     # Chemotaxis parameters
     k1 = chemotaxis_params['k1']
@@ -280,8 +281,8 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     print(f"  Problem: {problem_name} ({neq} equations)")
     print(f"  Time: T={T}, dt={dt}")
     print(f"  Viscosity: nu={nu}, mu={mu}, epsilon={epsilon}, sigma={sigma}")
-    print(f"  Coupling: a={a}, c={c}")
-    print(f"  Reactions: b={b}, d={d}")
+    print(f"  Reactions: a={a}, c={c}")
+    print(f"  Coupling: b={b}, d={d}")
     print(f"  Chemotaxis: type={chemotaxis_params['type']}, k1={k1}, k2={k2}")
     
     # ============================================================================

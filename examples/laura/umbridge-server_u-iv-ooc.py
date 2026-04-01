@@ -55,7 +55,7 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("coupling", "a"), ("reaction", "b"),("coupling", "c"),  ("reaction", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("coupling", "b"),("reaction", "c"),  ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
@@ -206,6 +206,8 @@ class ooc_sol(umbridge.Model):
                     #QOI
                     ################################################
                     extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(current_solution)
+                   # print('etr=',extracted_traces_n)
+                   # time.sleep(30)
                     #tr =  np.hstack(extracted_traces_n)
                     
                     #singole soluzioni
@@ -249,6 +251,7 @@ class ooc_sol(umbridge.Model):
                         tr_phi = extracted_traces_n[i][3*nh:4*nh]
        
                        # print(i, tr_u, tr_v, tr_omega, tr_phi)
+                       # time.sleep(30)
                         
                         sol_u.append(tr_u[int(len(x_tile)/2)] )
 
@@ -294,13 +297,23 @@ class ooc_sol(umbridge.Model):
                     vettore_massa[3,:] = np.nan
 
 
-                    vettore_pesi[0,:]= 100*u_weights
+                  #  vettore_pesi[0,:]= 100*u_weights
                 # vettore_pesi[1,:] = np.nan
-                    vettore_pesi[2,:]= 100*v_weights
+                  #  vettore_pesi[2,:]= 100*v_weights
                 # vettore_pesi[3,:] = np.nan
                 #  print('t',current_time ,extracted_traces_n[i] , tr_u)
             
-                    
+                    # plots over time steps
+                    if current_time %10 ==0:
+                        for eq_idx in range(plotter.neq):
+                            plotter.plot_birdview(
+                                extracted_traces_n,
+                                equation_idx=eq_idx,
+                                time=current_time,
+                                coord = vettore_massa[eq_idx,:],
+                                sizepoint = 20*vettore_pesi[eq_idx,:],
+                                save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                            ) 
                     # Handle result
                     if result.converged:
 
