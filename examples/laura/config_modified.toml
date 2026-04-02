@@ -4,11 +4,11 @@ neq = 4
 problem_type = "ooc"
 
 [time_parameters]
-T = 100.0
-dt = 5.0
+T = 3600.0
+dt = 16.0
 
 [discretization]
-n_elements = 50
+h = 15.0
 tau = [ 0.5, 0.5, 0.5, 0.5,]
 
 [initial_conditions]
@@ -28,6 +28,8 @@ domain_4_v = "gaussian"
 domain_11_u = "gaussian"
 
 [domain_force_functions]
+
+[boundary_conditions]
 
 [physical_parameters.viscosity]
 nu = 30.0

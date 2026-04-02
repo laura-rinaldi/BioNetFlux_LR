@@ -370,9 +370,16 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     discretizations = []
     
     # Extract discretization parameters
-    n_elements = disc_params['n_elements']
+    h = disc_params.get('h', None)
+    n_elements_fixed = disc_params['n_elements']  # fallback when h is absent
     tau_values = disc_params['tau']
-    
+
+    if h is not None:
+        from bionetflux.core.discretization import compute_n_elements_from_h
+        print(f"  Using target mesh size h = {h} (n_elements computed per domain)")
+    else:
+        print(f"  Using uniform n_elements = {n_elements_fixed} for all domains")
+
     # Apply config parameters to all domains based on geometry
     for domain_id in range(geometry.num_domains()):
         domain_info = geometry.get_domain(domain_id)
@@ -415,11 +422,17 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
         problems.append(problem)
         
         # Create discretization for this domain with config parameters
+        if h is not None:
+            n_elements = compute_n_elements_from_h(domain_info.domain_length, h)
+        else:
+            n_elements = n_elements_fixed
+
         discretization = Discretization(
             domain_start=domain_info.domain_start,
             domain_length=domain_info.domain_length,
-            n_elements=n_elements  # From config
+            n_elements=n_elements,
         )
+        print(f"    n_elements = {n_elements}, h_eff = {domain_info.domain_length / n_elements:.4f}")
 
         # Set stabilization parameters from config
         discretization.set_tau(tau_values)
@@ -476,6 +489,23 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     # ============================================================================
     
     constraint_manager = setup_constraints_from_geometry(geometry, problems, neq)
+    
+    # Apply TOML-based boundary condition overrides (if any)
+    boundary_overrides = config.get('boundary_conditions', {})
+    if boundary_overrides:
+        boundary_point_map = geometry.get_global_metadata().get('boundary_point_map', {})
+        if not boundary_point_map:
+            print("  ⚠️  Warning: boundary_conditions specified but no boundary_point_map "
+                  "in geometry metadata (only available for maze geometries).")
+        else:
+            from bionetflux.core.boundary_override import apply_boundary_overrides
+            apply_boundary_overrides(
+                constraint_manager,
+                boundary_overrides,
+                boundary_point_map,
+                equation_names,
+                function_resolver=config_manager.function_resolver,
+            )
     
     # Map constraints to discretizations
     constraint_manager.map_to_discretizations(discretizations)

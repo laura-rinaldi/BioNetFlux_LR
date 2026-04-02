@@ -48,6 +48,7 @@ ENV/
 
 build/
 .cache/
+MatlabReference/
 
 # Generated outputs in examples
 examples/*.png
@@ -68,4 +69,6 @@ requirements.txt.conda-backup
 AGENT_INSTRUCTIONS.md
 AGENT_RULES_SHORT.md
 PROMPTS.md
+
+outputs/
 
