@@ -4,8 +4,8 @@ neq = 4
 problem_type = "ooc"
 
 [time_parameters]
-T = 600.0
-dt = 10.0
+T = 100.0
+dt = 5.0
 
 [discretization]
 n_elements = 50
@@ -30,22 +30,18 @@ domain_11_u = "gaussian"
 [domain_force_functions]
 
 [physical_parameters.viscosity]
-nu = 10.0
-mu = 200.0
-epsilon = 1e-12
-sigma = 1e-12
+nu = 30.0
+mu = 30.0
+epsilon = 30.0
+sigma = 56.0
 
 [physical_parameters.reaction]
-a = 0.1
-c = 0.1
-b = 0.01
-d = 1e-16
+a = 0.0005
+c = 0.0005
 
 [physical_parameters.coupling]
-b = 0.0001
-d = 0.0001
-a = 1e-12
-c = 1e-16
+b = 0.1
+d = 0.1
 
 [physical_parameters.chemotaxis]
 type = "receptor_saturation"
@@ -53,5 +49,5 @@ k1 = 3.9e-9
 k2 = 4.9999999999999996e-6
 
 [physical_parameters.tumor_suppression]
-m1 = 1e-16
+m1 = 1.9000000000000002e-11
 m2 = 0.0001

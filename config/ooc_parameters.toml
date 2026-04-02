@@ -7,22 +7,22 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-T = 600.0   # Final time
-dt =10.0   # Time step
+T = 100.0   # Final time
+dt =5.0   # Time step
 
 [physical_parameters.viscosity]
-nu = 900.0      # D_u: diffusivity of immune cells
-mu = 200.0      # D_psi: diffusivity of chemoattractant psi
+nu = 200.0      # D_u: diffusivity of immune cells
+mu = 900.0      # D_psi: diffusivity of chemoattractant psi
 epsilon = 200.0 # D_phi: diffusivity of chemoactractant phi
 sigma = 56.0     # D_v: diffusivity of tumor cells
 
 [physical_parameters.reaction]
-a = 0.1       #  production rate of phi
-c = 0.1      #  production rate of omega
+a = 1.0e-4      #  consumption rate of phi
+c = 1.0e-4     #   consumption rate of omega
 
 [physical_parameters.coupling]
-b = 1.0e-4       #  consumption rate of phi
-d = 1.0e-4       #  consumption rate of omega
+b = 1.0e-1       #   production rate of phi
+d = 1.0e-1       #  production rate of omega
 
 # Chemotaxis: chi(x) = k1 / (k2 + x)^2
 [physical_parameters.chemotaxis]

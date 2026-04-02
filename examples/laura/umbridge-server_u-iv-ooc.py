@@ -304,7 +304,7 @@ class ooc_sol(umbridge.Model):
                 #  print('t',current_time ,extracted_traces_n[i] , tr_u)
             
                     # plots over time steps
-                    if current_time %10 ==0:
+                    if current_time  ==0:
                         for eq_idx in range(plotter.neq):
                             plotter.plot_birdview(
                                 extracted_traces_n,
