@@ -32,7 +32,6 @@ class ooc_sol(umbridge.Model):
                 # Add the python_port directory to path for absolute imports
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..","src"))
 
-                
                 from setup_solver import quick_setup, SolverSetup
                 from bionetflux.time_integration import TimeStepper
                 from bionetflux.visualization.lean_matplotlib_plotter import LeanMatplotlibPlotter
@@ -119,7 +118,40 @@ class ooc_sol(umbridge.Model):
                 # ============================================================================
                 # STEP 2: TIME STEPPER INITIALIZATION 
                 # ============================================================================
-                
+                def plot_bulk(
+                                  bulk_solution,
+                                  problem,
+                                  discretization,
+                                  time) :    
+                    neq = problem.neq
+                    n_elements = discretization.n_elements
+                    nodes = discretization.nodes
+                    
+                    domain_errors = {}
+                    
+                    for eq_idx in range(neq):
+                        # Integrate over each element using 4-point quadrature
+                            for elem_idx in range(n_elements):
+                                x_left = nodes[elem_idx]
+                                x_right = nodes[elem_idx + 1]
+                                h_elem = x_right - x_left
+                                
+                                # Get bulk coefficients for this element and equation
+                                element_coeffs = bulk_solution.get_element_data(elem_idx)
+                                c0 = element_coeffs[2 * eq_idx]      # Left coefficient
+                                c1 = element_coeffs[2 * eq_idx + 1]  # Right coefficient
+                                
+                                # Map quadrature nodes to physical element
+                                xi_01 = (self.quad_nodes + 1) / 2  # Map [-1,1] to [0,1]
+                                mapped_nodes = x_left + xi_01 * h_elem
+                                
+                                # Evaluate numerical solution at quadrature points
+                                numerical_values = c0 * (1 - xi_01) + c1 * xi_01
+                                
+
+                            
+                            domain_errors[eq_idx] = numerical_values
+                    return domain_errors
                 print("\nStep 2: Initializing time stepper...")
                 
                 # Create time stepper with Newton solver configuration
@@ -133,6 +165,8 @@ class ooc_sol(umbridge.Model):
                 print(f"✓ Initial bulk data: {len(current_bulk_data)} domains")
                 
                 setup.compute_geometry_from_problems()
+
+                
                 
                 # ============================================================================
                 # STEP 3: VISUALIZATION SETUP (Same as original)
@@ -202,6 +236,13 @@ class ooc_sol(umbridge.Model):
                         dt=dt
                     )
 
+                    print('aa',current_bulk_data)
+                    result_bulk= plot_bulk(bulk_solution=current_bulk_data, 
+                                                    problem=plotter,
+                                                    discretization= setup.global_discretization.spatial_discretizations[domain_idx],
+                                                    time= current_time)
+                    print(result_bulk)
+                    time.sleep(5)
                     ################################################
                     #QOI
                     ################################################
@@ -312,7 +353,7 @@ class ooc_sol(umbridge.Model):
                                 time=current_time,
                                 coord = vettore_massa[eq_idx,:],
                                 sizepoint = 20*vettore_pesi[eq_idx,:],
-                                save_filename=f"outputs/birdview/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                                save_filename=f"outputs/birdview/20260403/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                             ) 
                     # Handle result
                     if result.converged:

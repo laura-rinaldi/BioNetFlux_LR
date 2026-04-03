@@ -24,8 +24,8 @@ v = "zeros"
 phi = "zeros"
 
 [domain_initial_conditions]
-domain_4_v = "gaussian"
-domain_11_u = "gaussian"
+domain_0_v = "gaussian"
+domain_3_u = "gaussian"
 
 [domain_force_functions]
 

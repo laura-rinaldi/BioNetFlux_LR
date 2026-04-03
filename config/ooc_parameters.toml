@@ -55,8 +55,8 @@ phi = "zeros"    # Default: zero force
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
-domain_4_v = "gaussian"     # Domain 0, equation v -> constant function  
-domain_11_u = "gaussian"     # Domain 5, equation u -> constant function
+domain_0_v = "gaussian"     # Domain 0, equation v -> constant function  
+domain_3_u = "gaussian"     # Domain 5, equation u -> constant function
 
 
 # Domain-specific overrides for force functions
