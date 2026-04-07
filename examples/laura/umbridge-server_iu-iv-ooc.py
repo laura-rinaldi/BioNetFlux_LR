@@ -82,8 +82,8 @@ class ooc_sol(umbridge.Model):
                 # ============================================================================
                 # STEP 1: SOLVER SETUP (Enhanced with config file support and error handling)
                 # ============================================================================
-                                
-                geometry = build_grid_geometry(N=2)
+                data_folder = 20260407               
+                geometry = build_grid_geometry(N=2, length=500.0)
                 
                 try:
                     # Use quick_setup with both geometry and config file support
@@ -118,40 +118,138 @@ class ooc_sol(umbridge.Model):
                 # ============================================================================
                 # STEP 2: TIME STEPPER INITIALIZATION 
                 # ============================================================================
-                def plot_bulk(
-                                  bulk_solution,
-                                  problem,
-                                  discretization,
-                                  time) :    
-                    neq = problem.neq
-                    n_elements = discretization.n_elements
-                    nodes = discretization.nodes
-                    
-                    domain_errors = {}
-                    
-                    for eq_idx in range(neq):
-                        # Integrate over each element using 4-point quadrature
-                            for elem_idx in range(n_elements):
-                                x_left = nodes[elem_idx]
-                                x_right = nodes[elem_idx + 1]
-                                h_elem = x_right - x_left
-                                
-                                # Get bulk coefficients for this element and equation
-                                element_coeffs = bulk_solution.get_element_data(elem_idx)
-                                c0 = element_coeffs[2 * eq_idx]      # Left coefficient
-                                c1 = element_coeffs[2 * eq_idx + 1]  # Right coefficient
-                                
-                                # Map quadrature nodes to physical element
-                                xi_01 = (self.quad_nodes + 1) / 2  # Map [-1,1] to [0,1]
-                                mapped_nodes = x_left + xi_01 * h_elem
-                                
-                                # Evaluate numerical solution at quadrature points
-                                numerical_values = c0 * (1 - xi_01) + c1 * xi_01
-                                
+                def plot_birdview_bulk(
+                    bulk_data_list,
+                    setup,
+                    equation_idx,
+                    time,
+                    coord=None,
+                    sizepoint=None,
+                    save_filename=None,
+                    plotter=None
+                ):
+                    """
+                    Plot a birdview-like representation of bulk solution values
+                    on 2D xy plane using the actual geometry from build_grid_geometry.
+                    """
+                    fig, ax = plt.subplots(figsize=(12, 10))
+                    spatial_discs = setup.global_discretization.spatial_discretizations
+                    num_domains = len(setup.geometry.domains)
 
+                    if len(bulk_data_list) != num_domains:
+                        raise ValueError(
+                            f"bulk_data_list deve contenere un elemento per dominio, "
+                            f"trovati {len(bulk_data_list)} != {num_domains}"
+                        )
+
+                    # Get global solution bounds for normalization
+                    vmin, vmax = np.inf, -np.inf
+                    colormap = 'viridis'
+                    
+                    for bulk_data in bulk_data_list:
+                        if hasattr(bulk_data, "get_data"):
+                            bulk_array = bulk_data.get_data()
+                        else:
+                            bulk_array = np.asarray(bulk_data)
+                        base = equation_idx * 2
+                        vals = bulk_array[base:base+2, :]
+                        vmin = min(vmin, np.min(vals))
+                        vmax = max(vmax, np.max(vals))
+                    
+                    if vmax <= vmin:
+                        vmin -= 1
+                        vmax += 1
+                    
+                    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+
+                    # Plot each domain in 2D using actual geometry extrema
+                    for domain_idx, (domain_info, disc, bulk_data) in enumerate(
+                        zip(setup.geometry.domains, spatial_discs, bulk_data_list)
+                    ):
+                        # Get parametric coordinates from discretization
+                        param_coords = disc.nodes
+
+                        if hasattr(bulk_data, "get_data"):
+                            bulk_array = bulk_data.get_data()
+                        else:
+                            bulk_array = np.asarray(bulk_data)
+
+                        n_elems = bulk_array.shape[1]
+                        base = equation_idx * 2
+                        
+                        # Extract bulk values (average per element)
+                        elem_values = (bulk_array[base + 0, :] + bulk_array[base + 1, :]) / 2.0
+
+                        # Map parametric coordinates to 2D using domain extrema
+                        extrema_start = domain_info.extrema_start
+                        extrema_end = domain_info.extrema_end
+                        
+                        # Normalize parameter coordinates to [0, 1]
+                        param_min, param_max = domain_info.domain_start, domain_info.domain_start + domain_info.domain_length
+                        t = (param_coords - param_min) / (param_max - param_min)
+                        
+                        # Linear interpolation between extrema
+                        x_coords = extrema_start[0] + t * (extrema_end[0] - extrema_start[0])
+                        y_coords = extrema_start[1] + t * (extrema_end[1] - extrema_start[1])
+
+                        # Plot segments with color based on solution value
+                        for i in range(len(elem_values)):
+                            color_val = elem_values[i]
+                            color = plt.colormaps[colormap](norm(color_val))
                             
-                            domain_errors[eq_idx] = numerical_values
-                    return domain_errors
+                            ax.plot(
+                                [x_coords[i], x_coords[i + 1]],
+                                [y_coords[i], y_coords[i + 1]],
+                                color=color, linewidth=8, alpha=0.8, solid_capstyle='round'
+                            )
+
+                        # QoI markers
+                        if (coord is not None and sizepoint is not None 
+                            and domain_idx < len(coord) and domain_idx < len(sizepoint)
+                            and not np.isnan(coord[domain_idx]) and sizepoint[domain_idx] > 0):
+                            
+                            # Use domain center for QoI marker
+                            center_x = (extrema_start[0] + extrema_end[0]) / 2
+                            center_y = (extrema_start[1] + extrema_end[1]) / 2
+                            
+                            ax.scatter(center_x, center_y, s=sizepoint[domain_idx], zorder=10, color='red')
+
+                    # Add colorbar
+                    sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
+                    sm.set_array([])
+                    cbar = plt.colorbar(sm, ax=ax, shrink=0.8)
+                    eq_name = plotter.equation_names[equation_idx] if plotter is not None else f'equation {equation_idx}'
+                    cbar.set_label(f'Bulk variable {eq_name}', fontsize=12)
+
+                    ax.set_xlabel('x', fontsize=12)
+                    ax.set_ylabel('y', fontsize=12)
+                    ax.set_aspect('equal', adjustable='box')
+                    
+                    # Set limits based on geometry
+                    all_x = []
+                    all_y = []
+                    for domain in setup.geometry.domains:
+                        all_x.extend([domain.extrema_start[0], domain.extrema_end[0]])
+                        all_y.extend([domain.extrema_start[1], domain.extrema_end[1]])
+                    
+                    x_margin = (max(all_x) - min(all_x)) * 0.1
+                    y_margin = (max(all_y) - min(all_y)) * 0.1
+                    
+                    ax.set_xlim(min(all_x) - x_margin, max(all_x) + x_margin)
+                    ax.set_ylim(min(all_y) - y_margin, max(all_y) + y_margin)
+                    
+                    ax.set_title(f'Bulk birdview (2D) - {plotter.equation_names[equation_idx]} at t = {time:.6f}', fontsize=13)
+                    ax.grid(True, alpha=0.3)
+                    fig.tight_layout()
+
+                    if save_filename:
+                        os.makedirs(os.path.dirname(save_filename), exist_ok=True)
+                        fig.savefig(save_filename, dpi=300, bbox_inches='tight')
+                    plt.close(fig)
+                
+               
+                    
+                
                 print("\nStep 2: Initializing time stepper...")
                 
                 # Create time stepper with Newton solver configuration
@@ -190,9 +288,9 @@ class ooc_sol(umbridge.Model):
                 print("\nPlotting geometry...")
                 
                 setup.compute_geometry_from_problems()
-                #plotter.plot_geometry_with_indices(geometry=setup.geometry,
-                 #                               save_filename="geometry_with_indices.png")
-                print("✓ Geometry plot created")
+               # plotter.plot_geometry_with_indices(geometry=setup.geometry,
+               #                                save_filename="geometry_with_indices.png")
+               # print("✓ Geometry plot created")
                                 
                 # ============================================================================
                 # STEP 4: TIME EVOLUTION
@@ -236,13 +334,7 @@ class ooc_sol(umbridge.Model):
                         dt=dt
                     )
 
-                    print('aa',current_bulk_data)
-                    result_bulk= plot_bulk(bulk_solution=current_bulk_data, 
-                                                    problem=plotter,
-                                                    discretization= setup.global_discretization.spatial_discretizations[domain_idx],
-                                                    time= current_time)
-                    print(result_bulk)
-                    time.sleep(5)
+
                     ################################################
                     #QOI
                     ################################################
@@ -279,12 +371,11 @@ class ooc_sol(umbridge.Model):
                     u_weights =[] 
                     v_weights =[] 
                     for i in range(info['num_domains']):
-
+                        h=config["discretization"]['h'] 
                         # Compute mesh size (vector of spacings)
-                        h =  np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
+                        # np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
                         x_tile = x_tile_tot[nh*i:nh*(i+1)]
                         
-                        #print(h) 
                         
                         tr_u = extracted_traces_n[i][0:nh]
                         tr_omega = extracted_traces_n[i][nh:2*nh]
@@ -345,6 +436,9 @@ class ooc_sol(umbridge.Model):
                 #  print('t',current_time ,extracted_traces_n[i] , tr_u)
             
                     # plots over time steps
+
+                    bulk_data_extracted = current_bulk_data
+
                     if current_time %10 ==0:
                         for eq_idx in range(plotter.neq):
                             plotter.plot_birdview(
@@ -353,8 +447,19 @@ class ooc_sol(umbridge.Model):
                                 time=current_time,
                                 coord = vettore_massa[eq_idx,:],
                                 sizepoint = 20*vettore_pesi[eq_idx,:],
-                                save_filename=f"outputs/birdview/20260403/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                                save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
                             ) 
+                
+                            plot_birdview_bulk(
+                                bulk_data_extracted,
+                                setup,
+                                equation_idx=eq_idx,
+                                time=current_time,
+                                coord=vettore_massa[eq_idx, :],
+                                sizepoint=20 * vettore_pesi[eq_idx, :],
+                                save_filename=f"outputs/birdview/{data_folder}/final_bulk_birdview_eq{eq_idx}_t{current_time:.6f}.png",
+                                plotter=plotter
+                            )
                     # Handle result
                     if result.converged:
 
@@ -367,10 +472,7 @@ class ooc_sol(umbridge.Model):
                         # Store history
                         solution_history.append(current_solution.copy())
                         time_history.append(current_time)
-                        
-                    else:
-                        print(f"  ✗ Time step failed!")
-                        break
+                      
                 sol_all_times = np.array(sol_all_times) # diventa array NumPy 
 
                 #singole soluzioni
@@ -404,7 +506,7 @@ class ooc_sol(umbridge.Model):
                 
                 # Extract final solutions
                 final_traces, final_multipliers = setup.extract_domain_solutions(current_solution)
-                
+                final_bulk_data = current_bulk_data
                 print(f"\nFinal solution characteristics:")
                 for i, trace in enumerate(final_traces):
                     trace_norm = np.linalg.norm(trace)
@@ -413,6 +515,21 @@ class ooc_sol(umbridge.Model):
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
                     print(f"  Multipliers: ||λ|| = {multiplier_norm:.6e}")
+                print(f"Final traces: {final_traces}, Final bulk data: {final_bulk_data}")
+                bulk_data_extracted = final_bulk_data
+                for eq_idx in range(plotter.neq):
+                    plot_birdview_bulk(
+                        bulk_data_extracted,
+                        setup,
+                        equation_idx=eq_idx,
+                        time=current_time,
+                        coord=vettore_massa[eq_idx, :],
+                        sizepoint=20 * vettore_pesi[eq_idx, :],
+                        save_filename=f"outputs/birdview/{data_folder}/final_bulk_birdview_eq{eq_idx}_t{current_time:.6f}.png",
+                        plotter=plotter
+                    )
+                
+    
     
                 # ============================================================================
                 # STEP 5: FINAL RESULTS AND VISUALIZATION
@@ -432,7 +549,7 @@ class ooc_sol(umbridge.Model):
                # print("dim",(I_all_times_omega[1] ), (I_all_times_phi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
                # print("dim",(I_all_times_v[1] ))
                 qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_omega[1:-1], I_all_times_phi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-                print(qoi)
+
                 return [[qoi] ]
             
         

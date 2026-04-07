@@ -1,0 +1,64 @@
+ def plot_bulk_solution(bulk_solutions, problems, discretizations, current_time, equation_idx):
+                    """
+                    Plot bulk solution (discontinuous piecewise linear per element) with analytical solution overlay.
+                    
+                    Args:
+                        bulk_solutions: List of BulkData objects per domain
+                        problems: Problem instances  
+                        discretizations: Spatial discretifications
+                        current_time: Current time value
+                        equation_idx: Equation index to plot
+                    """
+                    plt.figure(figsize=(10, 6))
+                    
+                    for domain_idx, (bulk_data, problem, disc) in enumerate(zip(bulk_solutions, problems, discretizations)):
+                        # Get domain geometry for physical coordinates
+                        domain_info = setup.geometry.domains[domain_idx]
+                        x_phys = parametric_to_physical_mesh(domain_info, disc)[1]
+                        
+                        # Get elements and nodes
+                        elements = disc.elements
+                        nodes = disc.nodes
+                        n_equations = problem.neq
+                        n_elements = len(elements)
+                        
+                        # Get bulk solution data from BulkData object
+                        bulk_sol = bulk_data.get_data()
+                        
+                        # Plot each element segment independently (discontinuous)
+                        for elem_idx, element in enumerate(elements):
+                            # Get element nodes
+                            node_indices = element
+                            elem_nodes_param = [nodes[node_indices[0]], nodes[node_indices[1]]]
+                            elem_nodes_phys = [x_phys[node_indices[0]], x_phys[node_indices[1]]]
+                            
+                            # Extract bulk values for this element and equation
+                            # Bulk solution format: shape (2*n_equations, n_elements)
+                            # For each element, we have 2*n_equations values (left and right node for each equation)
+                            bulk_values = []
+                            for node_in_elem in range(2):  # 2 nodes per element
+                                # For bulk solution: row = equation*2 + node_in_element, col = element_index
+                                bulk_idx = equation_idx * 2 + node_in_elem
+                                if bulk_idx < bulk_sol.shape[0] and elem_idx < bulk_sol.shape[1]:
+                                    bulk_values.append(bulk_sol[bulk_idx, elem_idx])
+                                else:
+                                    print(f"Warning: Bulk solution index out of bounds for domain {domain_idx}, element {elem_idx}")
+                                    bulk_values.append(0.0)
+                            
+                            # Plot element segment
+                            if elem_idx == 0 and domain_idx == 0:  # Only add label once
+                                plt.plot(elem_nodes_phys, bulk_values, 'r-', linewidth=2, 
+                                        label='Numerical (discontinuous)')
+                            else:
+                                plt.plot(elem_nodes_phys, bulk_values, 'b-', linewidth=2)
+                    
+                    
+                    plt.xlabel('x')
+                    plt.ylabel(f'Bulk Solution - Equation {equation_idx}')
+                    plt.title(f'Bulk Solution Comparison - Equation {equation_idx} at t = {current_time:.6f}')
+                    plt.legend()
+                    plt.grid(True, alpha=0.3)
+                    plt.tight_layout()
+                    plt.savefig(f"outputs/birdview/20260403/final_bulk_eq{equation_idx}_t{current_time:.6f}.png", dpi=300, bbox_inches='tight')
+                    plt.close()
+                    
