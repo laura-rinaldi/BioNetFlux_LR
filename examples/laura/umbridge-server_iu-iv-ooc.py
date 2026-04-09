@@ -456,9 +456,7 @@ class ooc_sol(umbridge.Model):
                     # plots over time steps
 
                     bulk_data_extracted = current_bulk_data
-
-                    if current_time:
-                        for eq_idx in range(plotter.neq):
+                    for eq_idx in range(plotter.neq):
                             plotter.plot_birdview(
                                 extracted_traces_n,
                                 equation_idx=eq_idx,
@@ -466,7 +464,9 @@ class ooc_sol(umbridge.Model):
                                 coord = vettore_massa[eq_idx,:],
                                 sizepoint = 20*vettore_pesi[eq_idx,:],
                                 save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-                            ) 
+                            )
+                    if current_time:
+                         
                 
                             plot_birdview_bulk(
                                 bulk_data_extracted,
