@@ -16,17 +16,17 @@ class ooc_sol(umbridge.Model):
         super().__init__("forward")
 
     def get_input_sizes(self, config):
-        return [12]
+        return [13]
 
     def get_output_sizes(self, config):
-        return [1]#[5]
+        return [1]
 
     def __call__(self, parameters, config):
                 config_file = "../../config/ooc_parameters.toml"
 
                 
                 physical_vec = [float(parameters[0][0]), float(parameters[0][1]),float(parameters[0][2]),float(parameters[0][3]),float(parameters[0][4]),float(parameters[0][5]),float(parameters[0][6]),
-                                float(parameters[0][7]),float(parameters[0][8]), float(parameters[0][9]),float(parameters[0][10]),float(parameters[0][11])]
+                                float(parameters[0][7]),float(parameters[0][8]), float(parameters[0][9]),float(parameters[0][10]),float(parameters[0][11]), float(parameters[0][12]) ]
                 
 
                 # Add the python_port directory to path for absolute imports
@@ -44,7 +44,7 @@ class ooc_sol(umbridge.Model):
                 import tomli as tomllib 
                 import toml
 
-                
+                data_folder = 20260409 
 
                 if config_file:
                     print(f"Using configuration file: {config_file}")
@@ -54,7 +54,7 @@ class ooc_sol(umbridge.Model):
                     if physical_vec is not None: 
                         print("Override parameters") 
                         # Ordine dei parametri nel vettore 
-                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("coupling", "b"),("reaction", "c"),  ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") ] 
+                        mapping = [ ("viscosity", "nu"), ("viscosity", "mu"), ("viscosity", "epsilon"), ("viscosity", "sigma"), ("reaction", "a"), ("coupling", "b"),("reaction", "c"),  ("coupling", "d"), ("chemotaxis", "k1"), ("chemotaxis", "k2"),  ("tumor_suppression", "m1"), ("tumor_suppression", "m2") , ("tumor_suppression", "m3") ] 
                         if len(physical_vec) != len(mapping): 
                             raise ValueError( f"The vector must have len = {len(mapping)}, " f"but given {len(physical_vec)}." ) 
                             # Applica override 
@@ -67,7 +67,7 @@ class ooc_sol(umbridge.Model):
                         for k, v in params.items(): 
                             print(f" {k} = {v}") 
                             print()
-                    new_config_file = "config_modified.toml"
+                    new_config_file = f"outputs/birdview/{data_folder}/config_modified.toml"
                     with open(new_config_file, "w") as f: 
                         toml.dump(config, f) 
                         print(f"Creato nuovo file TOML modificato: {new_config_file}")
@@ -82,7 +82,7 @@ class ooc_sol(umbridge.Model):
                 # ============================================================================
                 # STEP 1: SOLVER SETUP (Enhanced with config file support and error handling)
                 # ============================================================================
-                data_folder = 20260407               
+                             
                 geometry = build_grid_geometry(N=2, length=500.0)
                 
                 try:
@@ -178,7 +178,7 @@ class ooc_sol(umbridge.Model):
                         base = equation_idx * 2
                         
                         # Extract bulk values (average per element)
-                        elem_values = (bulk_array[base + 0, :] + bulk_array[base + 1, :]) / 2.0
+                        elem_values = (bulk_array[base + 0, :] + bulk_array[base + 1, :]) / 2
 
                         # Map parametric coordinates to 2D using domain extrema
                         extrema_start = domain_info.extrema_start
@@ -289,7 +289,7 @@ class ooc_sol(umbridge.Model):
                 
                 setup.compute_geometry_from_problems()
                # plotter.plot_geometry_with_indices(geometry=setup.geometry,
-               #                                save_filename="geometry_with_indices.png")
+               #                                save_filename=f"outputs/birdview/{data_folder}/geometry_with_indices.png")
                # print("✓ Geometry plot created")
                                 
                 # ============================================================================
@@ -325,7 +325,7 @@ class ooc_sol(umbridge.Model):
                     
                     time_step += 1
                     print(f"\n--- Time Step {time_step}: t = {current_time:.6f} → {current_time + dt:.6f} ---")
-                    
+                    print(f"dt = {dt}" )
                     # SINGLE CALL REPLACES ~50 LINES OF COMPLEX NEWTON ITERATION CODE!
                     result = time_stepper.advance_time_step(
                         current_solution=current_solution,
@@ -371,7 +371,7 @@ class ooc_sol(umbridge.Model):
                     u_weights =[] 
                     v_weights =[] 
                     for i in range(info['num_domains']):
-                        h=config["discretization"]['h'] 
+                        h=config["discretization"]['h'] /1000
                         # Compute mesh size (vector of spacings)
                         # np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
                         x_tile = x_tile_tot[nh*i:nh*(i+1)]
@@ -381,9 +381,28 @@ class ooc_sol(umbridge.Model):
                         tr_omega = extracted_traces_n[i][nh:2*nh]
                         tr_v = extracted_traces_n[i][2*nh:3*nh]
                         tr_phi = extracted_traces_n[i][3*nh:4*nh]
+
+
+                        # Usa:
+                        bulk_data_i = current_bulk_data[i]
+                        if hasattr(bulk_data_i, "get_data"):
+                            bulk_array = bulk_data_i.get_data()
+                        else:
+                            bulk_array = np.asarray(bulk_data_i)
+
+                        # Estrai valori bulk per equazione (media sinistra-destra per elemento)
+                        bulk_u = (bulk_array[0, :] + bulk_array[1, :]) / 2      # equazione u
+                        bulk_omega = (bulk_array[2, :] + bulk_array[3, :]) / 2  # equazione ω  
+                        bulk_v = (bulk_array[4, :] + bulk_array[5, :]) / 2      # equazione v
+                        bulk_phi = (bulk_array[6, :] + bulk_array[7, :]) / 2    # equazione φ
        
                        # print(i, tr_u, tr_v, tr_omega, tr_phi)
                        # time.sleep(30)
+
+                       # tr_u = bulk_u
+                       # tr_omega = bulk_omega
+                       # tr_v = bulk_v
+                       # tr_phi = bulk_phi
                         
                         sol_u.append(tr_u[int(len(x_tile)/2)] )
 
@@ -392,15 +411,13 @@ class ooc_sol(umbridge.Model):
                         # Composite trapezoidal rule:
                         # sum over h[i] * (sol[i] + sol[i+1]) / 2
                         
+                        i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
+                        i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+
                         I_phi.append(np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2))
                         I_omega.append(np.sum(h * (tr_omega[:-1] + tr_omega[1:]) / 2))
 
-                    
-                        
-
-                        i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
                         I_u.append(i_u)
-                        i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
                         I_v.append(i_v)
 
 
@@ -413,9 +430,10 @@ class ooc_sol(umbridge.Model):
                     v_weights =  I_v/sum(I_v)  
 
                     #print('p%=',phi_weights)
+                   # if current_time % 100 == 0:
                     I_all_times_phi.append(sum(I_phi))
                     I_all_times_omega.append(sum(I_omega))
-                    I_all_times_u.append(sum(I_u))
+                    I_all_times_u.append(I_u)
                     I_all_times_v.append(sum(I_v))
 
                     # calcolo centro di massa 
@@ -439,7 +457,7 @@ class ooc_sol(umbridge.Model):
 
                     bulk_data_extracted = current_bulk_data
 
-                    if current_time %10 ==0:
+                    if current_time:
                         for eq_idx in range(plotter.neq):
                             plotter.plot_birdview(
                                 extracted_traces_n,
@@ -457,7 +475,7 @@ class ooc_sol(umbridge.Model):
                                 time=current_time,
                                 coord=vettore_massa[eq_idx, :],
                                 sizepoint=20 * vettore_pesi[eq_idx, :],
-                                save_filename=f"outputs/birdview/{data_folder}/final_bulk_birdview_eq{eq_idx}_t{current_time:.6f}.png",
+                                save_filename=f"outputs/birdview/{data_folder}/final_birdview_bulk_eq{eq_idx}_t{current_time:.6f}.png",
                                 plotter=plotter
                             )
                     # Handle result
@@ -483,14 +501,14 @@ class ooc_sol(umbridge.Model):
                 #sol_phi= sol_all_times[:, 3*p_number:]
 
                 sol_all_times = np.array(sol_all_times) 
+
+                
                 I_all_times_phi = np.array(I_all_times_phi) 
                 I_all_times_omega = np.array(I_all_times_omega)
                 
-                I_all_times_u = np.array(I_all_times_u) 
+                I_all_times_u = np.array(I_all_times_u).flatten() 
                 I_all_times_v = np.array(I_all_times_v)
                 
-                #print("dim", np.shape(sol_u))
-                #print("dim", np.shape(I_all_times_v ))
                 # ============================================================================
                 # STEP 5: FINAL RESULTS AND VISUALIZATION
                 # ============================================================================
@@ -507,6 +525,7 @@ class ooc_sol(umbridge.Model):
                 # Extract final solutions
                 final_traces, final_multipliers = setup.extract_domain_solutions(current_solution)
                 final_bulk_data = current_bulk_data
+
                 print(f"\nFinal solution characteristics:")
                 for i, trace in enumerate(final_traces):
                     trace_norm = np.linalg.norm(trace)
@@ -515,25 +534,6 @@ class ooc_sol(umbridge.Model):
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
                     print(f"  Multipliers: ||λ|| = {multiplier_norm:.6e}")
-                print(f"Final traces: {final_traces}, Final bulk data: {final_bulk_data}")
-                bulk_data_extracted = final_bulk_data
-                for eq_idx in range(plotter.neq):
-                    plot_birdview_bulk(
-                        bulk_data_extracted,
-                        setup,
-                        equation_idx=eq_idx,
-                        time=current_time,
-                        coord=vettore_massa[eq_idx, :],
-                        sizepoint=20 * vettore_pesi[eq_idx, :],
-                        save_filename=f"outputs/birdview/{data_folder}/final_bulk_birdview_eq{eq_idx}_t{current_time:.6f}.png",
-                        plotter=plotter
-                    )
-                
-    
-    
-                # ============================================================================
-                # STEP 5: FINAL RESULTS AND VISUALIZATION
-                # ============================================================================
                 
                 
                 successful_steps = len(solution_history) - 1  # Subtract initial condition
@@ -546,10 +546,8 @@ class ooc_sol(umbridge.Model):
                 
                 if len(final_multipliers) > 0:
                     multiplier_norm = np.linalg.norm(final_multipliers)
-               # print("dim",(I_all_times_omega[1] ), (I_all_times_phi[1] ), (sol_u[0:12] ),(I_all_times_v[1] ))
-               # print("dim",(I_all_times_v[1] ))
-                qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:], sol_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_omega[1:-1], I_all_times_phi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-
+                print(np.shape(I_all_times_omega))
+                qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:], I_all_times_u[:], I_all_times_v[:]]).tolist() 
                 return [[qoi] ]
             
         
