@@ -339,11 +339,9 @@ class ooc_sol(umbridge.Model):
                     #QOI
                     ################################################
                     extracted_traces_n, extracted_multipliers_n = setup.extract_domain_solutions(current_solution)
-                   # print('etr=',extracted_traces_n)
-                   # time.sleep(30)
-                    #tr =  np.hstack(extracted_traces_n)
+                  
                     
-                    #singole soluzioni
+                    #ssolutions
                     # ['u', 'v', 'φ','ω',]
                     all_nodes=[]
                     all_nodes_param=[]
@@ -357,10 +355,8 @@ class ooc_sol(umbridge.Model):
               
 
                     x_tile_tot= np.hstack( all_nodes_param)
-                    #print('nodes', len(x_tile),x_tile[0:51] ,x_tile[52:103], x_tile[104:156])
                     
                     p_number= len(np.hstack( all_nodes_param))
-                    #print('p_number=', p_number, len(tr))
                     
                     nh = int(p_number/int(info['num_domains']))
 
@@ -368,12 +364,10 @@ class ooc_sol(umbridge.Model):
                     I_omega =[]
                     I_u=[]
                     I_v =[] 
-                    u_weights =[] 
-                    v_weights =[] 
+
                     for i in range(info['num_domains']):
-                        h=config["discretization"]['h'] /1000
+                        h=config["discretization"]['h'] 
                         # Compute mesh size (vector of spacings)
-                        # np.diff(np.hstack( all_nodes_param))[nh*i:nh*(i+1)-1]
                         x_tile = x_tile_tot[nh*i:nh*(i+1)]
                         
                         
@@ -390,19 +384,23 @@ class ooc_sol(umbridge.Model):
                         else:
                             bulk_array = np.asarray(bulk_data_i)
 
-                        # Estrai valori bulk per equazione (media sinistra-destra per elemento)
-                        bulk_u = (bulk_array[0, :] + bulk_array[1, :]) / 2      # equazione u
-                        bulk_omega = (bulk_array[2, :] + bulk_array[3, :]) / 2  # equazione ω  
-                        bulk_v = (bulk_array[4, :] + bulk_array[5, :]) / 2      # equazione v
-                        bulk_phi = (bulk_array[6, :] + bulk_array[7, :]) / 2    # equazione φ
+                        # average bulks (media sinistra-destra per elemento)
+                        bulk_a_u = (bulk_array[0, :] + bulk_array[1, :]) / 2      # equazione u
+                        bulk_a_omega = (bulk_array[2, :] + bulk_array[3, :]) / 2  # equazione ω  
+                        bulk_a_v = (bulk_array[4, :] + bulk_array[5, :]) / 2      # equazione v
+                        bulk_a_phi = (bulk_array[6, :] + bulk_array[7, :]) / 2    # equazione φ
        
-                       # print(i, tr_u, tr_v, tr_omega, tr_phi)
-                       # time.sleep(30)
+                        bulk_u = bulk_array[0:2, :].flatten() 
+                        bulk_omega = bulk_array[2:4, :]   
+                        bulk_v = bulk_array[4:6, :]      
+                        bulk_phi = bulk_array[6:8, :]  
+       
+                    
 
-                       # tr_u = bulk_u
-                       # tr_omega = bulk_omega
-                       # tr_v = bulk_v
-                       # tr_phi = bulk_phi
+                        tr_u = bulk_u
+                        tr_omega = bulk_omega
+                        tr_v = bulk_v
+                        tr_phi = bulk_phi
                         
                         sol_u.append(tr_u[int(len(x_tile)/2)] )
 
@@ -410,74 +408,50 @@ class ooc_sol(umbridge.Model):
                         
                         # Composite trapezoidal rule:
                         # sum over h[i] * (sol[i] + sol[i+1]) / 2
+                        len_segment = h*len(tr_u)
                         
-                        i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)
-                        i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)
+                        i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)/len_segment
+                        i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)/len_segment
+                        i_phi = np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2)/ len_segment
+                        i_omega = np.sum(h * (tr_omega[:-1] + tr_omega[1:]) / 2)/ len_segment
 
-                        I_phi.append(np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2))
-                        I_omega.append(np.sum(h * (tr_omega[:-1] + tr_omega[1:]) / 2))
-
+                        I_phi.append(i_phi)
+                        I_omega.append(i_omega)
                         I_u.append(i_u)
-                        I_v.append(i_v)
+                        I_v.append(i_v) 
 
-
-                    #sol_all_times.append(tr) 
-                    #phi_weights =  I_phi/sum(I_phi) 
-                    #w_weights =  I_omega/sum(I_omega) 
-                # print('w',  I_u, sum(I_u))
-
-                    u_weights =  I_u/sum(I_u) 
-                    v_weights =  I_v/sum(I_v)  
-
-                    #print('p%=',phi_weights)
+               
                    # if current_time % 100 == 0:
                     I_all_times_phi.append(sum(I_phi))
                     I_all_times_omega.append(sum(I_omega))
                     I_all_times_u.append(I_u)
                     I_all_times_v.append(sum(I_v))
 
-                    # calcolo centro di massa 
-                    vettore_massa = np.zeros((plotter.neq,int(info['num_domains'])))
-                    vettore_pesi = np.zeros((plotter.neq,int(info['num_domains'])))
-
-                    # ['u', 'ω', 'v', 'φ']
-                    vettore_massa[0,:]= np.nan
-                    vettore_massa[1,:] = np.nan
-                    vettore_massa[2,:]= np.nan
-                    vettore_massa[3,:] = np.nan
-
-
-                  #  vettore_pesi[0,:]= 100*u_weights
-                # vettore_pesi[1,:] = np.nan
-                  #  vettore_pesi[2,:]= 100*v_weights
-                # vettore_pesi[3,:] = np.nan
-                #  print('t',current_time ,extracted_traces_n[i] , tr_u)
+                    
             
                     # plots over time steps
 
                     bulk_data_extracted = current_bulk_data
-                    for eq_idx in range(plotter.neq):
-                            plotter.plot_birdview(
-                                extracted_traces_n,
-                                equation_idx=eq_idx,
-                                time=current_time,
-                                coord = vettore_massa[eq_idx,:],
-                                sizepoint = 20*vettore_pesi[eq_idx,:],
-                                save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-                            )
-                    if current_time:
+                   # if not current_time:
+                     #   for eq_idx in range(plotter.neq):
+                     #       plotter.plot_birdview(
+                     #           extracted_traces_n,
+                     #           equation_idx=eq_idx,
+                     #           time=current_time,
+                     #           coord = vettore_massa[eq_idx,:],
+                     #           sizepoint = 20*vettore_pesi[eq_idx,:],
+                     #           save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                     #       )
                          
                 
-                            plot_birdview_bulk(
-                                bulk_data_extracted,
-                                setup,
-                                equation_idx=eq_idx,
-                                time=current_time,
-                                coord=vettore_massa[eq_idx, :],
-                                sizepoint=20 * vettore_pesi[eq_idx, :],
-                                save_filename=f"outputs/birdview/{data_folder}/final_birdview_bulk_eq{eq_idx}_t{current_time:.6f}.png",
-                                plotter=plotter
-                            )
+                     #       plot_birdview_bulk(
+                     #           bulk_data_extracted,
+                     #           setup,
+                     #           equation_idx=eq_idx,
+                     #           time=current_time,
+                     #           save_filename=f"outputs/birdview/{data_folder}/final_birdview_bulk_eq{eq_idx}_t{current_time:.6f}.png",
+                     #           plotter=plotter
+                     #       )
                     # Handle result
                     if result.converged:
 
