@@ -44,7 +44,7 @@ class ooc_sol(umbridge.Model):
                 import tomli as tomllib 
                 import toml
 
-                data_folder = 20260409 
+                data_folder = 20260410 
 
                 if config_file:
                     print(f"Using configuration file: {config_file}")
@@ -364,7 +364,6 @@ class ooc_sol(umbridge.Model):
                     I_omega =[]
                     I_u=[]
                     I_v =[] 
-
                     for i in range(info['num_domains']):
                         h=config["discretization"]['h'] 
                         # Compute mesh size (vector of spacings)
@@ -428,20 +427,27 @@ class ooc_sol(umbridge.Model):
                     I_all_times_v.append(sum(I_v))
 
                     
-            
+                    # calcolo centro di massa 
+                    vettore_massa = np.zeros((plotter.neq,int(info['num_domains'])))
+                    vettore_pesi = np.zeros((plotter.neq,int(info['num_domains'])))
+
+                    # ['u', 'ω', 'v', 'φ']
+                    vettore_massa[0,:]= np.nan
+                    vettore_massa[1,:] = np.nan
+                    vettore_massa[2,:]= np.nan
+                    vettore_massa[3,:] = np.nan
                     # plots over time steps
 
                     bulk_data_extracted = current_bulk_data
-                   # if not current_time:
-                     #   for eq_idx in range(plotter.neq):
-                     #       plotter.plot_birdview(
-                     #           extracted_traces_n,
-                     #           equation_idx=eq_idx,
-                     #           time=current_time,
-                     #           coord = vettore_massa[eq_idx,:],
-                     #           sizepoint = 20*vettore_pesi[eq_idx,:],
-                     #           save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-                     #       )
+                    for eq_idx in range(plotter.neq):
+                            plotter.plot_birdview(
+                                extracted_traces_n,
+                                equation_idx=eq_idx,
+                                time=current_time,
+                                coord = vettore_massa[eq_idx,:],
+                                sizepoint = 20*vettore_pesi[eq_idx,:],
+                                save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                            )
                          
                 
                      #       plot_birdview_bulk(
@@ -511,16 +517,7 @@ class ooc_sol(umbridge.Model):
                 
                 
                 successful_steps = len(solution_history) - 1  # Subtract initial condition
-                
-                # Extract final solutions
-                final_traces, final_multipliers = setup.extract_domain_solutions(current_solution)
-                
-                for i, trace in enumerate(final_traces):
-                    trace_norm = np.linalg.norm(trace)
-                
-                if len(final_multipliers) > 0:
-                    multiplier_norm = np.linalg.norm(final_multipliers)
-                print(np.shape(I_all_times_omega))
+              
                 qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:], I_all_times_u[:], I_all_times_v[:]]).tolist() 
                 return [[qoi] ]
             
