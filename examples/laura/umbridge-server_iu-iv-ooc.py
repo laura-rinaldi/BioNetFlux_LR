@@ -22,8 +22,7 @@ class ooc_sol(umbridge.Model):
         return [1]
 
     def __call__(self, parameters, config):
-                config_file = "../../config/ooc_parameters.toml"
-
+                config_file = "../../config/ooc_parameters.toml" 
                 
                 physical_vec = [float(parameters[0][0]), float(parameters[0][1]),float(parameters[0][2]),float(parameters[0][3]),float(parameters[0][4]),float(parameters[0][5]),float(parameters[0][6]),
                                 float(parameters[0][7]),float(parameters[0][8]), float(parameters[0][9]),float(parameters[0][10]),float(parameters[0][11]), float(parameters[0][12]) ]
@@ -44,7 +43,7 @@ class ooc_sol(umbridge.Model):
                 import tomli as tomllib 
                 import toml
 
-                data_folder = 20260410 
+                data_folder = 202604135 
 
                 if config_file:
                     print(f"Using configuration file: {config_file}")

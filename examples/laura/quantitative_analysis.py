@@ -42,7 +42,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     print("="*80)
     print("Time evolution using the new TimeStepper module")
 
-    data_folder = 20260410 
+    data_folder = 20260414 
 
     if config_file:
         print(f"Using configuration file: {config_file}")
@@ -232,7 +232,6 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         I_omega =[]
         I_u=[]
         I_v =[] 
-
         for i in range(info['num_domains']):
             h=config["discretization"]['h'] 
             # Compute mesh size (vector of spacings)
@@ -296,22 +295,19 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         I_all_times_v.append(sum(I_v))
 
         
+        # calcolo centro di massa 
+        vettore_massa = np.zeros((plotter.neq,int(info['num_domains'])))
+        vettore_pesi = np.zeros((plotter.neq,int(info['num_domains'])))
 
+        # ['u', 'ω', 'v', 'φ']
+        vettore_massa[0,:]= np.nan
+        vettore_massa[1,:] = np.nan
+        vettore_massa[2,:]= np.nan
+        vettore_massa[3,:] = np.nan
         # plots over time steps
 
         bulk_data_extracted = current_bulk_data
-        # if not current_time:
-            #   for eq_idx in range(plotter.neq):
-            #       plotter.plot_birdview(
-            #           extracted_traces_n,
-            #           equation_idx=eq_idx,
-            #           time=current_time,
-            #           coord = vettore_massa[eq_idx,:],
-            #           sizepoint = 20*vettore_pesi[eq_idx,:],
-            #           save_filename=f"outputs/birdview/{data_folder}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
-            #       )
-                
-
+       
         # Handle result
         if result.converged:
 
@@ -342,6 +338,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     
     I_all_times_u = np.array(I_all_times_u).flatten() 
     I_all_times_v = np.array(I_all_times_v)
+                
     
     # ============================================================================
     # STEP 5: FINAL RESULTS AND VISUALIZATION
@@ -411,72 +408,120 @@ if __name__ == "__main__":
     
     try:
         # Main evolution example with config file
-                        # nu,  mu,  epsilon, sigma,  a,    c,    b,     d,    k1,   k2,   m1,    m2,    m3),
-        #physical_vec = [ 1.0,  2.0,   1.0,    1.0,  0.0,  0.0,   1.0,  1.0,  1.0 , 1.0, 1.0, 1.0, 1.0, 1.0]
+                        # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
+        physical_vecn = [ 50.,  150.,   90.,      50. , 5.e-4,  1.e-9,   5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4, 5.e-5]
     
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
-        times= np.linspace(0,9000,10)
-
+        times= np.linspace(0,72000,80)
+        #[ (40.,60.), (120., 170.), (72., 108.), (40.0, 60.0) , (4.e-4, 6.e-4), (1.e-9, 1.e-9), (4.e-4, 6.e-4), (0.8e-9, 1.2e-9), (5.6e-6, 8.4e-6) , (4.e-12, 6.e-12), (1.5e-11, 2.3e-11), (0.8e-4, 1.2e-4), (4.e-5, 6.e-5) ]
         import random 
-        ranges = [ (100.,300.), (700., 1000.), (700., 1000.), (100.0, 300.0)]#  , (1.e-4, 1.e-1), (1.e-4, 1.e-1), (1.e-4, 1.e-1), (1.e-4, 1.e-1)]
-        def genera_combinazioni(n=200): 
-            combinazioni = [] 
-            for _ in range(n): 
-                combo = [ random.uniform(r[0], r[1]) for r in ranges ] 
-                combo.extend([1.e-4,1.e-1,1.e-4,1.e-1,3.9e-9,5.e-6, 1.9*10**(-11),1.*10**(-4), 5.0*10**(-4)])
+        
+        PMm='kv'
+        lab=["min", "max"]
+        def genera_combinazioni(): 
+            combinazioni = []
+            for i in [4.5e-5, 6.e-5]: 
+                combo = [50.,  150.,  90., 50., 5.e-4,  1.e-9,  5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4, i] 
+                
                 combinazioni.append(combo) 
             return combinazioni 
         combinazioni = genera_combinazioni() 
         
-        data_folder = 20260410 
-        for i in range(200):
-            physical_vec = combinazioni[i]
-            print(physical_vec)                                                           
+        Iomegan ,Iphin, Iun, Ivn =run_evolution_with_time_stepper(config_file, physical_vecn)
+        Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[0])
+        IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[1])
+        data_folder = 20260414 
 
-            Iomega ,Iphi, Iu, Iv =run_evolution_with_time_stepper(config_file, physical_vec)
 
-            plt.figure(1) 
-            plt.plot( times, Iu[::12] )#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: Iu")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_u")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_2s.png" , bbox_inches="tight")
+        plt.figure() 
+        plt.plot( times, Iun[3::12],label="nominal")
+        plt.plot( times, Ium[3::12], label="min")
+        plt.plot( times, IuM[3::12], label="max")
+        plt.title("QoI: Iu")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s3_{PMm}.png" , bbox_inches="tight")
 
-            plt.figure(2)
-            plt.plot( times,  Iv[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: Iv")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_v")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_v_2s.png" , bbox_inches="tight")
 
-            plt.figure(3)
-            plt.plot( times,  Iphi[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: Iphi")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_phi")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_phi_2s.png" , bbox_inches="tight")
+        plt.figure() 
+        plt.plot( times, Iun[2::12] ,label="nominal")
+        plt.plot( times, Ium[2::12] , label="min")
+        plt.plot( times, IuM[2::12] , label="max")
+        plt.title("QoI: Iu")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s2_{PMm}.png" , bbox_inches="tight")
 
-            plt.figure(4)
-            plt.plot( times, Iomega[:])#, label=f"nu=100.*{i},   mu= 100.*{k},   epsilon= 100.*{m},    sigma=100.*{j},    a=1.0*10**{n},    c= 1.0*10**{o},   b= 1.0*10**{p},   d= 1.0*10**{q}")
-            plt.title("QoI: Iomega")
-            plt.xlabel("time (s)")
-            plt.ylabel("I_omega")
-            plt.legend()
-            plt.grid(True) 
-            # Salvataggio del grafico 
-            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_omega_2s.png" , bbox_inches="tight")
 
-        
+        plt.figure() 
+        plt.plot( times, Iun[6::12] ,label="nominal")
+        plt.plot( times, Ium[6::12] , label="min")
+        plt.plot( times, IuM[6::12] , label="max")
+        plt.title("QoI: Iu")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s6_{PMm}.png" , bbox_inches="tight")
+
+
+        plt.figure() 
+        plt.plot( times, Iun[9::12],label="nominal")
+        plt.plot( times, Ium[9::12] , label="min")
+        plt.plot( times, IuM[9::12] , label="max")
+        plt.title("QoI: Iu")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s9_{PMm}.png" , bbox_inches="tight")
+
+        plt.figure()
+        plt.plot( times, Ivn[:],label="nominal")
+        plt.plot( times,  Ivm[:], label="min")
+        plt.plot( times,  IvM[:], label="max")
+        plt.title("QoI: Iv")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_v")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_v_{PMm}.png" , bbox_inches="tight")
+
+        plt.figure()
+        plt.plot( times, Iphin[:] ,label="nominal")
+        plt.plot( times,  Iphim[:], label="min")
+        plt.plot( times,  IphiM[:], label="max")
+        plt.title("QoI: Iphi")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_phi")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_phi_{PMm}.png" , bbox_inches="tight")
+
+        plt.figure()
+        plt.plot( times, Iomegan[:],label="nominal")
+        plt.plot( times, Iomegam[:], label="min")
+        plt.plot( times, IomegaM[:], label="max")
+        plt.title("QoI: Iomega")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_omega")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_omega_{PMm}.png" , bbox_inches="tight")
+
+    
         print(f"\n🎉 All demonstrations completed successfully!")
         
     except KeyboardInterrupt:

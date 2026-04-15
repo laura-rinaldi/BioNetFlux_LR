@@ -7,7 +7,7 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-T =9000.0   # Final time
+T =72000.0   # Final time
 dt = 900.0  # Time step
 
 [physical_parameters.viscosity]
