@@ -414,112 +414,127 @@ if __name__ == "__main__":
                 
         #result = run_evolution_with_time_stepper(config_file, physical_vec)
         times= np.linspace(0,72000,80)
-        #[ (40.,60.), (120., 170.), (72., 108.), (40.0, 60.0) , (4.e-4, 6.e-4), (1.e-9, 1.e-9), (4.e-4, 6.e-4), (0.8e-9, 1.2e-9), (5.6e-6, 8.4e-6) , (4.e-12, 6.e-12), (1.5e-11, 2.3e-11), (0.8e-4, 1.2e-4), (4.e-5, 6.e-5) ]
-        import random 
+        ranges=[ [40.,60.],  #nu=50
+                 [120., 170.], #mu=150
+                 [72., 108.], #epsilon=90
+                 [40.0, 60.0] , #sigma=50
+                 [4.e-4, 6.e-4], #a=5e-4
+                 [1.e-9, 1.e-9], #b=1e-9
+                 [4.e-4, 6.e-4], #c=5e-4
+                 [0.8e-6, 1.2e-6], #d=1e-6
+                 [5.6e-9, 8.e-9] , #k1=7e-9
+                 [4.e-12, 6.e-12], #k2=5e-12
+                 [1.5e-11, 2.3e-11], #m1=1.9e-11
+                 [0.8e-4, 1.2e-4], #m2=1e-4
+                 [4.e-5, 6.e-5] ] #m3=5e-5
+            
+
         
-        PMm='kv'
+        PMm=['nu', 'mu' ,'epsilon','sigma','a','b','c','d','k1','k2','S','eta','kv']
         lab=["min", "max"]
         def genera_combinazioni(): 
-            combinazioni = []
-            for i in [4.5e-5, 6.e-5]: 
-                combo = [50.,  150.,  90., 50., 5.e-4,  1.e-9,  5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4, i] 
-                
-                combinazioni.append(combo) 
-            return combinazioni 
+            combinazioni = np.zeros((2, len(PMm)))
+            for i in range(len(PMm)):
+                for j in ranges[i]: 
+                    combo = physical_vecn.copy()
+                    combo[i] = j
+                    combinazioni[:, i] = combo
+                return combinazioni 
         combinazioni = genera_combinazioni() 
         
         Iomegan ,Iphin, Iun, Ivn =run_evolution_with_time_stepper(config_file, physical_vecn)
-        Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[0])
-        IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[1])
-        data_folder = 20260414 
+        for i in range(len(PMm)):   
+            Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[0,i])
+            IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[1,i])
+            data_folder = 20260415 
 
 
-        plt.figure() 
-        plt.plot( times, Iun[3::12],label="nominal")
-        plt.plot( times, Ium[3::12], label="min")
-        plt.plot( times, IuM[3::12], label="max")
-        plt.title("QoI: Iu")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_u")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s3_{PMm}.png" , bbox_inches="tight")
+            plt.figure() 
+            plt.plot( times, Iun[3::12],label="nominal")
+            plt.plot( times, Ium[3::12], label="min")
+            plt.plot( times, IuM[3::12], label="max")
+            plt.title("QoI: Iu")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_u")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s3_{PMm[i]}.png" , bbox_inches="tight")
 
 
-        plt.figure() 
-        plt.plot( times, Iun[2::12] ,label="nominal")
-        plt.plot( times, Ium[2::12] , label="min")
-        plt.plot( times, IuM[2::12] , label="max")
-        plt.title("QoI: Iu")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_u")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s2_{PMm}.png" , bbox_inches="tight")
+            plt.figure() 
+            plt.plot( times, Iun[2::12] ,label="nominal")
+            plt.plot( times, Ium[2::12] , label="min")
+            plt.plot( times, IuM[2::12] , label="max")
+            plt.title("QoI: Iu")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_u")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s2_{PMm[i]}.png" , bbox_inches="tight")
 
 
-        plt.figure() 
-        plt.plot( times, Iun[6::12] ,label="nominal")
-        plt.plot( times, Ium[6::12] , label="min")
-        plt.plot( times, IuM[6::12] , label="max")
-        plt.title("QoI: Iu")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_u")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s6_{PMm}.png" , bbox_inches="tight")
+            plt.figure() 
+            plt.plot( times, Iun[6::12] ,label="nominal")
+            plt.plot( times, Ium[6::12] , label="min")
+            plt.plot( times, IuM[6::12] , label="max")
+            plt.title("QoI: Iu")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_u")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s6_{PMm[i]}.png" , bbox_inches="tight")
 
 
-        plt.figure() 
-        plt.plot( times, Iun[9::12],label="nominal")
-        plt.plot( times, Ium[9::12] , label="min")
-        plt.plot( times, IuM[9::12] , label="max")
-        plt.title("QoI: Iu")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_u")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s9_{PMm}.png" , bbox_inches="tight")
+            plt.figure() 
+            plt.plot( times, Iun[9::12],label="nominal")
+            plt.plot( times, Ium[9::12] , label="min")
+            plt.plot( times, IuM[9::12] , label="max")
+            plt.title("QoI: Iu")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_u")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s9_{PMm[i]}.png" , bbox_inches="tight")
 
-        plt.figure()
-        plt.plot( times, Ivn[:],label="nominal")
-        plt.plot( times,  Ivm[:], label="min")
-        plt.plot( times,  IvM[:], label="max")
-        plt.title("QoI: Iv")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_v")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_v_{PMm}.png" , bbox_inches="tight")
+            plt.figure()
+            plt.plot( times, Ivn[:],label="nominal")
+            plt.plot( times,  Ivm[:], label="min")
+            plt.plot( times,  IvM[:], label="max")
+            plt.title("QoI: Iv")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_v")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_v_{PMm[i]}.png" , bbox_inches="tight")
 
-        plt.figure()
-        plt.plot( times, Iphin[:] ,label="nominal")
-        plt.plot( times,  Iphim[:], label="min")
-        plt.plot( times,  IphiM[:], label="max")
-        plt.title("QoI: Iphi")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_phi")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_phi_{PMm}.png" , bbox_inches="tight")
+            plt.figure()
+            plt.plot( times, Iphin[:] ,label="nominal")
+            plt.plot( times,  Iphim[:], label="min")
+            plt.plot( times,  IphiM[:], label="max")
+            plt.title("QoI: Iphi")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_phi")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_phi_{PMm[i]}.png" , bbox_inches="tight")
 
-        plt.figure()
-        plt.plot( times, Iomegan[:],label="nominal")
-        plt.plot( times, Iomegam[:], label="min")
-        plt.plot( times, IomegaM[:], label="max")
-        plt.title("QoI: Iomega")
-        plt.xlabel("time (s)")
-        plt.ylabel("I_omega")
-        plt.legend()
-        plt.grid(True) 
-        # Salvataggio del grafico 
-        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_omega_{PMm}.png" , bbox_inches="tight")
+            plt.figure()
+            plt.plot( times, Iomegan[:],label="nominal")
+            plt.plot( times, Iomegam[:], label="min")
+            plt.plot( times, IomegaM[:], label="max")
+            plt.title("QoI: Iomega")
+            plt.xlabel("time (s)")
+            plt.ylabel("I_omega")
+            plt.legend()
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_omega_{PMm[i]}.png" , bbox_inches="tight")
 
     
         print(f"\n🎉 All demonstrations completed successfully!")
