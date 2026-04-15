@@ -42,7 +42,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     print("="*80)
     print("Time evolution using the new TimeStepper module")
 
-    data_folder = 20260414 
+    data_folder = 20260415
 
     if config_file:
         print(f"Using configuration file: {config_file}")
@@ -431,16 +431,18 @@ if __name__ == "__main__":
 
         
         PMm=['nu', 'mu' ,'epsilon','sigma','a','b','c','d','k1','k2','S','eta','kv']
-        lab=["min", "max"]
-        def genera_combinazioni(): 
-            combinazioni = np.zeros((2, len(PMm)))
-            for i in range(len(PMm)):
-                for j in ranges[i]: 
-                    combo = physical_vecn.copy()
-                    combo[i] = j
-                    combinazioni[:, i] = combo
-                return combinazioni 
-        combinazioni = genera_combinazioni() 
+        lab=["min", "max"] 
+        combinazioni = []
+        for i in range(len(PMm)):
+            for j in ranges[i]: 
+                combo = physical_vecn.copy()
+                combo[i] = j
+                if len(combinazioni) == 0:
+                    combinazioni = np.array(combo)
+                else:   
+                    combinazioni= np.vstack((combinazioni, combo)) 
+    
+        print("Combinazioni generate:" , combinazioni)
         
         Iomegan ,Iphin, Iun, Ivn =run_evolution_with_time_stepper(config_file, physical_vecn)
         for i in range(len(PMm)):   
