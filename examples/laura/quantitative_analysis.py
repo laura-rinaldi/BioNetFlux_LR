@@ -408,46 +408,68 @@ if __name__ == "__main__":
     
     try:
         # Main evolution example with config file
+        #untreated
                         # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
-        physical_vecn = [ 50.,  150.,   90.,      50. , 5.e-4,  1.e-9,   5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4, 5.e-5]
+        #physical_vecn = [ 50.,  150.,   90.,      50. , 5.e-4,  1.e-9,   5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4, 5.e-5]
     
                 
-        #result = run_evolution_with_time_stepper(config_file, physical_vec)
+    
+        times= np.linspace(0,72000,80)
+        #ranges=[ [40.,60.],  #nu=50
+         #        [120., 170.], #mu=150
+          #       [72., 108.], #epsilon=90
+           #      [40.0, 60.0] , #sigma=50
+            #     [4.e-4, 6.e-4], #a=5e-4
+             #    [0.8e-9, 1.2e-9], #b=1e-9
+              #   [4.e-4, 6.e-4], #c=5e-4
+               #  [0.8e-6, 1.2e-6], #d=1e-6
+                # [5.6e-9, 8.e-9] , #k1=7e-9
+                 #[4.e-12, 6.e-12], #k2=5e-12
+                 #[1.5e-11, 2.3e-11], #m1=1.9e-11
+                 #[0.8e-4, 1.2e-4], #m2=1e-4
+                 #[4.e-5, 6.e-5] ] #m3=5e-5
+            
+
+        #treated
+                        # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
+        physical_vecn = [ 50.,  150.,   90.,  0.5 , 5.e-4,  1.e-6,   5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4,0.]
+    
+                
+    
         times= np.linspace(0,72000,80)
         ranges=[ [40.,60.],  #nu=50
                  [120., 170.], #mu=150
                  [72., 108.], #epsilon=90
-                 [40.0, 60.0] , #sigma=50
+                 [0.4,0.6] , #sigma=0.5
                  [4.e-4, 6.e-4], #a=5e-4
-                 [1.e-9, 1.e-9], #b=1e-9
+                 [0.8e-6, 1.2e-6], #b=1e-6
                  [4.e-4, 6.e-4], #c=5e-4
                  [0.8e-6, 1.2e-6], #d=1e-6
                  [5.6e-9, 8.e-9] , #k1=7e-9
                  [4.e-12, 6.e-12], #k2=5e-12
                  [1.5e-11, 2.3e-11], #m1=1.9e-11
                  [0.8e-4, 1.2e-4], #m2=1e-4
-                 [4.e-5, 6.e-5] ] #m3=5e-5
+                 [0.,0.] ] #m3=0
             
-
-        
         PMm=['nu', 'mu' ,'epsilon','sigma','a','b','c','d','k1','k2','S','eta','kv']
         lab=["min", "max"] 
         combinazioni = []
-        for i in range(len(PMm)):
-            for j in ranges[i]: 
+        for i in range(len(PMm)-1):
+            
+            for j in range(2): 
+                
                 combo = physical_vecn.copy()
-                combo[i] = j
-                if len(combinazioni) == 0:
-                    combinazioni = np.array(combo)
-                else:   
-                    combinazioni= np.vstack((combinazioni, combo)) 
-    
-        print("Combinazioni generate:" , combinazioni)
+                combo[i] = float(ranges[i][j])
+                combinazioni.append(combo)
+
         
         Iomegan ,Iphin, Iun, Ivn =run_evolution_with_time_stepper(config_file, physical_vecn)
-        for i in range(len(PMm)):   
-            Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[0,i])
-            IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[1,i])
+        for i in range(len(PMm)-1):   
+            print(i, np.shape(combinazioni), combinazioni[2*i][:], combinazioni[2*i+1][:])
+   
+
+            Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[2*i])
+            IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[2*i+1])
             data_folder = 20260415 
 
 
