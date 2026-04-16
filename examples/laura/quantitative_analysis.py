@@ -437,6 +437,38 @@ if __name__ == "__main__":
                 
     
         times= np.linspace(0,72000,80)
+
+        PMm='a'
+        lab=["min", "max"]
+        def genera_combinazioni(): 
+            combinazioni = []
+            for i in [4e-4, 6e-4]: 
+                combo = [ 50.,  150.,   90.,  0.5 , i ,  1.e-6,   5.e-4,  1.e-6,  7.e-9 , 5.e-12, 1.9e-11, 1.e-4,0.]
+                
+                combinazioni.append(combo) 
+            return combinazioni 
+        combinazioni = genera_combinazioni() 
+        
+        Iomegan ,Iphin, Iun, Ivn =run_evolution_with_time_stepper(config_file, physical_vecn)
+        Iomegam ,Iphim, Ium, Ivm =run_evolution_with_time_stepper(config_file, combinazioni[0])
+        IomegaM ,IphiM, IuM, IvM =run_evolution_with_time_stepper(config_file, combinazioni[1])
+        data_folder = 20260415 
+
+
+        plt.figure() 
+        plt.plot( times, Iun[0::12],label="nominal")
+        plt.plot( times, Ium[0::12], label="min")
+        plt.plot( times, IuM[0::12], label="max")
+        plt.title("QoI: Iu")
+        plt.xlabel("time (s)")
+        plt.ylabel("I_u")
+        plt.legend()
+        plt.grid(True) 
+        # Salvataggio del grafico 
+        plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s0_{PMm}.png" , bbox_inches="tight")
+
+
+        time.sleep(30)
         ranges=[ [40.,60.],  #nu=50
                  [120., 170.], #mu=150
                  [72., 108.], #epsilon=90
