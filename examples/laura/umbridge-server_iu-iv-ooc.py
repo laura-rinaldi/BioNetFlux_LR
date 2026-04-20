@@ -43,7 +43,7 @@ class ooc_sol(umbridge.Model):
                 import tomli as tomllib 
                 import toml
 
-                data_folder = 202604135 
+                data_folder = 20260420 
 
                 if config_file:
                     print(f"Using configuration file: {config_file}")
