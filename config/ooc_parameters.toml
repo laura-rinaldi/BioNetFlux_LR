@@ -7,8 +7,8 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-T =1800.0   # Final time
-dt = 180.0  # Time step
+T =72000.0   # Final time
+dt = 720.0  # Time step
 
 [physical_parameters.viscosity]
 nu = 200.0      # D_M: diffusivity of immune cells
@@ -30,7 +30,7 @@ type = "receptor_saturation"  # Type of chemotaxis function
 k1 = 3.9e-9     # cellular drift velocity
 k2 = 5.0e-6     # receptor dissociation constant
 
-# Tumor suppression: lambda(x) = m1 / (m2 + x) -m3
+# Tumor suppression: lambda(x) = m1 x / (m2 + x) -m3
 [physical_parameters.tumor_suppression]
 m1 = 0.0  # k_omega1: killing efficiency of omega on tumor cells
 m2 = 1.0  # k_omega2: dissociation constant
@@ -38,7 +38,7 @@ m3 = 1.0  # k_v: proliferation constant
 
 [discretization]
 # n_elements = 10    # Used when h is absent; ignored when h is provided
-h = 50        # Target mesh size — n_elements computed per domain (even, >= 4)
+h = 50      # Target mesh size — n_elements computed per domain (even, >= 4)
 tau = [0.5, 0.5, 0.5, 0.5]
 
 [initial_conditions]
@@ -57,7 +57,7 @@ phi = "zeros"    # Default: zero force
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
 domain_0_v = "gaussian_scaled_bottom"     # Domain 0, equation v -> constant function  
-domain_3_u = "gaussian_scaled_top"     # Domain 5, equation u -> constant function
+domain_3_u = "gaussian_scaled_top"     # Domain 5, equation u -> constant function   
 
 
 # Domain-specific overrides for force functions

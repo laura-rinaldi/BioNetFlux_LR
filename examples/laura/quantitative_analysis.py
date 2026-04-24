@@ -42,7 +42,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     print("="*80)
     print("Time evolution using the new TimeStepper module")
 
-    data_folder = 20260420
+    data_folder = 202604232
 
     if config_file:
         print(f"Using configuration file: {config_file}")
@@ -188,6 +188,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     I_all_times_omega = []
     I_all_times_u = []
     I_all_times_v = []
+      
     while current_time + dt <= T and time_step < max_time_steps:
         
         
@@ -222,70 +223,55 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             all_nodes.append(parametric_to_physical_mesh(domain_info, dicretization)[1]) #physical coord.
     
 
-        x_tile_tot= np.hstack( all_nodes_param)
         
         p_number= len(np.hstack( all_nodes_param))
         
-        nh = int(p_number/int(info['num_domains']))
+       
 
         I_phi=[]
         I_omega =[]
         I_u=[]
         I_v =[] 
+        
         for i in range(info['num_domains']):
             h=config["discretization"]['h'] 
             # Compute mesh size (vector of spacings)
-            x_tile = x_tile_tot[nh*i:nh*(i+1)]
             
-            
-            tr_u = extracted_traces_n[i][0:nh]
-            tr_omega = extracted_traces_n[i][nh:2*nh]
-            tr_v = extracted_traces_n[i][2*nh:3*nh]
-            tr_phi = extracted_traces_n[i][3*nh:4*nh]
+           # mh = h * len(all_nodes_param[i]) 
+           # tr_u = extracted_traces_n[i][0:mh]
+           # tr_omega = extracted_traces_n[i][mh:2*mh]
+           # tr_v = extracted_traces_n[i][2*mh:3*mh]
+           # tr_phi = extracted_traces_n[i][3*mh:4*mh]
 
-
-            # Usa:
             bulk_data_i = current_bulk_data[i]
             if hasattr(bulk_data_i, "get_data"):
                 bulk_array = bulk_data_i.get_data()
             else:
                 bulk_array = np.asarray(bulk_data_i)
 
-            # average bulks (media sinistra-destra per elemento)
-            bulk_a_u = (bulk_array[0, :] + bulk_array[1, :]) / 2      # equazione u
-            bulk_a_omega = (bulk_array[2, :] + bulk_array[3, :]) / 2  # equazione ω  
-            bulk_a_v = (bulk_array[4, :] + bulk_array[5, :]) / 2      # equazione v
-            bulk_a_phi = (bulk_array[6, :] + bulk_array[7, :]) / 2    # equazione φ
-
-            bulk_u = bulk_array[0:2, :].flatten() 
+            bulk_u = bulk_array[0:2, :]
             bulk_omega = bulk_array[2:4, :]   
             bulk_v = bulk_array[4:6, :]      
             bulk_phi = bulk_array[6:8, :]  
-
-        
-
-            tr_u = bulk_u
-            tr_omega = bulk_omega
-            tr_v = bulk_v
-            tr_phi = bulk_phi
             
-            sol_u.append(tr_u[int(len(x_tile)/2)] )
 
         
             
             # Composite trapezoidal rule:
             # sum over h[i] * (sol[i] + sol[i+1]) / 2
-            len_segment = h*len(tr_u)
+          
             
-            i_u = np.sum(h * (tr_u[:-1] + tr_u[1:]) / 2)/len_segment
-            i_v = np.sum(h * (tr_v[:-1] + tr_v[1:]) / 2)/len_segment
-            i_phi = np.sum(h * (tr_phi[:-1] + tr_phi[1:]) / 2)/ len_segment
-            i_omega = np.sum(h * (tr_omega[:-1] + tr_omega[1:]) / 2)/ len_segment
+            i_u = np.sum(h * (bulk_u[:][0,:] + bulk_u[:][1,:]) /2)
+            i_v = np.sum(h * (bulk_v[:][0,:] + bulk_v[:][1,:]) / 2)
+            i_phi =np.sum(h*(bulk_phi[:][0,:] + bulk_phi[:][1,:]) / 2)
+            i_omega = np.sum(h * (bulk_omega[:][0,:] + bulk_omega[:][1,:]) / 2)
 
+           # print('a)',i,bulk_phi[:,:-1] , bulk_phi[1:], bulk_phi,i_phi)
             I_phi.append(i_phi)
             I_omega.append(i_omega)
             I_u.append(i_u)
             I_v.append(i_v) 
+           # print('b)',i, I_phi)
 
     
         # if current_time % 100 == 0:
@@ -293,7 +279,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         I_all_times_omega.append(sum(I_omega))
         I_all_times_u.append(I_u)
         I_all_times_v.append(sum(I_v))
-
+       # print('Iu', sum(I_u))
+       # print('Iphi', I_all_times_phi)
         
         # calcolo centro di massa 
         vettore_massa = np.zeros((plotter.neq,int(info['num_domains'])))
@@ -305,6 +292,17 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         vettore_massa[2,:]= np.nan
         vettore_massa[3,:] = np.nan
         # plots over time steps
+        if plot_flag and time_step % 10 == 0:
+            for eq_idx in range(plotter.neq):
+                            plotter.plot_birdview(
+                                extracted_traces_n,
+                                equation_idx=eq_idx,
+                                time=current_time,
+                                coord = vettore_massa[eq_idx,:],
+                                sizepoint = 20*vettore_pesi[eq_idx,:],
+                                save_filename=f"outputs/birdview/{data_folder}_{ut_t_flag}/final_birdview_eq{eq_idx}_t{current_time:.6f}.png"
+                            )
+                         
 
         bulk_data_extracted = current_bulk_data
        
@@ -320,6 +318,8 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             # Store history
             solution_history.append(current_solution.copy())
             time_history.append(current_time)
+
+        
             
     sol_all_times = np.array(sol_all_times) # diventa array NumPy 
 
@@ -408,43 +408,45 @@ if __name__ == "__main__":
     
     try:
         # Main evolution example with config file
-        times= np.linspace(0,2,8)
-        
+        times= np.linspace(0,20,100)
+        plot_flag = True
+        ut_t_flag = 'ut'
         #untreated           # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
-        physical_vecn_ut = [ 50.,  150.,   90.,      50. , 5.e-4,  1.e-9,   5.e-4,  1.e-6,  3.9e-3 , 5.e-6, 1.9e-4, 1.e-2, 5.e-5]
+        physical_vecn_ut = [ 100.,  900.,   900.,      50. , 0., 0.,   5.e-4,  1.e-6,  3.9e-3 , 5.e-4, 1.9e-11, 1.e-4, 1.e-4]
         Iomegan_ut ,Iphin_ut, Iun_ut, Ivn_ut =run_evolution_with_time_stepper(config_file, physical_vecn_ut)
         
-        ranges_ut=[ [40.,60.],  #nu=50
-                 [120., 170.], #mu=150
-                 [72., 108.], #epsilon=90
+        ranges_ut=[ [80., 120.],  #nu=50
+                 [720., 1080.], #mu=150
+                 [720., 1080.], #epsilon=90
                  [40.0, 60.0] , #sigma=50
-                 [4.e-4, 6.e-4], #a=5e-4
-                 [0.8e-9, 1.2e-9], #b=1e-9
+                 [0., 0.], #a=5e-4
+                 [0., 0.], #b=1e-9
                  [4.e-4, 6.e-4], #c=5e-4
                  [0.8e-6, 1.2e-6], #d=1e-6
-                 [3.1e-3, 4.7e-3] , #k1=7e-9
-                 [4.e-6, 6.e-6], #k2=5e-12
-                 [1.5e-4, 2.3e-4], #m1=1.9e-11
-                 [0.8e-2, 1.2e-2], #m2=1e-4
-                 [4.e-5, 6.e-5] ] #m3=5e-5
+                 [3.1e-3, 4.7e-3] , #k1=3.9e-9
+                 [4.e-4, 6.e-4], #k2=5e-12
+                 [1.5e-11, 2.3e-11], #m1=1.9e-11
+                 [0.8e-4, 1.2e-4], #m2=1e-4
+                 [0.8e-4, 1.2e-4] ] #m3=5e-5
             
 
         #treated            # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
-        physical_vecn_t = [ 50.,  150.,   90.,  0.5 , 5.e-4,  1.e-5,   5.e-4,  1.e-6,  3.9e-3 , 5.e-6, 1.9e-4, 1.e-2,0.]
+        ut_t_flag = 't'
+        physical_vecn_t = [ 100.,  900.,   900.,     0.5 , 5.e-6,   1.e-4,   5.e-4,  1.e-6,  3.9e-3 , 5.e-4, 1.9e-11, 1.e-4,0.]
         Iomegan_t ,Iphin_t, Iun_t, Ivn_t =run_evolution_with_time_stepper(config_file, physical_vecn_t)
         
-        ranges_t=[ [40.,60.],  #nu=50
-                 [120., 170.], #mu=150
-                 [72., 108.], #epsilon=90
+        ranges_t=[ [80., 120.],  #nu=50
+                 [720., 1080.], #mu=150
+                 [720., 1080.], #epsilon=90
                  [0.4,0.6] , #sigma=0.5
-                 [4.e-4, 6.e-4], #a=5e-4
-                 [0.8e-5, 1.2e-5], #b=1e-6
+                 [4.e-6, 6.e-6], #a=5e-4
+                 [0.8e-4, 1.2e-4], #b=1e-5
                  [4.e-4, 6.e-4], #c=5e-4
                  [0.8e-6, 1.2e-6], #d=1e-6
                  [3.1e-3, 4.7e-3] , #k1=7e-9
-                 [4.e-6, 6.e-6], #k2=5e-12
-                 [1.5e-4, 2.3e-4], #m1=1.9e-11
-                 [0.8e-2, 1.2e-2], #m2=1e-4
+                 [4.e-4, 6.e-4], #k2=5e-12
+                 [1.5e-11, 2.3e-11], #m1=1.9e-11
+                 [0.8e-4, 1.2e-4], #m2=1e-4
                  [0.,0.] ] #m3=0
             
         PMm=['nu', 'mu' ,'epsilon','sigma','a','b','c','d','k1','k2','S','eta','kv']
@@ -467,8 +469,105 @@ if __name__ == "__main__":
                 combo[i] = float(ranges_ut[i][j])
                 combinazioni_ut.append(combo)
 
-        
-        for i in range(len(PMm)-1):   
+            data_folder = 202604232 
+
+
+            plt.figure() 
+            plt.plot( times, Iun_t[::12],label="nominal_treated")
+            plt.plot( times, Iun_ut[::12],label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iu", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s0_{PMm[i]}_n.png" , bbox_inches="tight")
+
+
+            plt.figure() 
+            plt.plot( times, Iun_t[3::12] ,label="nominal_treated")
+            plt.plot( times, Iun_ut[3::12] ,label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iu", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s3_{PMm[i]}_n.png" , bbox_inches="tight")
+
+
+            plt.figure() 
+            plt.plot( times, Iun_t[4::12] ,label="nominal_treated")
+            plt.plot( times, Iun_ut[4::12] ,label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iu", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s4_{PMm[i]}_n.png" , bbox_inches="tight")
+
+
+            plt.figure() 
+            plt.plot( times, Iun_t[9::12],label="nominal_treated")
+            plt.plot( times, Iun_ut[9::12],label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iu", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s9_{PMm[i]}_n.png" , bbox_inches="tight")
+
+            plt.figure()
+            plt.plot( times, Ivn_t[:],label="nominal_treated")
+            plt.plot( times, Ivn_ut[:],label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iv", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_v_{PMm[i]}_n.png" , bbox_inches="tight")
+
+            plt.figure()
+            plt.plot( times, Iphin_t[:] ,label="nominal_treated")
+            plt.plot( times, Iphin_ut[:] ,label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iphi", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_phi_{PMm[i]}_n.png" , bbox_inches="tight")
+
+            plt.figure()
+            plt.plot( times, Iomegan_t[:],label="nominal_treated")
+            plt.plot( times, Iomegan_ut[:],label="nominal_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iomega", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_omega_{PMm[i]}_n.png" , bbox_inches="tight")
+
+        for i in range(len(PMm)-1):  
+            plot_flag = False 
             print(i, np.shape(combinazioni_t), combinazioni_t[2*i][:], combinazioni_t[2*i+1][:])
    
 
@@ -477,7 +576,6 @@ if __name__ == "__main__":
             Iomegam_ut ,Iphim_ut, Ium_ut, Ivm_ut =run_evolution_with_time_stepper(config_file, combinazioni_ut[2*i])
             IomegaM_ut ,IphiM_ut, IuM_ut, IvM_ut =run_evolution_with_time_stepper(config_file, combinazioni_ut[2*i+1])
             
-            data_folder = 20260420 
 
 
             plt.figure() 
@@ -496,6 +594,24 @@ if __name__ == "__main__":
             plt.grid(True) 
             # Salvataggio del grafico 
             plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s0_{PMm[i]}.png" , bbox_inches="tight")
+
+
+            plt.figure() 
+            plt.plot( times, Iun_t[3::12] ,label="nominal_treated")
+            plt.plot( times, Ium_t[3::12] , label="min_treated")
+            plt.plot( times, IuM_t[3::12] , label="max_treated")
+            plt.plot( times, Iun_ut[3::12] ,label="nominal_untreated")
+            plt.plot( times, Ium_ut[3::12] , label="min_untreated")
+            plt.plot( times, IuM_ut[3::12] , label="max_untreated")
+            plt.title(f"{PMm[i]}", fontsize=16)
+            plt.xlabel("time (h)", fontsize=16)
+            plt.ylabel("Iu", fontsize=16)
+            plt.xticks(fontsize=14)
+            plt.yticks(fontsize=14)
+            plt.legend(fontsize=14)
+            plt.grid(True) 
+            # Salvataggio del grafico 
+            plt.savefig(f"./outputs/plots/{data_folder}/plot_I_u_s3_{PMm[i]}.png" , bbox_inches="tight")
 
 
             plt.figure() 

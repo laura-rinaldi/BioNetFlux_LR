@@ -71,7 +71,7 @@ class FunctionResolver:
             
             # Exponential and Gaussian
             'gaussian': lambda s, t=0: np.exp(-s**2),
-            'gaussian_scaled': lambda s, t=0: np.exp(-(s-500)**2/(2*10**5)),
+            'gaussian_scaled': lambda s, t=0: np.exp(-(s-150)**2/200),
             'gaussian_scaled_top': lambda s, t=0: 20*np.exp(-(s-750)**2/(2*10**4)),
             'gaussian_scaled_bottom': lambda s, t=0: 20*np.exp(-(s-250)**2/(2*10**4)),
             'exp_decay': lambda s, t=0: np.exp(-t) * np.ones_like(s),

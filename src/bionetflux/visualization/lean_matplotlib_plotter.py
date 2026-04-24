@@ -490,7 +490,7 @@ class LeanMatplotlibPlotter:
             sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
             sm.set_array([])
             cbar = plt.colorbar(sm, ax=ax, shrink=0.8, aspect=30)
-            cbar.set_label(f'{eq_name} Solution', fontsize=12)
+            cbar.set_label(f'{eq_name} Solution', fontsize=20)
         
         # Add bounding box if requested
         if show_bounding_box:
@@ -551,14 +551,14 @@ class LeanMatplotlibPlotter:
                 ax.scatter(xcoord, ycoord, s=sizepoint[i], zorder=10, color='red')
         
         # Formatting
-        ax.set_xlabel('x', fontsize=12)
-        ax.set_ylabel('y', fontsize=12)
+        ax.set_xlabel('x', fontsize=20)
+        ax.set_ylabel('y', fontsize=20)
         ax.set_aspect('equal', adjustable='box')
         
         # New title format: "Solution (name) at time t = ..."
         if title is None:
             title = f'Solution {eq_name} at time t = {time:.3f}'
-        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_title(title, fontsize=20, fontweight='bold')
         
         # Set nice limits based on bounding box
         x_range = self.bounding_box['x_max'] - self.bounding_box['x_min']
