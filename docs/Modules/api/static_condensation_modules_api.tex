@@ -628,6 +628,7 @@ bulk_solution, flux_jump, jacobian = ooc_sc.static_condensation(
 
 print(f"Bulk solution shape: {bulk_solution.shape}")  # (8, n_elements)
 print(f"Flux jump shape: {flux_jump.shape}")  # (4,) 
+
 print(f"Jacobian shape: {jacobian.shape}")  # (8, 4*(n_elements+1))
 \end{lstlisting}
 

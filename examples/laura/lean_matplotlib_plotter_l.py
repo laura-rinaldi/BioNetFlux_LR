@@ -490,8 +490,10 @@ class LeanMatplotlibPlotter:
             sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
             sm.set_array([])
             cbar = plt.colorbar(sm, ax=ax, shrink=0.8, aspect=30)
-            cbar.set_label(f'{eq_name} Solution', fontsize=12)
+            cbar.set_label(f'{eq_name} Solution', fontsize=16)
+            cbar.ax.tick_params(labelsize=14)
         
+
         # Add bounding box if requested
         if show_bounding_box:
             from matplotlib.patches import Rectangle
@@ -505,7 +507,10 @@ class LeanMatplotlibPlotter:
                 linestyle='--', alpha=0.7, label='Bounding box'
             )
             ax.add_patch(rect)
-        
+            ax.set_xlabel('x', fontsize=14)
+            ax.set_ylabel('y', fontsize=14)
+            ax.set_aspect('equal', adjustable='box')
+            
 
         #scatter
         if any(coord):

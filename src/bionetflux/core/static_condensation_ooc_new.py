@@ -344,7 +344,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         bulk_solution = U.reshape(-1, 1)
         
         flux = None  # Placeholder if needed
-        
+        print(f"flux: {flux}")
         return bulk_solution, flux, flux_jump, jacobian
 
     def assemble_forcing_term(self, 

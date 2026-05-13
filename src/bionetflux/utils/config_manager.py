@@ -61,6 +61,7 @@ class FunctionResolver:
             'zeros': lambda s, t=0: np.zeros_like(s),
             'ones': lambda s, t=0: np.ones_like(s),
             'constant': lambda s, t=0: np.ones_like(s),
+            '5_constant': lambda s, t=0: 5000*np.ones_like(s),
             '-constant': lambda s, t=0: - np.ones_like(s),
             
             # Trigonometric functions  
@@ -71,13 +72,14 @@ class FunctionResolver:
             
             # Exponential and Gaussian
             'gaussian': lambda s, t=0: np.exp(-s**2),
-            'gaussian_scaled': lambda s, t=0: np.exp(-(s-150)**2/200),
-            'gaussian_scaled_top': lambda s, t=0: 20*np.exp(-(s-750)**2/(2*10**4)),
-            'gaussian_scaled_bottom': lambda s, t=0: 20*np.exp(-(s-250)**2/(2*10**4)),
+            'gaussian_scaled': lambda s, t=0: 5000*np.exp(-(s-600)**2/(10**4)) + 5000*np.exp(-(s-350)**2/(10**4))+ 5000*np.exp(-(s-100)**2/(10**4)),
+            'gaussian_scaled_top': lambda s, t=0: 2*np.exp(-(s-750)**2/(2*10**4)),
+            'gaussian_scaled_bottom': lambda s, t=0: 2*np.exp(-(s-250)**2/(2*10**4)),
             'exp_decay': lambda s, t=0: np.exp(-t) * np.ones_like(s),
             'exp_growth': lambda s, t=0: np.exp(t) * np.ones_like(s),
             
             # Polynomial functions
+            'linear': lambda s, t=0: s,
             'quadratic': lambda s, t=0: s * (1 - s),
             'cubic': lambda s, t=0: s * (1 - s) * (0.5 - s),
             

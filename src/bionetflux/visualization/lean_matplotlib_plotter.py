@@ -490,8 +490,13 @@ class LeanMatplotlibPlotter:
             sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
             sm.set_array([])
             cbar = plt.colorbar(sm, ax=ax, shrink=0.8, aspect=30)
-            cbar.set_label(f'{eq_name} Solution', fontsize=20)
-        
+            cbar.set_label(f'{eq_name} Solution', fontsize=22)
+            cbar.ax.tick_params(labelsize=18)
+
+        # Increase axis tick label size for better readability
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.tick_params(axis='both', which='minor', labelsize=16)
+
         # Add bounding box if requested
         if show_bounding_box:
             from matplotlib.patches import Rectangle
@@ -575,7 +580,7 @@ class LeanMatplotlibPlotter:
         # Save if requested
         save_path = self._get_save_path(save_filename)
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=200, bbox_inches='tight')
             print(f"✓ Bird's eye view plot saved as: {save_path}")
         
         return fig

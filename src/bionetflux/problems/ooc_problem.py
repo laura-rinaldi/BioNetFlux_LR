@@ -292,8 +292,8 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     
     print("Setting up mathematical functions...")
 
-    # Chemotaxis sensitivity function: chi(x) = k1 / (k2 + x)^2
-    # and its derivative: dchi(x) = -2 * k1 / (k2 + x)^3
+    # Chemotaxis sensitivity function: chi(x) = k1 / (nu*(k2 + x)^2)
+    # and its derivative: dchi(x) = -2 * k1 / (nu*(k2 + x)^3)
     # Constructed from TOML parameters k1, k2
     chi_func = lambda x: k1 / (nu * (k2 + x)**2) 
     dchi_func = lambda x: -2.0 * k1 / (nu * (k2 + x)**3)
