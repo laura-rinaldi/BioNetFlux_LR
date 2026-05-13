@@ -95,7 +95,15 @@ def build_T_junction_geometry():
         parameter1=0.0,  # Start of branch
         boundary_condition="Neumann"
     )
-   
+
+    # Build boundary_point_map: B0 = main_channel start (-500), B1 = main_channel end (500),
+    # B2 = branch start (0).  Sequential order matches add_connection call order above.
+    boundary_point_map = {
+        f"B{k}": (conn.domain1_id, conn.parameter1)
+        for k, conn in enumerate(geometry.get_boundary_connections())
+    }
+    geometry.set_global_metadata(boundary_point_map=boundary_point_map)
+
     return geometry
 
 
@@ -295,7 +303,9 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     # Chemotaxis sensitivity function: chi(x) = k1 / (nu*(k2 + x)^2)
     # and its derivative: dchi(x) = -2 * k1 / (nu*(k2 + x)^3)
     # Constructed from TOML parameters k1, k2
-    chi_func = lambda x: k1 / (nu * (k2 + x)**2) 
+    # The chemotactic function is rescaled by viscority, as it was implemented in a rescaled version in the code
+    # Later it would be better to rescale nu in the static condensation module.
+    chi_func = lambda x: k1 / (nu * (k2 + x)**2)
     dchi_func = lambda x: -2.0 * k1 / (nu * (k2 + x)**3)
     
     lambda_func = lambda omega: m1*omega / (m2 + omega) -m3  # Tumor suppression function 

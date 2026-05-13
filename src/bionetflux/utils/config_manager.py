@@ -59,7 +59,9 @@ class FunctionResolver:
         return {
             # Basic functions
             'zeros': lambda s, t=0: np.zeros_like(s),
+            'zero':  lambda s, t=0: np.zeros_like(s),   # alias
             'ones': lambda s, t=0: np.ones_like(s),
+            'one':  lambda s, t=0: np.ones_like(s),     # alias
             'constant': lambda s, t=0: np.ones_like(s),
             '5_constant': lambda s, t=0: 5000*np.ones_like(s),
             '-constant': lambda s, t=0: - np.ones_like(s),
@@ -136,9 +138,14 @@ class FunctionResolver:
                 def wrapped_func(s, t):
                     s = np.asarray(s)
                     result = raw_func(s, t)
-                    # If result is scalar, broadcast it to match shape of s
                     if np.isscalar(result):
                         return np.full_like(s, result, dtype=float)
+                    result = np.asarray(result, dtype=float)
+                    if result.shape != s.shape:
+                        try:
+                            result = np.broadcast_to(result, s.shape).copy()
+                        except ValueError:
+                            result = np.full_like(s, float(result.flat[0]))
                     return result
                 return wrapped_func
                 

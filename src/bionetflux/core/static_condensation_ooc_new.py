@@ -59,7 +59,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         # Get chi and dchi as callables from problem (set via set_chemotaxis)
         self.chi_func = self.problem.chi
         self.dchi_func = self.problem.dchi
-        
+
         # Get lambda function and its derivative
         self.lambda_func = getattr(self.problem, 'lambda_function', lambda x: np.ones_like(x))
         self.dlambda_func = getattr(self.problem, 'dlambda_function', lambda x: np.zeros_like(x))
@@ -292,7 +292,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         barphi = (Av @ u4).item()
         barchi = self.chi_func(barphi)
         dbarchi = self.dchi_func(barphi)
-        
+
         # Compute Jacobian for Newton method
         # Initialize JAC following MATLAB logic
         JAC = np.zeros((8, 8))
@@ -320,7 +320,6 @@ class StaticCondensationOOC(StaticCondensationBase):
         
         # Construction of j and dj (Q is multiplied by barchi at runtime)
         j = hB4 @ hU + barchi * tJ.T @ Q @ U
-        
         # WARNING: the formula for dbarphi_dhU needs to be checked against the theory
         dbarphi_dhU = Av @ R[3] @ JAC                           # (1, 8)
         dj = hB4 - barchi * tJ.T @ Q @ JAC - barchi * U.T @ Q.T @ dtJ \
@@ -343,8 +342,8 @@ class StaticCondensationOOC(StaticCondensationBase):
         # Return in expected format
         bulk_solution = U.reshape(-1, 1)
         
-        flux = None  # Placeholder if needed
-        print(f"flux: {flux}")
+        flux = np.concatenate([j.flatten(), tJ.flatten()])
+        
         return bulk_solution, flux, flux_jump, jacobian
 
     def assemble_forcing_term(self, 
