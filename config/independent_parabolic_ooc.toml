@@ -8,18 +8,18 @@ problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensati
 
 
 [time_parameters]
-T = 1.0   # Final time
-dt = 0.025 # Time step
+T = 0.1   # Final time
+dt = 0.05 # Time step
 
 [physical_parameters.viscosity]
-nu = 1.0      # D_M: diffusivity of immune cells
+nu = 1.0   # D_M: diffusivity of immune cells
 mu = 1.0      # D_phi: diffusivity of chemoattractant phi
 epsilon = 1.0 # D_omega: diffusivity of chemoactractant omega
 sigma = 1.0     # D_T: diffusivity of tumor cells (56.0)
 
 [physical_parameters.reaction]
-a = 1.0       # beta_phi: consumption rate of phi
-c = 1.0      # beta_omega: consumption rate of omega
+a = 0.0       # beta_phi: consumption rate of phi
+c = 0.0      # beta_omega: consumption rate of omega
 
 [physical_parameters.coupling]
 b = 0.0       # alpha_phi: production rate of phi
@@ -28,16 +28,17 @@ d = 0.0       # alpha_omega: production rate of omega
 # Chemotaxis: chi(x) = k1 / (k2 + x)^2
 [physical_parameters.chemotaxis]
 type = "receptor_saturation"  # Type of chemotaxis function
-k1 = 0     # cellular drift velocity
-k2 = 5.0e-6     # receptor dissociation constant
+k1 = 0.39   # cellular drift velocity
+k2 = 0.01     # receptor dissociation constant
 
-# Tumor suppression: lambda(x) = m1 / (m2 + x)
+# Tumor suppression: lambda(x) = m1 / (m2 + x) -m3
 [physical_parameters.tumor_suppression]
 m1 = 0.0  # k_omega1: killing efficiency of omega on tumor cells
 m2 = 1.0  # k_omega2: dissociation constant
+m3 = 0.0  # k_v: proliferation constant
 
 [discretization]
-n_elements = 40    # Used when h is absent; ignored when h is provided
+n_elements = 5    # Used when h is absent; ignored when h is provided
 # h = 15.0         # Target mesh size — n_elements computed per domain (even, >= 4)
 tau = [0.5, 0.5, 0.5, 0.5]
 
@@ -45,13 +46,13 @@ tau = [0.5, 0.5, 0.5, 0.5]
 u = "zeros"      # Default: zero initial condition
 omega = "zeros"  # Default: zero initial condition  
 v = "zeros"      # Default: zero initial condition
-phi = "zeros"    # Default: zero initial condition
+phi = "sin(s)+1"    # Default: zero initial condition
 
 [force_functions]
-u = "sin(s + 2*t) + 2 * t * cos(s+2*t) + t * sin(s + 2*t)"      # Default: zero force
+u = "s**2 -2*1.0*t + 2*0.39*s*t*cos(s)/((0.01 + sin(s) +1)**2) -0.39*s**2*t*sin(s)/((0.01 + sin(s) +1)**2)  -2*0.39*s**2*t*cos(s)**2/((0.01 + sin(s) +1)**3)  "   # Default: zero force
 omega = "zeros"  # Default: zero force
-v = "zeros"      # Default: zero force
-phi = "zeros"    # Default: zero force
+v =  "zeros"    # Default: zero force
+phi = "1.0*sin(s)"    # Default: zero force
 
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
@@ -68,18 +69,18 @@ phi = "zeros"    # Default: zero force
 # Exact solutions for error analysis (set to a function name or expression if known,
 # leave as "none" if no analytical solution is available).
 [exact_solutions]
-u = "t * sin(s + 2*t)"  # Example: u(s,t) = t * sin(s + 2*t)
+u =  "t * s**2"#   # Example: u(s,t) = t * sin(s + 2*t)
 omega = "zero"
 v = "zero"
-phi = "zero"
+phi = "sin(s)+1"
 
 # Pointwise derivatives of the exact solutions (used for flux/gradient error norms).
 # Set to "none" if not available.
 [exact_solution_derivatives]
-u = "none"
-omega = "none"
-v = "none"
-phi = "none"
+u = "zeros"
+omega = "zeros"
+v = "zeros"
+phi = "zeros"
 
 # Boundary condition overrides (per B-point, per equation)
 # Keys: "<point_name>_<equation_name>"
@@ -87,10 +88,13 @@ phi = "none"
 # Default (when omitted): homogeneous Neumann on every boundary for every equation
 #
 [boundary_conditions]
-B0_u   = { type = "dirichlet", data = "t * sin(s + 2*t)" }
-B1_u   = { type = "neumann", data = "t * cos(s + 2*t)" }
+# B0_u   = { type = "dirichlet", data = "t * sin(s + 2*t)" }
+# B1_u   = { type = "neumann", data = "t * cos(s + 2*t)" }
 # B1_u   = { type = "dirichlet", data = "zeros" }
 # B2_phi = { type = "neumann",   data = "150.0+0.0*t" }
 # B0_u   = { type = "robin", alpha = 1.0, beta = -1.0, data = "zeros" }
 # B1_v   = { type = "neumann", data = "500.0+0.0*t" }
-
+B0_u = { type = "dirichlet", data = "t *s**2" }
+B1_u = { type = "dirichlet", data = "t *s**2" }
+B0_phi = { type = "dirichlet", data = "sin(s)+1" }
+B1_phi = { type = "dirichlet", data = "sin(s)+1" }

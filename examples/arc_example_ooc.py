@@ -1,3 +1,4 @@
+#python3 examples/arc_example_ooc.py --adaptive config/independent_parabolic_ooc.toml  --arc-number 1 --arc-length 6.28
 """
 Evolution + Plotting Example using new Time Stepper Module
 
@@ -10,8 +11,9 @@ encapsulates all the Newton iteration and bulk data management.
 
 import sys
 import os
+from unittest import result
 # sys.path hack — commented out, use pip install -e . instead
-# sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 
 from setup_solver import quick_setup, SolverSetup
@@ -27,6 +29,8 @@ import shutil
 import time
 from datetime import datetime
 from typing import Optional, List, Dict, Any
+import tomli as tomllib 
+import toml
 
 
 def _create_run_output_dir(config_file: Optional[str] = None) -> str:
@@ -116,6 +120,12 @@ def _load_exact_solutions(config_file: Optional[str]) -> Dict[str, Any]:
     return config.get('exact_solutions', {})
 
 
+def _load_exact_solutions_derivatives(config_file: Optional[str]) -> Dict[str, Any]:
+    """Load the OoC config and return the resolved ``exact_solutions_derivatives`` dict."""
+    cfg_manager = OoCConfigManager()
+    config = cfg_manager.load_config(config_file)
+    return config.get('exact_solution_derivatives', {})
+
 def run_evolution_with_time_stepper(
     config_file: Optional[str] = None,
     arc_number: int = 3,
@@ -198,7 +208,7 @@ def run_evolution_with_time_stepper(
     time_stepper = TimeStepper(setup, verbose=True)
     
     # Initialize solution at t=0 (replaces Steps 3-4 and lines 226-233 from original)
-    current_solution, current_bulk_data = time_stepper.initialize_solution()
+    current_solution, current_bulk_data, current_flux_solution = time_stepper.initialize_solution()
     
     print("✓ Time stepper initialized")
     print(f"✓ Initial solution: shape {current_solution.shape}")
@@ -282,6 +292,7 @@ def run_evolution_with_time_stepper(
         result = time_stepper.advance_time_step(
             current_solution=current_solution,
             current_bulk_data=current_bulk_data,
+            current_flux_solution=current_flux_solution,
             current_time=current_time,
             dt=dt
         )
@@ -297,7 +308,7 @@ def run_evolution_with_time_stepper(
             current_time += dt
             current_solution = result.updated_solution
             current_bulk_data = result.updated_bulk_data
-            
+            current_flux_solution = result.updated_flux_solution
             # Store history
             solution_history.append(current_solution.copy())
             time_history.append(current_time)
@@ -467,7 +478,7 @@ def run_evolution_with_adaptive_time_stepper(
         safety_factor=safety_factor,
     )
 
-    current_solution, current_bulk_data = time_stepper.initialize_solution()
+    current_solution, current_bulk_data, current_flux_solution = time_stepper.initialize_solution()
     print(f"\u2713 Adaptive time stepper initialized "
           f"(dt_min={time_stepper.dt_min:.6e}, dt_max={time_stepper.dt_max:.6e})")
     print(f"\u2713 Initial solution: shape {current_solution.shape}")
@@ -527,9 +538,13 @@ def run_evolution_with_adaptive_time_stepper(
         result, dt_next = time_stepper.advance_time_step_adaptive(
             current_solution=current_solution,
             current_bulk_data=current_bulk_data,
+            current_flux_solution=current_flux_solution,
             current_time=current_time,
             dt_suggested=dt_try,
         )
+
+        
+       
 
         if result.converged:
             # The actual dt used may differ from dt_try if retries occurred;
@@ -545,6 +560,7 @@ def run_evolution_with_adaptive_time_stepper(
             current_time += dt_used
             current_solution = result.updated_solution
             current_bulk_data = result.updated_bulk_data
+            current_flux_solution = result.updated_flux_solution
 
             solution_history.append(current_solution.copy())
             time_history.append(current_time)
@@ -597,6 +613,55 @@ def run_evolution_with_adaptive_time_stepper(
         if save_path:
             fig_final.savefig(save_path, dpi=300, bbox_inches='tight')
         print(f"  \u2713 Exact solution overlay added")
+
+    
+   # print(result.flux_data, np.shape(result.flux_data[0][:100]   ))
+    # flux_u = result.flux_data[0][0]
+    # flux_omega= result.flux_data[0][1]
+    # flux_v= result.flux_data[0][3]
+    # flux_phi= result.flux_data[0][5]
+    # final_fluxes = np.array([flux_u, flux_omega, flux_v, flux_phi]).flatten()
+    # print("Final fluxes shapes:" ,np.shape(final_fluxes))
+    # # --- Final 2D curves ---
+    # exact_solutions_derivatives = _load_exact_solutions_derivatives(config_file)
+  
+   # nodi (N+1 valori)
+    N=100
+    x_nodes = np.linspace(0, 6.28, N+1)
+    print(np.shape(x_nodes))
+
+
+    # flux è un array N x 2:
+    # flux[i,0] = valore a sinistra dell'elemento i
+    # flux[i,1] = valore a destra dell'elemento i
+    qL = result.flux_data[0][5]   # valori a sinistra
+    qR = result.flux_data[0][6]  # valori a destra
+    print("Flux qL shape:", np.shape(result.flux_data[0][0]))
+    print("Flux qR shape:", np.shape(qR))
+    # costruiamo i vettori per il plot
+    x_plot = np.zeros(2 * N)
+    y_plot = np.zeros(2 * N)
+
+    for i in range(N):
+        x_plot[2*i : 2*i+2] = [x_nodes[i], x_nodes[i+1]]
+        y_plot[2*i : 2*i+2] = [qL[i], qR[i]]
+
+    plt.figure(figsize=(8,4))
+    plt.plot(x_plot, y_plot, linewidth=1.8)
+    plt.grid(True)
+    plt.xlabel("x")
+    plt.ylabel("flux(x)")
+    plt.title("Flusso P1 per elemento (lineare)")
+    plt.show()
+
+    # plt.figure()
+    # plt.plot(result.flux_data[0][0])
+    # plt.grid(True)
+    # plt.xlabel("x")
+    # plt.ylabel("flux(x)")
+    # plt.title("Flusso P0 per elemento (lineare)")
+    # plt.show()
+
     print(f"  \u2713 Final snapshot at t = {current_time:.2f}")
 
     # ====================================================================
@@ -648,7 +713,7 @@ def demonstrate_multiple_steps(config_file: Optional[str] = None):
     time_stepper = TimeStepper(setup, verbose=True)
     
     # Initialize
-    initial_solution, initial_bulk_data = time_stepper.initialize_solution()
+    initial_solution, initial_bulk_data, initial_flux_solution = time_stepper.initialize_solution()
     
     # Advance multiple steps in one call
     dt = setup.global_discretization.dt
@@ -659,6 +724,7 @@ def demonstrate_multiple_steps(config_file: Optional[str] = None):
     results = time_stepper.advance_multiple_steps(
         initial_solution=initial_solution,
         initial_bulk_data=initial_bulk_data,
+        initial_flux_solution=initial_flux_solution,
         start_time=0.0,
         dt=dt,
         n_steps=n_steps,

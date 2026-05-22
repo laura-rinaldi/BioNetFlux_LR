@@ -10,6 +10,8 @@ import os
 from typing import Dict, List, Optional, Callable, Any, Union
 from abc import ABC, abstractmethod
 import sympy as sp
+import tomli as tomllib 
+import toml
 
 
 def load_toml_config(config_file: str) -> Dict[str, Any]:
@@ -26,17 +28,21 @@ def load_toml_config(config_file: str) -> Dict[str, Any]:
         ImportError: If no TOML library available
         FileNotFoundError: If config file doesn't exist
     """
+    # if config_file:
+    #     print(f"Using configuration file: {config_file}")
+    #     with open(config_file, "rb") as f: 
+    #         config = tomllib.load(f)
     try:
         # Python 3.11+
-        import tomllib
+        
         with open(config_file, 'rb') as f:
             return tomllib.load(f)
     except ImportError:
         try:
             # Fallback to tomli for older Python versions
-            import tomli
+            
             with open(config_file, 'rb') as f:
-                return tomli.load(f)
+                return tomllib.load(f)
         except ImportError:
             raise ImportError(
                 "No TOML library available. Install with: pip install tomli"

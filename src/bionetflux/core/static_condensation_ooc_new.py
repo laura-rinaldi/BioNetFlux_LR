@@ -1,6 +1,11 @@
-import numpy as np
-from typing import Dict, Tuple
 
+
+from math import tau
+
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Dict, Tuple
+import time
 from .problem import Problem
 from .static_condensation_base import StaticCondensationBase
 
@@ -29,10 +34,11 @@ class StaticCondensationOOC(StaticCondensationBase):
         - Equation 3 (φ): P1 flux (2 DOFs per element)
     """
 
-    def __init__(self, problem, global_disc, elementary_matrices, ipb=0):
-        super().__init__(problem, global_disc, elementary_matrices, ipb)
+    def __init__(self, problem, global_disc, elementary_matrices, ipb=0, gamma: float=None):
+        super().__init__(problem, global_disc, elementary_matrices, ipb, gamma)
         self.flux_orders = [0, 1, 1, 1]  # P0 for u, P1 for ω, v, φ
-    
+        self.new_tau =[] 
+        self.chi_plot=[] 
     def build_matrices(self):
         """
         Build static condensation matrices for OrganOnChip problem.
@@ -65,12 +71,15 @@ class StaticCondensationOOC(StaticCondensationBase):
         self.dlambda_func = getattr(self.problem, 'dlambda_function', lambda x: np.zeros_like(x))
         
         # Get stabilization parameters
-        tau = self.discretization.tau if hasattr(self.discretization, 'tau') else [1.0, 1.0, 1.0, 1.0]
-        tu = tau[0]/h    # tau for u
+        tau = self.tau if hasattr(self.discretization, 'tau') else [1.0, 1.0, 1.0, 1.0]
+        tu = self.gamma if self.gamma is not None else tau[0] / h    # tau for u
         to = tau[1]    # tau for omega  
         tv = tau[2]    # tau for v
         tp = tau[3]    # tau for phi
         
+        print('tau, tu:', tau, tu)
+        
+        time.sleep(5)
         # Cache frequently used values
         dt = self.dt  
        
@@ -92,6 +101,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         Nhat = self.elementary_matrices.get_matrix('Nhat')
         QUAD = h * self.elementary_matrices.get_matrix('QUAD')
         
+
         normali = np.array([-1.0, 1.0])
         Z = np.zeros((2, 2))
         
@@ -117,6 +127,8 @@ class StaticCondensationOOC(StaticCondensationBase):
         H1 = dt * tu * Gb # type: ignore / Checked
         B1 = L1 @ H1
         
+
+        self.sc_matrices.update({'A1': A1, 'H1': H1})
         self.sc_matrices.update({'L1': L1, 'B1': B1})
         
         # Step 2: Matrices for omega equation  
@@ -214,10 +226,9 @@ class StaticCondensationOOC(StaticCondensationBase):
             'B5': B5, 'B6': B6, 'B7': B7,
             'hatB0': hatB0, 'hatB1': hatB1, 'hatB2': hatB2
         })
-        
         return self.sc_matrices
 
-    def static_condensation(self, local_trace, local_source=None, **kwargs):
+    def static_condensation(self, local_trace, local_source=None, gamma: float=1.0, **kwargs):
         """
         Perform OrganOnChip static condensation step.
         Python port from MATLAB StaticC.m
@@ -229,7 +240,6 @@ class StaticCondensationOOC(StaticCondensationBase):
         Returns:
             Tuple (bulk_solution, flux_jump, jacobian)
         """
-        
         # Handle None local_source
         if local_source is None:
             local_source = np.zeros(8)
@@ -253,6 +263,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         d = self.problem.parameters[7]     # coupling parameter
         
         # Get matrices
+        A1, H1 = self.sc_matrices['A1'], self.sc_matrices['H1']
         L1, B1 = self.sc_matrices['L1'], self.sc_matrices['B1']
         L2, B2, C2 = self.sc_matrices['L2'], self.sc_matrices['B2'], self.sc_matrices['C2']
         L4, B4, C4 = self.sc_matrices['L4'], self.sc_matrices['B4'], self.sc_matrices['C4']
@@ -262,7 +273,29 @@ class StaticCondensationOOC(StaticCondensationBase):
         hB4, Q = self.sc_matrices['hB4'], self.sc_matrices['Q']
         B5, B6, B7 = self.sc_matrices['B5'], self.sc_matrices['B6'], self.sc_matrices['B7']
         hatB0, hatB1, hatB2 = self.sc_matrices['hatB0'], self.sc_matrices['hatB1'], self.sc_matrices['hatB2']
+       
+        ##########NEW MATRICES DEFINITIONS############################
+       # print(self.tau[0] )
+        if gamma:
+           print('new tau:', gamma)
+           gamma=gamma/(self.tau[0]/ self.discretization.element_length)
+           if gamma>1:
+                print('gamma:', gamma)
+                A1 =  gamma * A1 - (gamma-1) * M
+                L1 = np.linalg.inv(A1)
+                H1 =  gamma * H1
+                B1 = L1 @ H1
+                C2 =  gamma * C2
+                B6 =  gamma * B6
+                B7 =  gamma * B7
+            #     time.sleep(5)
+               # self.sc_matrices.update({ 'A1': A1, 'L1': L1, 'H1': H1,'B1': B1, 'C2': C2, 'B6': B6, 'B7': B7})
+       # print('L1:', L1)
         
+        ##############################################################  
+
+
+
         # Step 1: Compute u
         y1 = L1 @ g[0]
         u1 = B1 @ hu[0] + y1
@@ -287,11 +320,13 @@ class StaticCondensationOOC(StaticCondensationBase):
         
         # Assemble bulk solution U = [u1; u2; u3; u4]
         U = np.concatenate([u1, u2, u3, u4])
+       
         
         # Step 5b: Compute average phi and evaluate chi
         barphi = (Av @ u4).item()
         barchi = self.chi_func(barphi)
         dbarchi = self.dchi_func(barphi)
+
 
         # Compute Jacobian for Newton method
         # Initialize JAC following MATLAB logic
@@ -324,6 +359,9 @@ class StaticCondensationOOC(StaticCondensationBase):
         dbarphi_dhU = Av @ R[3] @ JAC                           # (1, 8)
         dj = hB4 - barchi * tJ.T @ Q @ JAC - barchi * U.T @ Q.T @ dtJ \
              - dbarchi * (tJ.T @ Q @ U) * dbarphi_dhU            # (1, 8)
+        
+        
+    
         # Final flux jumps
         
         B5 = B5.reshape(1, -1)  # Ensure B5 is 1x2
@@ -344,6 +382,23 @@ class StaticCondensationOOC(StaticCondensationBase):
         
         flux = np.concatenate([j.flatten(), tJ.flatten()])
         
+
+        # MODFICA LAURA PER STABILIZZAZIONE 
+        
+      #  print(f"nu:{self.problem.parameters[0]}",f"barchi: {barchi}")
+       # print(f"flux_phi_dx: {flux[5]}")
+        qL = - flux[5]/ self.problem.parameters[1] * (-1)   # valori a sinistra * normale
+        qR = - flux[6] / self.problem.parameters[1]  # valori a destr
+        
+       # print(barchi*self.problem.parameters[0])
+        self.new_tau=max(self.tau[0] /self.discretization.element_length, abs(barchi*self.problem.parameters[0]**2*qL), abs(barchi*self.problem.parameters[0]**2*qR))
+       # print(self.tau[0] /self.discretization.element_length, abs(barchi*self.problem.parameters[0]*qL))
+        # self.chi_plot.append(barchi)
+        # if len(self.chi_plot) ==100:
+        #     plt.figure()
+        #     plt.plot(np.arange(100),self.chi_plot)
+        #     plt.show()
+        #     self.chi_plot=[]
         return bulk_solution, flux, flux_jump, jacobian
 
     def assemble_forcing_term(self, 

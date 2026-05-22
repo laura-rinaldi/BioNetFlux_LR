@@ -208,7 +208,8 @@ class GlobalAssembler:
                                      global_solution: np.ndarray,
                                      forcing_terms: List[np.ndarray],
                                      static_condensations: List,
-                                     time: float) -> Tuple[np.ndarray, np.ndarray]:
+                                     time: float,
+                                     gamma: float = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Assemble global residual and Jacobian from domain flux jumps and constraints.
         If we put the nonlinear static condensation equation in the form F(U;F_ext) = 0,
@@ -249,11 +250,13 @@ class GlobalAssembler:
                 raise ValueError(f"Domain {i} forcing term shape {forcing_terms[i].shape} != expected ({expected_rows}, {expected_cols})")
             
             # Compute domain flux jump using static condensation
+            print(f"Computing flux jump for domain {i} at time {time:.3f}")
             U, J, F, JF = domain_flux_jump(
                 trace_solutions[i].reshape(-1, 1),
                 forcing_terms[i],
                 None, None,
-                static_condensations[i]
+                static_condensations[i], 
+                gamma
             )
             
             bulk_solution.append(U)

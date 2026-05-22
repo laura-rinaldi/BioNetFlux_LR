@@ -1,5 +1,6 @@
 import numpy as np
 from typing import Tuple
+import time
 
 
 def domain_flux_jump(
@@ -7,7 +8,8 @@ def domain_flux_jump(
     forcing_term: np.ndarray,
     problem, # dummy placeholder for backwards compatibility
     discretization, # dummy placeholder for backwards compatibility
-    static_condensation
+    static_condensation,
+    gamma: np.ndarray = None
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
     Compute the local contribution to the flux balance equation for a domain.
@@ -54,6 +56,8 @@ def domain_flux_jump(
     
     # Cycle over elements
     for k in range(N):
+        print("number of elements: ", N)
+        
         # Create logical indexing for element k
         # This selects nodes k and k+1 for all equations
         
@@ -71,11 +75,13 @@ def domain_flux_jump(
         
         # Extract local trace values for element k
         local_trace = trace_solution[local_indices].reshape(-1, 1)  # (2*neq)×1 vector
-        
+        if gamma is None:
+             gamma = np.ones(N)
+        print("gamma array", gamma)
         # Apply static condensation
         try:
             local_solution, flux, flux_trace, jacobian = static_condensation.static_condensation(
-                local_trace, gk)
+                local_trace, gk, gamma=gamma[k] )
             flux_trace = flux_trace.reshape(-1, 1)  # Ensure column vector
             local_solution = local_solution.reshape(-1,)  # Ensure column vector
             

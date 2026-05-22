@@ -7,6 +7,8 @@ import numpy as np
 import time
 from typing import List, Optional, Tuple
 from .newton_solver import NewtonSolver, NewtonResult
+
+from ..core.problem import Problem
 # from .time_step_result import TimeStepResult
 
 @dataclass
@@ -19,6 +21,7 @@ class TimeStepResult:
     final_residual_norm: float
     updated_solution: np.ndarray
     updated_bulk_data: List
+    updated_flux_solution:np.ndarray
     computation_time: float
     
     # Optional detailed info
@@ -75,7 +78,7 @@ class TimeStepper:
         self.setup = setup
         self.newton_solver = newton_solver or NewtonSolver(tolerance=1.e-7,verbose=False)
         self.verbose = verbose
-        
+
         # Cache frequently used components
         self.bulk_manager = setup.bulk_data_manager
         self.global_assembler = setup.global_assembler
@@ -119,12 +122,14 @@ class TimeStepper:
         if self.verbose:
             print(f"    ✓ Bulk data initialized for {len(current_bulk_data)} domains")
             print(f"    ✓ Initialization at t=0 completed")
-        
-        return current_solution, current_bulk_data
+
+        current_flux_solution = None  # Placeholder for flux solution at t=0 (if needed)
+        return current_solution, current_bulk_data, current_flux_solution
     
     def advance_time_step(self, 
                          current_solution: np.ndarray,
                          current_bulk_data: List, 
+                         current_flux_solution: List,
                          current_time: float,
                          dt: float) -> TimeStepResult:
         """
@@ -143,7 +148,6 @@ class TimeStepper:
         """
         start_time = time.time()
         new_time = current_time + dt
-        
         if self.verbose:
             print(f"  TimeStepper: advancing from t={current_time:.6f} to t={new_time:.6f}")
         
@@ -208,19 +212,34 @@ class TimeStepper:
                 computation_time=time.time() - start_time,
                 residual_history=newton_result.residual_history,
                 jacobian_condition=newton_result.jacobian_condition,
-                newton_step_norms=newton_result.step_norms
+                newton_step_norms=newton_result.step_norms # Keep old flux solution
+
             )
         
         # Step 5: Update bulk data via static condensation
+        ##############################
+        
+        print(f'Current time: {current_time}')
+        
+        if current_time > 0.0 :
+            phi_L=(current_bulk_data[0].data)[6,:] 
+            dphi_L = current_flux_solution[0][5,:]
+            gamma =abs((0.39  /(0.05 + phi_L)**2 )*dphi_L)    # Scaling factor for stabilization
+        else:
+            gamma = None   
+        ##############################  
         try:
-            updated_bulk_solutions, flux_solutions = self.global_assembler.bulk_by_static_condensation(
+            updated_bulk_solutions, updated_flux_solutions = self.global_assembler.bulk_by_static_condensation(
                 global_solution=newton_result.final_solution,
                 forcing_terms=forcing_terms,
                 static_condensations=self.static_condensations,
-                time=new_time
+                time=new_time,
+                gamma=gamma
             )
-            
             # Update bulk_data objects with new solutions
+
+            current_flux_solution = updated_flux_solutions
+
             # Following the pattern from evolution+plotting_example.py lines 342-350
             updated_bulk_data = []
             
@@ -264,7 +283,7 @@ class TimeStepper:
             residual_history=newton_result.residual_history,
             jacobian_condition=newton_result.jacobian_condition,
             newton_step_norms=newton_result.step_norms,
-            flux_data=flux_solutions
+            updated_flux_solution=updated_flux_solutions
         )
     
     def _create_failed_result(self, solution, bulk_data, error_msg, comp_time):
@@ -277,13 +296,14 @@ class TimeStepper:
             iterations=0,
             final_residual_norm=np.inf,
             updated_solution=solution,
-            updated_bulk_data=bulk_data,
+            updated_bulk_data=bulk_data,  # Keep old flux solution
             computation_time=comp_time
         )
     
     def advance_multiple_steps(self, 
                               initial_solution: np.ndarray,
                               initial_bulk_data: List,
+                              initial_flux_solution: List,
                               start_time: float,
                               dt: float,
                               n_steps: int,
@@ -305,6 +325,7 @@ class TimeStepper:
         results = []
         current_solution = initial_solution.copy()
         current_bulk_data = initial_bulk_data
+        current_flux_solution = initial_flux_solution
         current_time = start_time
         
         if self.verbose:
@@ -313,10 +334,12 @@ class TimeStepper:
         for step in range(n_steps):
             if self.verbose:
                 print(f"\n--- Time Step {step + 1}/{n_steps} ---")
-            
+           
+
             result = self.advance_time_step(
                 current_solution=current_solution,
                 current_bulk_data=current_bulk_data,
+                current_flux_solution=current_flux_solution,  # Placeholder, can be extended to track flux solutions
                 current_time=current_time,
                 dt=dt
             )
@@ -334,6 +357,7 @@ class TimeStepper:
                 # Update state for next iteration
                 current_solution = result.updated_solution
                 current_bulk_data = result.updated_bulk_data
+                current_flux_solution = result.updated_flux_solution  # Update flux solution if available
                 current_time += dt
         
         if self.verbose:
@@ -391,6 +415,7 @@ class AdaptiveTimeStepper(TimeStepper):
     def advance_time_step_adaptive(self, 
                                   current_solution: np.ndarray,
                                   current_bulk_data: List,
+                                  current_flux_solution: List,
                                   current_time: float,
                                   dt_suggested: float) -> Tuple[TimeStepResult, float]:
         """
@@ -399,6 +424,7 @@ class AdaptiveTimeStepper(TimeStepper):
         Parameters:
             current_solution: Current global solution
             current_bulk_data: Current bulk data
+            current_flux_solution: Current flux solution
             current_time: Current time
             dt_suggested: Suggested time step size
             
@@ -421,7 +447,7 @@ class AdaptiveTimeStepper(TimeStepper):
             
             # Try time step with current dt
             result = self.advance_time_step(
-                current_solution, current_bulk_data, current_time, dt_current
+                current_solution, current_bulk_data, current_flux_solution, current_time, dt_current
             )
             
             if result.converged:

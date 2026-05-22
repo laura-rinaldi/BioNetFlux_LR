@@ -30,10 +30,11 @@ type = "receptor_saturation"  # Type of chemotaxis function
 k1 = 3.9e-5     # cellular drift velocity
 k2 = 5.0e-6     # receptor dissociation constant
 
-# Tumor suppression: lambda(x) = m1 / (m2 + x)
+# Tumor suppression: lambda(x) = m1 / (m2 + x) -m3
 [physical_parameters.tumor_suppression]
 m1 = 0.0  # k_omega1: killing efficiency of omega on tumor cells
 m2 = 1.0  # k_omega2: dissociation constant
+m3 = 0.  # k_v: proliferation constant
 
 [discretization]
 # n_elements = 10    # Used when h is absent; ignored when h is provided

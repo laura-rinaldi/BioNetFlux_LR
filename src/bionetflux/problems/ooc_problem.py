@@ -305,7 +305,7 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     # Constructed from TOML parameters k1, k2
     # The chemotactic function is rescaled by viscority, as it was implemented in a rescaled version in the code
     # Later it would be better to rescale nu in the static condensation module.
-    chi_func = lambda x: k1 / (nu * (k2 + x)**2)
+    chi_func = lambda x: k1/ (nu * (k2 + x)**2)
     dchi_func = lambda x: -2.0 * k1 / (nu * (k2 + x)**3)
     
     lambda_func = lambda omega: m1*omega / (m2 + omega) -m3  # Tumor suppression function 

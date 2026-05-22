@@ -17,7 +17,7 @@ class StaticCondensationBase(ABC):
             is called.  Length must equal ``problem.neq``.
     """
     
-    def __init__(self, problem: Problem, global_disc: GlobalDiscretization, elementary_matrices: Any, ipb: int=0):
+    def __init__(self, problem: Problem, global_disc: GlobalDiscretization, elementary_matrices: Any, ipb: int=0, gamma: float=1.0):
         """
         Initialize static condensation for a specific problem type.
         
@@ -26,6 +26,7 @@ class StaticCondensationBase(ABC):
             global_disc: Global discretization object
             elementary_matrices: Pre-computed elementary matrices
             ipb: Index of the problem/domain in case of multiple problems/domains
+            gamma: Stabilization parameter
         """
         self.problem = problem
         self._global_disc = global_disc
@@ -33,8 +34,10 @@ class StaticCondensationBase(ABC):
         self.elementary_matrices = elementary_matrices
         self.sc_matrices = {}
         self.dt = global_disc.dt
-        self.tau = self.discretization.tau  # Stabilization parameters
+        self.tau = self.discretization.tau # Stabilization parameters
+        self.gamma = gamma
         self.flux_orders: List[int] = []  # To be set by subclass
+
         
     @abstractmethod
     def build_matrices(self) -> Dict[str, np.ndarray]:

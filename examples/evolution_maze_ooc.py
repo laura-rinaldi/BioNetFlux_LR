@@ -708,7 +708,7 @@ def run_evolution_with_adaptive_time_stepper(
         print(f"\n--- Time Step {time_step}: t = {current_time:.6f} → "
               f"{current_time + dt_try:.6f}  (dt = {dt_try:.6e}) ---")
 
-        result, dt_next = time_stepper.advance_time_step_adaptive(
+        result, dt_next, flux_data = time_stepper.advance_time_step_adaptive(
             current_solution=current_solution,
             current_bulk_data=current_bulk_data,
             current_time=current_time,
