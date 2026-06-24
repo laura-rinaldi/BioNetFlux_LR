@@ -191,13 +191,34 @@ class TimeStepper:
         # Step 3: Solve nonlinear system using BioNetFlux-specific Newton solver
         if self.verbose:
             print(f"    Starting Newton iterations...")
+        ##############################
         
+        print(f'Current time: {current_time}')
+        if current_time > 0.0 :
+            # phi_L=(current_bulk_data[0].data)[6,:] 
+            # dphi_L = -current_flux_solution[0][5,:]/self.problems[0].parameters[1]
+            # phi_R=(current_bulk_data[0].data)[7,:]
+            # dphi_R = -current_flux_solution[0][6,:]/self.problems[0].parameters[1]
+            # # print('phi_L:', phi_L)
+            # print('phi_R:', phi_R) 
+            # time.sleep(10)
+            # print('dphi_L:', dphi_L)
+            # print('dphi_R:', dphi_R)
+            # time.sleep(10)
+            # print('k1', self.problems[0].parameters[8])
+            # print('k2', self.problems[0].parameters[9])
+            # time.sleep(10)
+            gamma = None #  -dphi_L    # Scaling factor for stabilization
+        else:
+            gamma = None
+        ##############################  
         newton_result = self.newton_solver.solve(
             initial_guess=current_solution,  # Use current_solution directly as Newton initial guess
             global_assembler=self.global_assembler,
             forcing_terms=forcing_terms,
             static_condensations=self.static_condensations,
-            current_time=new_time  # Updated parameter name
+            current_time=new_time,  # Updated parameter name
+            gamma=gamma
         )
         
         if not newton_result.converged:
@@ -212,22 +233,12 @@ class TimeStepper:
                 computation_time=time.time() - start_time,
                 residual_history=newton_result.residual_history,
                 jacobian_condition=newton_result.jacobian_condition,
-                newton_step_norms=newton_result.step_norms # Keep old flux solution
-
+                newton_step_norms=newton_result.step_norms, # Keep old flux solution
+                updated_flux_solution=current_flux_solution
             )
         
         # Step 5: Update bulk data via static condensation
-        ##############################
         
-        print(f'Current time: {current_time}')
-        
-        if current_time > 0.0 :
-            phi_L=(current_bulk_data[0].data)[6,:] 
-            dphi_L = current_flux_solution[0][5,:]
-            gamma =abs((0.39  /(0.05 + phi_L)**2 )*dphi_L)    # Scaling factor for stabilization
-        else:
-            gamma = None   
-        ##############################  
         try:
             updated_bulk_solutions, updated_flux_solutions = self.global_assembler.bulk_by_static_condensation(
                 global_solution=newton_result.final_solution,

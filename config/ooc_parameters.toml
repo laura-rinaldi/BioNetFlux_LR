@@ -7,22 +7,22 @@ neq = 4
 problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensation problem_type)
 
 [time_parameters]
-T = 1800.0   # Final time
-dt = 64.0  # Time step
+T = 18000.0   # Final time
+dt = 60.0  # Time step
 
 [physical_parameters.viscosity]
 nu = 200.0      # D_M: diffusivity of immune cells
-mu = 900.0      # D_phi: diffusivity of chemoattractant phi
-epsilon = 900.0 # D_omega: diffusivity of chemoactractant omega
-sigma = 0.1e-8     # D_T: diffusivity of tumor cells (56.0)
+mu = 700.0      # D_phi: diffusivity of chemoattractant phi
+epsilon = 700.0 # D_omega: diffusivity of chemoactractant omega
+sigma = 5.6     # D_T: diffusivity of tumor cells (56.0)
 
 [physical_parameters.reaction]
-a = 1.0e-4      #  consumption rate of phi
-c = 1.0e-4     #   consumption rate of omega
+a = 5.0e-4      #  consumption rate of phi
+c = 5.0e-4     #   consumption rate of omega
 
 [physical_parameters.coupling]
-b = 1.0e-1       #   production rate of phi
-d = 1.0e-1       #  production rate of omega
+b = 1.0e-6       #   production rate of phi
+d = 1.0e-6       #  production rate of omega
 
 # Chemotaxis: chi(x) = k1 / (k2 + x)^2
 [physical_parameters.chemotaxis]
@@ -32,12 +32,12 @@ k2 = 5.0e-6     # receptor dissociation constant
 
 # Tumor suppression: lambda(x) = m1 x / (m2 + x) -m3
 [physical_parameters.tumor_suppression]
-m1 = 0.0  # k_omega1: killing efficiency of omega on tumor cells
-m2 = 1.0  # k_omega2: dissociation constant
-m3 = 1.0  # k_v: proliferation constant
+m1 = 1.9e-11  # k_omega1: killing efficiency of omega on tumor cells
+m2 = 1.0e-4  # k_omega2: dissociation constant
+m3 = 0.0 # k_v: proliferation constant
 
 [discretization]
-# n_elements = 10    # Used when h is absent; ignored when h is provided
+# n_elements = 20    # Used when h is absent; ignored when h is provided
 h = 50      # Target mesh size — n_elements computed per domain (even, >= 4)
 tau = [0.5, 0.5, 0.5, 0.5]
 
@@ -58,7 +58,7 @@ phi = "zeros"    # Default: zero force
 [domain_initial_conditions]
 domain_0_v = "gaussian_scaled"    # Domain 0, equation v -> constant function  
 domain_3_u = "5_constant"      # Domain 5, equation u -> constant function   
-
+domain_0_phi = "05_constant"
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  

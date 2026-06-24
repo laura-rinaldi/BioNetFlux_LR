@@ -56,7 +56,8 @@ class NewtonSolver:
               static_condensations: List,
               current_time: float,  # Renamed from 'time' to 'current_time'
               tolerance: Optional[float] = None,
-              max_iterations: Optional[int] = None) -> NewtonResult:
+              max_iterations: Optional[int] = None, 
+              gamma: np.ndarray = None) -> NewtonResult:
         """
         Solve nonlinear system using BioNetFlux global assembler.
         
@@ -96,7 +97,8 @@ class NewtonSolver:
                     global_solution=newton_solution,
                     forcing_terms=forcing_terms,
                     static_condensations=static_condensations,
-                    time=current_time  # Updated variable name
+                    time=current_time,  # Updated variable name
+                    gamma=gamma
                 )
             except Exception as e:
                 if self.verbose:

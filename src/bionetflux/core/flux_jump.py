@@ -56,8 +56,8 @@ def domain_flux_jump(
     
     # Cycle over elements
     for k in range(N):
-        print("number of elements: ", N)
-        
+       # print(f"Processing element {k} over {N}") 
+       # print(f"gamma element {k} = {gamma[k]}") if gamma is not None else print(f"gamma is None")              
         # Create logical indexing for element k
         # This selects nodes k and k+1 for all equations
         
@@ -76,8 +76,7 @@ def domain_flux_jump(
         # Extract local trace values for element k
         local_trace = trace_solution[local_indices].reshape(-1, 1)  # (2*neq)×1 vector
         if gamma is None:
-             gamma = np.ones(N)
-        print("gamma array", gamma)
+             gamma = np.zeros(N)
         # Apply static condensation
         try:
             local_solution, flux, flux_trace, jacobian = static_condensation.static_condensation(

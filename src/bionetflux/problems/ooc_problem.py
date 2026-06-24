@@ -284,7 +284,7 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     m3 = tumor_suppression_params['m3']
     
     # Combine into parameter array (matches MATLAB order)
-    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, 1.0])
+    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, k1, k2, m1, m2, m3])
     
     print(f"✓ Configuration loaded:")
     print(f"  Problem: {problem_name} ({neq} equations)")
@@ -305,7 +305,7 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     # Constructed from TOML parameters k1, k2
     # The chemotactic function is rescaled by viscority, as it was implemented in a rescaled version in the code
     # Later it would be better to rescale nu in the static condensation module.
-    chi_func = lambda x: k1/ (nu * (k2 + x)**2)
+    chi_func = lambda x: k1 / (nu * (k2 + x)**2)
     dchi_func = lambda x: -2.0 * k1 / (nu * (k2 + x)**3)
     
     lambda_func = lambda omega: m1*omega / (m2 + omega) -m3  # Tumor suppression function 

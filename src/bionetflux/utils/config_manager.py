@@ -69,7 +69,8 @@ class FunctionResolver:
             'ones': lambda s, t=0: np.ones_like(s),
             'one':  lambda s, t=0: np.ones_like(s),     # alias
             'constant': lambda s, t=0: np.ones_like(s),
-            '5_constant': lambda s, t=0: 5000*np.ones_like(s),
+            '5_constant': lambda s, t=0: 50*np.ones_like(s),
+            '05_constant': lambda s, t=0: 0.009*np.ones_like(s),
             '-constant': lambda s, t=0: - np.ones_like(s),
             
             # Trigonometric functions  
@@ -80,7 +81,7 @@ class FunctionResolver:
             
             # Exponential and Gaussian
             'gaussian': lambda s, t=0: np.exp(-s**2),
-            'gaussian_scaled': lambda s, t=0: 5000*np.exp(-(s-600)**2/(10**4)) + 5000*np.exp(-(s-350)**2/(10**4))+ 5000*np.exp(-(s-100)**2/(10**4)),
+            'gaussian_scaled': lambda s, t=0: 50*np.exp(-(s-600)**2/(10**4)) + 50*np.exp(-(s-350)**2/(10**4))+ 50*np.exp(-(s-100)**2/(10**4)),
             'gaussian_scaled_top': lambda s, t=0: 2*np.exp(-(s-750)**2/(2*10**4)),
             'gaussian_scaled_bottom': lambda s, t=0: 2*np.exp(-(s-250)**2/(2*10**4)),
             'exp_decay': lambda s, t=0: np.exp(-t) * np.ones_like(s),

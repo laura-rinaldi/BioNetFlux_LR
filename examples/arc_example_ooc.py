@@ -634,25 +634,25 @@ def run_evolution_with_adaptive_time_stepper(
     # flux è un array N x 2:
     # flux[i,0] = valore a sinistra dell'elemento i
     # flux[i,1] = valore a destra dell'elemento i
-    qL = result.flux_data[0][5]   # valori a sinistra
-    qR = result.flux_data[0][6]  # valori a destra
-    print("Flux qL shape:", np.shape(result.flux_data[0][0]))
-    print("Flux qR shape:", np.shape(qR))
-    # costruiamo i vettori per il plot
-    x_plot = np.zeros(2 * N)
-    y_plot = np.zeros(2 * N)
+    # qL = result.flux_data[0][5]   # valori a sinistra
+    # qR = result.flux_data[0][6]  # valori a destra
+    # print("Flux qL shape:", np.shape(result.flux_data[0][0]))
+    # print("Flux qR shape:", np.shape(qR))
+    # # costruiamo i vettori per il plot
+    # x_plot = np.zeros(2 * N)
+    # y_plot = np.zeros(2 * N)
 
-    for i in range(N):
-        x_plot[2*i : 2*i+2] = [x_nodes[i], x_nodes[i+1]]
-        y_plot[2*i : 2*i+2] = [qL[i], qR[i]]
+    # for i in range(N):
+    #     x_plot[2*i : 2*i+2] = [x_nodes[i], x_nodes[i+1]]
+    #     y_plot[2*i : 2*i+2] = [qL[i], qR[i]]
 
-    plt.figure(figsize=(8,4))
-    plt.plot(x_plot, y_plot, linewidth=1.8)
-    plt.grid(True)
-    plt.xlabel("x")
-    plt.ylabel("flux(x)")
-    plt.title("Flusso P1 per elemento (lineare)")
-    plt.show()
+    # plt.figure(figsize=(8,4))
+    # plt.plot(x_plot, y_plot, linewidth=1.8)
+    # plt.grid(True)
+    # plt.xlabel("x")
+    # plt.ylabel("flux(x)")
+    # plt.title("Flusso P1 per elemento (lineare)")
+    # plt.show()
 
     # plt.figure()
     # plt.plot(result.flux_data[0][0])

@@ -320,7 +320,7 @@ class LeanMatplotlibPlotter:
         
         # Plot each domain as a thick segment
         coord_start = 0
-        vmin, vmax = np.min(eq_solution), np.max(eq_solution)
+        vmin, vmax =0, np.max(eq_solution) # np.min(eq_solution), np.max(eq_solution)
         
         for domain_idx in range(self.ndom):
             domain_info = self.domain_info[domain_idx]
@@ -441,7 +441,7 @@ class LeanMatplotlibPlotter:
         
         # Plot each domain as a thick colored segment
         coord_start = 0
-        vmin, vmax = np.min(eq_solution), np.max(eq_solution)
+        vmin, vmax = 0, np.max(eq_solution)# np.min(eq_solution), np.max(eq_solution)
         
         # Create colormap normalization
         if vmax > vmin:

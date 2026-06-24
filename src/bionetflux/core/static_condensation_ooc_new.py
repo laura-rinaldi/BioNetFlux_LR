@@ -37,7 +37,7 @@ class StaticCondensationOOC(StaticCondensationBase):
     def __init__(self, problem, global_disc, elementary_matrices, ipb=0, gamma: float=None):
         super().__init__(problem, global_disc, elementary_matrices, ipb, gamma)
         self.flux_orders = [0, 1, 1, 1]  # P0 for u, P1 for ω, v, φ
-        self.new_tau =[] 
+       # self.new_tau =[] 
         self.chi_plot=[] 
     def build_matrices(self):
         """
@@ -72,14 +72,19 @@ class StaticCondensationOOC(StaticCondensationBase):
         
         # Get stabilization parameters
         tau = self.tau if hasattr(self.discretization, 'tau') else [1.0, 1.0, 1.0, 1.0]
-        tu = self.gamma if self.gamma is not None else tau[0] / h    # tau for u
+        # tau for u
+        tu0 = tau[0] / h
+       # self.tu0 = tu0
+        tu = tu0# np.max([self.gamma, tu0]) if self.gamma is not None else tu0
+        
+       # tu_vec = np.array([tu, tu])
+       # self.tu_vec = tu_vec
+
         to = tau[1]    # tau for omega  
         tv = tau[2]    # tau for v
         tp = tau[3]    # tau for phi
         
-        print('tau, tu:', tau, tu)
-        
-        time.sleep(5)
+       # print('tau, tu:', tau, tu)
         # Cache frequently used values
         dt = self.dt  
        
@@ -108,6 +113,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         # Store basic matrices
         self.sc_matrices.update({
             'M': M,
+            'Mb': Mb,
             'D': D,
             'Gb': Gb,
             'T': T,
@@ -120,11 +126,10 @@ class StaticCondensationOOC(StaticCondensationBase):
         R = IM @ D # Checked
         Rhat = IM @ Nhat # Checked
         self.sc_matrices.update({'R': R, 'Rhat': Rhat})
-        
         # Step 1: Matrix for u equation
-        A1 = M + dt * tu * Mb # type: ignore / Checked
+        A1 = M + dt * Mb*tu  # type: ignore / Checked
         L1 = np.linalg.inv(A1) # Checked
-        H1 = dt * tu * Gb # type: ignore / Checked
+        H1 = dt *  Gb*tu  # type: ignore / Checked
         B1 = L1 @ H1
         
 
@@ -144,7 +149,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         C2 = L2 @ H2 # Checked
 
         self.sc_matrices.update({
-            'L2': L2, 'B2': B2, 'C2': C2,
+            'L2': L2, 'B2': B2, 'C2': C2, 'H2': H2,
             'E1': E1, 'E1hat': E1hat
         })
         
@@ -200,8 +205,8 @@ class StaticCondensationOOC(StaticCondensationBase):
         # Matrices for final flux jump assembly
         # B5 = - nu * normali / h
         B5 = normali #1 x 2 matrix
-        B6 = tu * T @ np.block([np.eye(2), Z, Z, Z])
-        B7 = -tu * np.block([np.eye(2), Z, Z, Z])
+        B6 = tu* T @ np.block([np.eye(2), Z, Z, Z])
+        B7 = -tu*np.block([np.eye(2), Z, Z, Z])
         
         hatB0 = np.block([
             [Nhat.T, Z, Z],
@@ -226,6 +231,7 @@ class StaticCondensationOOC(StaticCondensationBase):
             'B5': B5, 'B6': B6, 'B7': B7,
             'hatB0': hatB0, 'hatB1': hatB1, 'hatB2': hatB2
         })
+        
         return self.sc_matrices
 
     def static_condensation(self, local_trace, local_source=None, gamma: float=1.0, **kwargs):
@@ -261,11 +267,18 @@ class StaticCondensationOOC(StaticCondensationBase):
         g = [local_source[2*i:2*i+2] for i in range(4)]
         dt = self.dt
         d = self.problem.parameters[7]     # coupling parameter
+       
         
-        # Get matrices
+        # Get matrices (after potential rebuild with new gamma)
+        Gb = self.sc_matrices['Gb']
+        Mb = self.sc_matrices['Mb']
+        T = self.sc_matrices['T']
+        Z = np.zeros_like(Mb)
         A1, H1 = self.sc_matrices['A1'], self.sc_matrices['H1']
         L1, B1 = self.sc_matrices['L1'], self.sc_matrices['B1']
-        L2, B2, C2 = self.sc_matrices['L2'], self.sc_matrices['B2'], self.sc_matrices['C2']
+        L2 = self.sc_matrices['L2']
+        H2 = self.sc_matrices['H2']
+        B2, C2 = self.sc_matrices['B2'], self.sc_matrices['C2']
         L4, B4, C4 = self.sc_matrices['L4'], self.sc_matrices['B4'], self.sc_matrices['C4']
         A3, S3, H3 = self.sc_matrices['A3'], self.sc_matrices['S3'], self.sc_matrices['H3']
         M, Av = self.sc_matrices['M'], self.sc_matrices['Av']
@@ -273,28 +286,40 @@ class StaticCondensationOOC(StaticCondensationBase):
         hB4, Q = self.sc_matrices['hB4'], self.sc_matrices['Q']
         B5, B6, B7 = self.sc_matrices['B5'], self.sc_matrices['B6'], self.sc_matrices['B7']
         hatB0, hatB1, hatB2 = self.sc_matrices['hatB0'], self.sc_matrices['hatB1'], self.sc_matrices['hatB2']
-       
         ##########NEW MATRICES DEFINITIONS############################
-       # print(self.tau[0] )
-        if gamma:
-           print('new tau:', gamma)
-           gamma=gamma/(self.tau[0]/ self.discretization.element_length)
-           if gamma>1:
-                print('gamma:', gamma)
-                A1 =  gamma * A1 - (gamma-1) * M
-                L1 = np.linalg.inv(A1)
-                H1 =  gamma * H1
-                B1 = L1 @ H1
-                C2 =  gamma * C2
-                B6 =  gamma * B6
-                B7 =  gamma * B7
-            #     time.sleep(5)
-               # self.sc_matrices.update({ 'A1': A1, 'L1': L1, 'H1': H1,'B1': B1, 'C2': C2, 'B6': B6, 'B7': B7})
-       # print('L1:', L1)
-        
-        ##############################################################  
 
+        # MODFICA LAURA PER STABILIZZAZIONE 
+        # if gamma:
+        #    # self.tu = self.tu0
+        #     print('previous tau:', self.tu_vec)
+        #     print('new tau:', gamma)
+        #     print(gamma > self.tu0)
+            # if gamma >0 :
+            #     tu_vec = self.tu_vec +[gamma, -gamma]
+            #     A1 = M + dt * Mb*tu_vec  # type: ignore / Checked
+            #     L1 = np.linalg.inv(A1) # Checked
+            #     H1 = dt *  Gb*tu_vec  # type: ignore / Checked
+            #     B1 = L1 @ H1
+            #     H2 = dt * d * M @ B1 # type: ignore / Checked
+            #     C2 = L2 @ H2 # Checked
 
+            #     B6 = tu_vec @ T @ np.block([np.eye(2), Z, Z, Z])
+            #     B7 = -tu_vec @ np.block([np.eye(2), Z, Z, Z])
+                    # self.build_matrices()  # Rebuild matrices with new gamma
+               # gamma_f = gamma/self.tu0
+                # A1 = A1 * gamma_f - M *(gamma_f - 1) # type: ignore
+                # L1 = np.linalg.inv(A1) # Checked
+                # H1 = H1 * gamma_f # type: ignore / Checked
+                # B1 = L1 @ H1
+                # H2 = dt * d * M @ B1 # type: ignore / Checked
+                # C2 = L2 @ H2 # type: ignore / Checked
+                # B6 = B6 * gamma_f # type: ignore / Checked
+                # B7 = B7 * gamma_f # type: ignore / Checked
+        #     else:
+        #         self.gamma = self.tu0
+        # print(L1)
+               # self.build_matrices()  # Rebuild matrices with new gamma
+        ##############################################################
 
         # Step 1: Compute u
         y1 = L1 @ g[0]
@@ -382,23 +407,7 @@ class StaticCondensationOOC(StaticCondensationBase):
         
         flux = np.concatenate([j.flatten(), tJ.flatten()])
         
-
-        # MODFICA LAURA PER STABILIZZAZIONE 
-        
-      #  print(f"nu:{self.problem.parameters[0]}",f"barchi: {barchi}")
-       # print(f"flux_phi_dx: {flux[5]}")
-        qL = - flux[5]/ self.problem.parameters[1] * (-1)   # valori a sinistra * normale
-        qR = - flux[6] / self.problem.parameters[1]  # valori a destr
-        
-       # print(barchi*self.problem.parameters[0])
-        self.new_tau=max(self.tau[0] /self.discretization.element_length, abs(barchi*self.problem.parameters[0]**2*qL), abs(barchi*self.problem.parameters[0]**2*qR))
-       # print(self.tau[0] /self.discretization.element_length, abs(barchi*self.problem.parameters[0]*qL))
-        # self.chi_plot.append(barchi)
-        # if len(self.chi_plot) ==100:
-        #     plt.figure()
-        #     plt.plot(np.arange(100),self.chi_plot)
-        #     plt.show()
-        #     self.chi_plot=[]
+    
         return bulk_solution, flux, flux_jump, jacobian
 
     def assemble_forcing_term(self, 

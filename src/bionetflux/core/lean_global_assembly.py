@@ -87,7 +87,8 @@ class GlobalAssembler:
                                      global_solution: np.ndarray,
                                      forcing_terms: List[np.ndarray],
                                      static_condensations: List,
-                                     time: float) -> Tuple[np.ndarray, np.ndarray]:
+                                     time: float, 
+                                     gamma: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Assemble global residual and Jacobian from domain flux jumps and constraints.
         If we put the nonlinear static condensation equation in the form F(U;F_ext) = 0,
@@ -126,13 +127,15 @@ class GlobalAssembler:
             expected_cols = self.bulk_manager.domain_data_list[i].n_elements
             if forcing_terms[i].shape != (expected_rows, expected_cols):
                 raise ValueError(f"Domain {i} forcing term shape {forcing_terms[i].shape} != expected ({expected_rows}, {expected_cols})")
-            
+           # print("gamma assembler residual and jacobian:", gamma  )
             # Compute domain flux jump using static condensation
+            
             U, J, F, JF = domain_flux_jump(
                 trace_solutions[i].reshape(-1, 1),
                 forcing_terms[i],
                 None, None,
-                static_condensations[i]
+                static_condensations[i], 
+                gamma
             )
             
             # Add domain residual to global residual
@@ -209,7 +212,7 @@ class GlobalAssembler:
                                      forcing_terms: List[np.ndarray],
                                      static_condensations: List,
                                      time: float,
-                                     gamma: float = None) -> Tuple[np.ndarray, np.ndarray]:
+                                     gamma: np.ndarray = None) -> Tuple[np.ndarray, np.ndarray]:
         """
         Assemble global residual and Jacobian from domain flux jumps and constraints.
         If we put the nonlinear static condensation equation in the form F(U;F_ext) = 0,

@@ -8,12 +8,12 @@ problem_type = "ooc"  # Config validation type (NOT the same as StaticCondensati
 
 
 [time_parameters]
-T = 0.1   # Final time
-dt = 0.05 # Time step
+T = 10.0   # Final time
+dt = 1.0 # Time step
 
 [physical_parameters.viscosity]
-nu = 1.0   # D_M: diffusivity of immune cells
-mu = 1.0      # D_phi: diffusivity of chemoattractant phi
+nu = 200.0   # D_M: diffusivity of immune cells
+mu = 900.0      # D_phi: diffusivity of chemoattractant phi
 epsilon = 1.0 # D_omega: diffusivity of chemoactractant omega
 sigma = 1.0     # D_T: diffusivity of tumor cells (56.0)
 
@@ -25,11 +25,11 @@ c = 0.0      # beta_omega: consumption rate of omega
 b = 0.0       # alpha_phi: production rate of phi
 d = 0.0       # alpha_omega: production rate of omega
 
-# Chemotaxis: chi(x) = k1 / (k2 + x)^2
+# Chemotaxis: chi(phi) = k1 / (k2 + phi)^2
 [physical_parameters.chemotaxis]
 type = "receptor_saturation"  # Type of chemotaxis function
-k1 = 0.39   # cellular drift velocity
-k2 = 0.01     # receptor dissociation constant
+k1 = 0.4  # cellular drift velocity
+k2 = 0.000005     # receptor dissociation constant
 
 # Tumor suppression: lambda(x) = m1 / (m2 + x) -m3
 [physical_parameters.tumor_suppression]
@@ -38,21 +38,22 @@ m2 = 1.0  # k_omega2: dissociation constant
 m3 = 0.0  # k_v: proliferation constant
 
 [discretization]
-n_elements = 5    # Used when h is absent; ignored when h is provided
+n_elements = 100    # Used when h is absent; ignored when h is provided
 # h = 15.0         # Target mesh size — n_elements computed per domain (even, >= 4)
 tau = [0.5, 0.5, 0.5, 0.5]
+
 
 [initial_conditions]
 u = "zeros"      # Default: zero initial condition
 omega = "zeros"  # Default: zero initial condition  
 v = "zeros"      # Default: zero initial condition
-phi = "sin(s)+1"    # Default: zero initial condition
+phi = "0.002+s**2"    # Default: zero initial condition
 
 [force_functions]
-u = "s**2 -2*1.0*t + 2*0.39*s*t*cos(s)/((0.01 + sin(s) +1)**2) -0.39*s**2*t*sin(s)/((0.01 + sin(s) +1)**2)  -2*0.39*s**2*t*cos(s)**2/((0.01 + sin(s) +1)**3)  "   # Default: zero force
+u = "s**2 -2*200*t +(6*0.4 *t*s**2)/(0.000005 +s**2)**2 -(8*0.4 *t*s**4)/( 0.000005+s**2)**3 "# Default: zero force
 omega = "zeros"  # Default: zero force
 v =  "zeros"    # Default: zero force
-phi = "1.0*sin(s)"    # Default: zero force
+phi = "-2*900.0"    # Default: zero force
 
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
@@ -72,7 +73,7 @@ phi = "1.0*sin(s)"    # Default: zero force
 u =  "t * s**2"#   # Example: u(s,t) = t * sin(s + 2*t)
 omega = "zero"
 v = "zero"
-phi = "sin(s)+1"
+phi = "s**2"
 
 # Pointwise derivatives of the exact solutions (used for flux/gradient error norms).
 # Set to "none" if not available.
@@ -96,5 +97,5 @@ phi = "zeros"
 # B1_v   = { type = "neumann", data = "500.0+0.0*t" }
 B0_u = { type = "dirichlet", data = "t *s**2" }
 B1_u = { type = "dirichlet", data = "t *s**2" }
-B0_phi = { type = "dirichlet", data = "sin(s)+1" }
-B1_phi = { type = "dirichlet", data = "sin(s)+1" }
+B0_phi = { type = "dirichlet", data = "s**2" }
+B1_phi = { type = "dirichlet", data = "s**2" }

@@ -42,7 +42,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     print("="*80)
     print("Time evolution using the new TimeStepper module")
 
-    data_folder = 20260430
+    data_folder = 20260619
 
     if config_file:
         print(f"Using configuration file: {config_file}")
@@ -124,7 +124,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     time_stepper = TimeStepper(setup, verbose=True)
     
     # Initialize solution at t=0 (replaces Steps 3-4 and lines 226-233 from original)
-    current_solution, current_bulk_data = time_stepper.initialize_solution()
+    current_solution, current_bulk_data, current_flux_solution = time_stepper.initialize_solution()
     
     print("✓ Time stepper initialized")
     print(f"✓ Initial solution: shape {current_solution.shape}")
@@ -199,6 +199,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
         result = time_stepper.advance_time_step(
             current_solution=current_solution,
             current_bulk_data=current_bulk_data,
+            current_flux_solution=current_flux_solution,
             current_time=current_time,
             dt=dt
         )
@@ -332,6 +333,7 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
             current_solution = result.updated_solution
             current_bulk_data = result.updated_bulk_data
             
+            current_flux_solution = result.updated_flux_solution
             # Store history
             solution_history.append(current_solution.copy())
             time_history.append(current_time)
@@ -385,7 +387,25 @@ def run_evolution_with_time_stepper(config_file: Optional[str] = None ,
     
     
     successful_steps = len(solution_history) - 1  # Subtract initial condition
+    
+    # print(current_flux_solution )#flux è un array N x 2:
+    # qL = current_flux_solution[6][5,:]   # valori a sinistra
+    # qR = current_flux_solution[6][6,:]  # valori a destra
+    # # print("Flux qL shape:", np.shape(current_flux_solution[0][0]))
+    # print("Flux qR shape:", np.shape(qR))
+    # # costruiamo i vettori per il plot
+    # y_plot = np.zeros(2 *np.shape(qR)[0])
 
+    # for i in range(np.shape(qR)[0]):
+    #     y_plot[2*i : 2*i+2] = [qL[i], qR[i]]
+
+    # plt.figure(figsize=(8,4))
+    # plt.plot(y_plot, linewidth=1.8)
+    # plt.grid(True)
+    # plt.xlabel("x")
+    # plt.ylabel("flux(x)")
+    # plt.title("Flusso P1 per elemento (lineare)")
+    # plt.show()
     
     return I_all_times_omega[:], I_all_times_phi[:], I_all_times_u[:], I_all_times_v[:] 
 
@@ -425,16 +445,16 @@ if __name__ == "__main__":
     
     try:
         # Main evolution example with config file
-        times= np.linspace(0,20,100)
-        data_folder = 20260430
+        times= np.linspace(0,18000,300)
+        data_folder = 20260619
         plot_flag = True
         ut_t_flag = 't'
         for k in [3.9e-1]: # [-2,-4,-6,2,4]: 
            #ut 
          #   physical_vecn_t = [ 900.,  200.,   200.,   56.,    0,   0,   1.e-4,  0,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4,1.e-5]
          #t 
-            physical_vecn_t = [ 200.,  900.,   900.,   0.56,    1.e-4,   0.05,   1.e-4,  1.e-1,  3.9e-1 , 5.e-4, 1.9e-11, 1.e-4,0.]
-           # physical_vecn_t = [ 1000.,  200.,   200.,    0.5,    5.e-4,   1.e-6,   5.e-4,  1.e-6,  1.0*10**k , 5.e-2, 1.9e-11, 1.e-4,0.]
+            physical_vecn_t = [ 200.,  700.,   700.,   5.6,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
+           
             Iomegan_t ,Iphin_t, Iun_t, Ivn_t =run_evolution_with_time_stepper(config_file, physical_vecn_t)
                 
             plt.figure() 
@@ -469,7 +489,7 @@ if __name__ == "__main__":
         #     #untreated           # nu,  mu,  epsilon, sigma,    a,       b,      c,     d,      k1,      k2,      m1,    m2,    m3),
         #     physical_vecn_ut = [ 1000.,  200.,   200.,   50. ,   0.,     0.,   5.e-4,    0.,     3.9e-9 ,     5.e-6, 1.9e-11, 1.e-4, 1.e-5]
         #     Iomegan_ut ,Iphin_ut, Iun_ut, Ivn_ut =run_evolution_with_time_stepper(config_file, physical_vecn_ut)
-        #     data_folder = 20260428 
+     
         #     ranges_ut=[ [80., 120.],  #nu=50
         #             [160., 240.], #mu=150
         #             [160., 240.], #epsilon=90
@@ -524,7 +544,6 @@ if __name__ == "__main__":
         #             combo[i] = float(ranges_ut[i][j])
         #             combinazioni_ut.append(combo)
 
-        #     data_folder = 20260427 
 
 
         #     plt.figure() 
