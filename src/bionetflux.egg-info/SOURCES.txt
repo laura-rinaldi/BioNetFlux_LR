@@ -46,8 +46,10 @@ src/bionetflux/utils/mesh_mapping.py
 src/bionetflux/visualization/__init__.py
 src/bionetflux/visualization/lean_matplotlib_plotter.py
 tests/test_adaptive_time_stepping.py
+tests/test_arc_example_solver_selection.py
 tests/test_boundary_overrides.py
 tests/test_bulk_data.py
+tests/test_bulk_plot_overlay.py
 tests/test_compute_n_elements_from_h.py
 tests/test_constraint_override.py
 tests/test_core_smoke.py
@@ -60,8 +62,10 @@ tests/test_lean_global_assembly.py
 tests/test_lean_setup.py
 tests/test_mass_monitoring.py
 tests/test_maze_geometry.py
+tests/test_mms_ooc_upwind_chemotaxis.py
 tests/test_picard_flux_threading.py
 tests/test_problem.py
 tests/test_robin_jacobian.py
 tests/test_sample.py
 tests/test_static_condensation_setup.py
+tests/test_upwind_chemotaxis_scaling.py

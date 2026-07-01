@@ -1,4 +1,4 @@
-Metadata-Version: 2.4
+Metadata-Version: 2.1
 Name: bionetflux
 Version: 1.0.0
 Summary: Multi-Domain Biological Network Flow Simulation using HDG Methods
@@ -29,7 +29,6 @@ Requires-Dist: mypy>=1.5.0; extra == "dev"
 Provides-Extra: extras
 Requires-Dist: pandas>=1.5.0; extra == "extras"
 Requires-Dist: toml>=0.10.0; extra == "extras"
-Dynamic: license-file
 
 # BioNetFlux
 

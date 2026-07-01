@@ -281,10 +281,11 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     
     m1 = tumor_suppression_params['m1']
     m2 = tumor_suppression_params['m2']
+    m3 = tumor_suppression_params['m3']
     
     # Combine into parameter array (matches MATLAB order)
-    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, 1.0])
-    
+   # parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, 1.0])
+    parameters = np.array([nu, mu, epsilon, sigma, a, b, c, d, k1, k2, m1, m2, m3])
     print(f"✓ Configuration loaded:")
     print(f"  Problem: {problem_name} ({neq} equations)")
     print(f"  Time: T={T}, dt={dt}")
@@ -314,8 +315,8 @@ def create_global_framework(geometry: Optional[DomainGeometry] = None,
     else:
         raise ValueError(f"Unsupported chemotaxis type: {chemotaxis_type}")
     
-    lambda_func = lambda omega: m1 / (m2 + omega)  # Tumor suppression function 
-    dlambda_func = lambda omega: -m1 / (m2 + omega)**2  # Derivative of tumor suppression function
+    lambda_func = lambda omega: m1 / (m2 + omega) -m3  # Tumor suppression function 
+    dlambda_func = lambda omega: m1 * m2/ (m2 + omega)**2  # Derivative of tumor suppression function
 
     print("✓ Mathematical functions configured:")
     print(f"  - Chemotaxis: chi(x) = k1/(k2+x)^2 with k1={k1}, k2={k2}")

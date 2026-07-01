@@ -317,7 +317,7 @@ class LeanMatplotlibPlotter:
         # Save if requested
         save_path = self._get_save_path(save_filename)
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=100, bbox_inches='tight')
             print(f"✓ 2D curves saved as: {save_path}")
         
         return fig
@@ -431,7 +431,7 @@ class LeanMatplotlibPlotter:
         # Save if requested
         save_path = self._get_save_path(save_filename)
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=100, bbox_inches='tight')
             print(f"✓ Flat 3D plot saved as: {save_path}")
         
         return fig
@@ -472,7 +472,7 @@ class LeanMatplotlibPlotter:
         
         # Plot each domain as a thick colored segment
         coord_start = 0
-        vmin, vmax = np.min(eq_solution), np.max(eq_solution)
+        vmin, vmax = 0.0, np.max(eq_solution)
         
         # Create colormap normalization
         if vmax > vmin:
@@ -519,7 +519,8 @@ class LeanMatplotlibPlotter:
             sm = plt.cm.ScalarMappable(cmap=colormap, norm=norm)
             sm.set_array([])
             cbar = plt.colorbar(sm, ax=ax, shrink=0.8, aspect=30)
-            cbar.set_label(f'{eq_name} Solution', fontsize=12)
+            cbar.set_label(f'{eq_name} Solution', fontsize=22)
+            cbar.ax.tick_params(labelsize=18)      
         
         # Add bounding box if requested
         if show_bounding_box:
@@ -536,8 +537,8 @@ class LeanMatplotlibPlotter:
             ax.add_patch(rect)
         
         # Formatting
-        ax.set_xlabel('x', fontsize=12)
-        ax.set_ylabel('y', fontsize=12)
+        ax.set_xlabel('x', fontsize=22)
+        ax.set_ylabel('y', fontsize=22)
         ax.set_aspect('equal', adjustable='box')
         
         # New title format: "Solution (name) at time t = ..."
@@ -560,7 +561,7 @@ class LeanMatplotlibPlotter:
         # Save if requested
         save_path = self._get_save_path(save_filename)
         if save_path:
-            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            plt.savefig(save_path, dpi=100, bbox_inches='tight')
             print(f"✓ Bird's eye view plot saved as: {save_path}")
         
         return fig
