@@ -14,7 +14,7 @@ dt = 60.0  # Time step
 nu = 200.0      # D_M: diffusivity of immune cells
 mu = 700.0      # D_phi: diffusivity of chemoattractant phi
 epsilon = 700.0 # D_omega: diffusivity of chemoactractant omega
-sigma = 5.6     # D_T: diffusivity of tumor cells (56.0)
+sigma = 0.56     # D_T: diffusivity of tumor cells (56.0)
 
 [physical_parameters.reaction]
 a = 5.0e-4       # beta_phi: consumption rate of phi
@@ -37,7 +37,7 @@ m2 = 1.0e-4  # k_omega2: dissociation constant
 m3 = 0.0
 
 [discretization]
-n_elements = 30
+n_elements = 20
 tau = [1.0, 0.5, 0.5, 0.5]
 gam = 1.0   # Upwinding parameter for static condensation (0.0 = no upwind)
 
@@ -56,8 +56,8 @@ phi = "zeros"    # Default: zero force
 # Domain-specific overrides for initial conditions
 # Format: "domain_<id>_<equation_name>" = "function_name"
 [domain_initial_conditions]
-domain_0_v = "gaussian_scaled_bottom"     # Domain 0, equation v -> constant function  
-domain_3_u = "gaussian_scaled_top"     # Domain 5, equation u -> constant function
+domain_0_v = "0002_constant"     # Domain 0, equation v -> grid  
+domain_16_u = "2_constant"        # Domain 3, equation u -> grid
 
 # Domain-specific overrides for force functions
 # Format: "domain_<id>_<equation_name>" = "function_name"  

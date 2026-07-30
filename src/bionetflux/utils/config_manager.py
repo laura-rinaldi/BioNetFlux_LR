@@ -64,8 +64,10 @@ class FunctionResolver:
             'one':  lambda s, t=0: np.ones_like(s),     # alias
             'constant': lambda s, t=0: np.ones_like(s),
             '-constant': lambda s, t=0: - np.ones_like(s),
-            '5_constant': lambda s, t=0: 50*np.ones_like(s),
+            '50_constant': lambda s, t=0: 50*np.ones_like(s),
             '05_constant': lambda s, t=0: 0.05*np.ones_like(s),
+            '0002_constant': lambda s, t=0: 0.00025*np.ones_like(s),
+            '2_constant': lambda s, t=0: 1.8*np.ones_like(s),
             
             # Trigonometric functions  
             'sin_2pi': lambda s, t=0: np.sin(2 * np.pi * s),
