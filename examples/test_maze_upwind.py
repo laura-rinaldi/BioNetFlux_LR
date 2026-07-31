@@ -654,7 +654,7 @@ if __name__ == "__main__":
     try:
         # Main evolution example with config file
         times= np.linspace(0,12000,200)
-        data_folder = 20260727
+        data_folder = 20260730
         plot_flag = True
 
 
@@ -887,8 +887,8 @@ if __name__ == "__main__":
        # INIZIO SCELTA DT E DX
        ######################################################################## 
     
-       # physical_vecn_t = [ 200.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
-        physical_vecn_t = [ 160.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  4.7e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
+        physical_vecn_t = [ 200.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
+      #  physical_vecn_t = [ 160.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  4.7e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
        #  physical_vecn_t = [ 240.,  700.,   700.,   0.56,    5.e-4,  0.8e-6,  5.e-4,  1.e-6,  4.7e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
        #  physical_vecn_t = [ 200.,  700.,   700.,   0.56,    5.e-4,  0.8e-6,  6.e-4,  1.e-6,  3.1e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]
            
@@ -926,7 +926,7 @@ if __name__ == "__main__":
 
         # Main evolution example with config file
         times= np.linspace(0,1200,10)
-        data_folder = 20260727
+        data_folder = 20260730
         plot_flag = True
         ut_t_flag = 't'
 
@@ -941,7 +941,7 @@ if __name__ == "__main__":
         physical_vec = physical_vecn_t
         i=1
         j=1
-        Iomegan_t0 ,Iphin_t0, Iun_t0, Ivn_t0 =run_evolution_with_time_stepper(config_file, physical_vecn_t,[480./(2**(i-1))],[5*2**(j-1)])
+        Iomegan_t0 ,Iphin_t0, Iun_t0, Ivn_t0 =run_evolution_with_time_stepper(config_file, physical_vecn_t,[240./(2**(i-1))],[20*2**(j-1)])
         print('Iun_t0', np.shape(Iun_t0))
         import matplotlib.pyplot as plt
 
@@ -954,19 +954,19 @@ if __name__ == "__main__":
         # --- FIGURA 2: Iphi ---
         fig2 = plt.figure(2)
         ax2 = fig2.add_subplot(111)    
-        while i <= 9 or j <= 4:
+        while i <= 1 or j <= 1:
                 grid_ij.append([i,j])    
                 print('grid_ij:', grid_ij)   
                 time.sleep(5)                                                
-                Iomegan_ti ,Iphin_ti, Iun_ti, Ivn_ti =run_evolution_with_time_stepper(config_file, physical_vecn_t, [480./(2**(i))], [5*2**(j-1)])
-                Iomegan_tj ,Iphin_tj, Iun_tj, Ivn_tj =run_evolution_with_time_stepper(config_file, physical_vecn_t, [480./(2**(i-1))], [5*2**(j)])
+                Iomegan_ti ,Iphin_ti, Iun_ti, Ivn_ti =run_evolution_with_time_stepper(config_file, physical_vecn_t, [240./(2**(i))], [20*2**(j-1)])
+                Iomegan_tj ,Iphin_tj, Iun_tj, Ivn_tj =run_evolution_with_time_stepper(config_file, physical_vecn_t, [240./(2**(i-1))], [20*2**(j)])
                   # -----------------------------
                 # FIGURA 1: plot Iu
                 # -----------------------------
                 
-                ax1.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iun_t0[0::17],label=f"dt={480./(2**(i-1))},dx={5*2**(j-1)}")
-                ax1.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iun_ti[0::17][0::2],label=f"dt={480./(2**i)},dx={5*2**(j-1)}")
-                ax1.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iun_tj[0::17],label=f"dt={480./(2**(i-1))},dx={5*2**j}")
+                ax1.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iun_t0[0::17],label=f"dt={240./(2**(i-1))},dx={20*2**(j-1)}")
+                ax1.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iun_ti[0::17][0::2],label=f"dt={240./(2**i)},dx={20*2**(j-1)}")
+                ax1.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iun_tj[0::17],label=f"dt={240./(2**(i-1))},dx={20*2**j}")
 
                 
                 ax1.set_xlabel("time (s)", fontsize=16)
@@ -982,9 +982,9 @@ if __name__ == "__main__":
                 # FIGURA 2: plot Iphi_t0
                 # -----------------------------
                
-                ax2.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iphin_t0, label=f"dt={480./(2**(i-1))},dx={5*2**(j-1)}")
-                ax2.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iphin_ti[::2],label=f"dt={480./(2**(i))},dx={5*2**(j-1)}")
-                ax2.plot(np.linspace(0,12000,int(12000/(480./2**(i-1)))), Iphin_tj, label=f"dt={480./(2**(i-1))},dx={5*2**j}")
+                ax2.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iphin_t0, label=f"dt={240./(2**(i-1))},dx={20*2**(j-1)}")
+                ax2.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iphin_ti[::2],label=f"dt={240./(2**(i))},dx={20*2**(j-1)}")
+                ax2.plot(np.linspace(0,12000,int(12000/(240./2**(i-1)))), Iphin_tj, label=f"dt={240./(2**(i-1))},dx={20*2**j}")
 
                 ax2.set_xlabel("time (s)", fontsize=16)
                 ax2.set_ylabel("Iphi", fontsize=16)
@@ -1002,7 +1002,7 @@ if __name__ == "__main__":
                 Delta_j = np.linalg.norm(Iun_t0[::17]-Iun_tj[::17] , ord=2)/np.linalg.norm(Iun_t0[::17]  , ord=2) + np.linalg.norm(Iphin_t0-Iphin_tj  , ord=2)/np.linalg.norm(Iphin_t0  , ord=2) 
 
                 print('errore:', "Delta_i", Delta_i, "Delta_j", Delta_j)
-                time.sleep(5)
+                time.sleep(20)
 
                 if Delta_i < Delta_j:
                     j+=1
