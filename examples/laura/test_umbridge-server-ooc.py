@@ -23,7 +23,7 @@ print(output)
 
 
 #test model output
-param = [[200.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4,0.]]
+param = [[200.,  700.,   700.,   0.56,    5.e-4,  1.e-6,  5.e-4,  1.e-6,  3.9e-1 , 5.e-6, 1.9e-11, 1.e-4]]
 output = model(param)
 print(output)
 

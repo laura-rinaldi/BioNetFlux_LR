@@ -1,0 +1,57 @@
+[problem]
+name = "OoC_Grid_Problem"
+neq = 4
+problem_type = "ooc"
+
+[time_parameters]
+T = 12000.0
+dt = 240.0
+
+[discretization]
+n_elements = 20
+tau = [ 1.0, 0.5, 0.5, 0.5,]
+gam = 1.0
+
+[initial_conditions]
+u = "zeros"
+omega = "zeros"
+v = "zeros"
+phi = "zeros"
+
+[force_functions]
+u = "zeros"
+omega = "zeros"
+v = "zeros"
+phi = "zeros"
+
+[domain_initial_conditions]
+domain_0_v = "0002_constant"
+domain_16_u = "2_constant"
+
+[domain_force_functions]
+
+[boundary_conditions]
+
+[physical_parameters.viscosity]
+nu = 232.12304523262532
+mu = 774.5530066907014
+epsilon = 653.0661054755542
+sigma = 0.56
+
+[physical_parameters.reaction]
+a = 9.411243242433509e-5
+c = 4.037292969689937e-6
+
+[physical_parameters.coupling]
+b = 0.00010758282254005233
+d = 4.674993451710504e-6
+
+[physical_parameters.chemotaxis]
+type = "receptor_saturation"
+k1 = 0.41549480417935425
+k2 = 5.358243332133879e-6
+
+[physical_parameters.tumor_suppression]
+m1 = 1.9000000000000002e-11
+m2 = 0.0001
+m3 = 0.0

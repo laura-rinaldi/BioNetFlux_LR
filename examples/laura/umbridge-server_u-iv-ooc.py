@@ -351,7 +351,7 @@ class ooc_sol(umbridge.Model):
                     vettore_massa[2,:]= np.nan
                     vettore_massa[3,:] = np.nan
                     # plots over time steps
-                    if  (0  and time_step % 10 == 0) or time_step==0:
+                    if 0 : #  (0  and time_step % 10 == 0) or time_step==0:
                         for eq_idx in range(plotter.neq):
                                         plotter.plot_birdview(
                                             extracted_traces_n,
@@ -446,8 +446,9 @@ class ooc_sol(umbridge.Model):
                 # plt.title("Flusso P1 per elemento (lineare)")
                 # plt.show()
                 #  return sol_omega, sol_phi, sol_u, sol_v
-                qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:],  I_all_times_u[:], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_omega[1:-1], I_all_times_phi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
-                print(qoi)
+                # qoi = np.concatenate([I_all_times_omega[:], I_all_times_phi[:],  I_all_times_u[13::17], I_all_times_u[14::17], I_all_times_v[:]]).tolist() #np.concatenate([sol_u[12:]]).tolist() #np.concatenate([I_all_times_omega[1:-1], I_all_times_phi[1:-1], sol_u[1:-1], I_all_times_v[1:-1]]).tolist()
+                qoi = np.concatenate([ I_all_times_phi[:],  I_all_times_u[13::17], I_all_times_u[14::17]]).tolist()
+                print(qoi.shape())
                 return [[qoi] ]
             
         
